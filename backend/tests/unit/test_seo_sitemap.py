@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 
 from app.main import app
 from app.core.database import Base, get_db
+from app.core.config import settings
 from app.models.user import User, UserRole
 from app.models.project import Project
 from app.models.job import Job
@@ -61,13 +62,14 @@ async def test_sitemap_xml_returns_valid_xml_structure(client):
     assert "</urlset>" in content
 
     # Key static pages must always be present
-    assert "<loc>http://localhost:5173</loc>" in content
-    assert "<loc>http://localhost:5173/projects</loc>" in content
-    assert "<loc>http://localhost:5173/jobs</loc>" in content
-    assert "<loc>http://localhost:5173/ats-analyzer</loc>" in content
-    assert "<loc>http://localhost:5173/resumes</loc>" in content
-    assert "<loc>http://localhost:5173/about</loc>" in content
-    assert "<loc>http://localhost:5173/contact</loc>" in content
+    base_url = settings.FRONTEND_URL.rstrip("/")
+    assert f"<loc>{base_url}</loc>" in content
+    assert f"<loc>{base_url}/projects</loc>" in content
+    assert f"<loc>{base_url}/jobs</loc>" in content
+    assert f"<loc>{base_url}/ats-analyzer</loc>" in content
+    assert f"<loc>{base_url}/resumes</loc>" in content
+    assert f"<loc>{base_url}/about</loc>" in content
+    assert f"<loc>{base_url}/contact</loc>" in content
 
 
 @pytest.mark.asyncio
@@ -142,8 +144,9 @@ async def test_sitemap_dynamically_includes_published_projects_and_active_jobs(c
     xml_text = response.text
 
     # Published project and active job must be in sitemap
-    assert f"<loc>http://localhost:5173/projects/{pub_project.slug}</loc>" in xml_text
-    assert f"<loc>http://localhost:5173/jobs/{active_job.id}</loc>" in xml_text
+    base_url = settings.FRONTEND_URL.rstrip("/")
+    assert f"<loc>{base_url}/projects/{pub_project.slug}</loc>" in xml_text
+    assert f"<loc>{base_url}/jobs/{active_job.id}</loc>" in xml_text
 
     # Draft project and inactive job MUST NOT be in sitemap
     assert "secret-internal-draft" not in xml_text
@@ -165,4 +168,5 @@ async def test_robots_txt_endpoint(client):
     assert "Disallow: /admin/" in content
     assert "Disallow: /workspace" in content
     assert "Disallow: /dashboard" in content
-    assert "Sitemap: http://localhost:5173/sitemap.xml" in content
+    base_url = settings.FRONTEND_URL.rstrip("/")
+    assert f"Sitemap: {base_url}/sitemap.xml" in content
