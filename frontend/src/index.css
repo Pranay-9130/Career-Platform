@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #0F172A;
+    background-color: #F8FBFF;
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  }
+
+  /* WCAG 2.1 AA Focus Visible enhancement */
+  :focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 2px;
+  }
+
+  /* Respect user motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .gradient-brand {
+    background-image: linear-gradient(135deg, #0284C7 0%, #06B6D4 100%);
+  }
+
+  .gradient-brand-subtle {
+    background-image: linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 100%);
+  }
+
+  .text-gradient-brand {
+    background-image: linear-gradient(135deg, #0284C7 0%, #06B6D4 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}

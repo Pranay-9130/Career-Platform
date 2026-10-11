@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /resumes/builder/
+Disallow: /dashboard
+Disallow: /workspace
+Disallow: /settings
+Disallow: /api/
+
+Sitemap: https://studentcareer.dev/sitemap.xml

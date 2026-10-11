@@ -1,0 +1,354 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
+  CheckCircle2,
+  LogOut,
+} from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Button, Input, Card, Alert } from '@/components/common';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
+
+export default function LoginPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { loginWithCredentials, loginWithGoogle, isAuthenticated, user, logout } = useAuth();
+
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: true,
+  });
+
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  const redirectPath = location.state?.from?.pathname || (user?.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+
+  // Client-side form validation
+  const validate = () => {
+    const errs = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!formData.email.trim()) {
+      errs.email = 'Email address is required.';
+    } else if (!emailRegex.test(formData.email.trim())) {
+      errs.email = 'Please provide a valid email address.';
+    }
+
+    if (!formData.password) {
+      errs.password = 'Password is required.';
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+    // Clear field-specific error as user types
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }));
+    }
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await loginWithCredentials(
+        formData.email.trim(),
+        formData.password
+      );
+
+      const targetPath =
+        location.state?.from?.pathname ||
+        (response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+
+      navigate(targetPath, { replace: true });
+    } catch (err) {
+      const message =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        'Unable to log in. Please check your credentials and try again.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credential) => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const response = await loginWithGoogle(credential);
+      const targetPath =
+        location.state?.from?.pathname ||
+        (response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+
+      navigate(targetPath, { replace: true });
+    } catch (err) {
+      const message =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        'Unable to complete Google sign-in. Please try again.';
+      setErrorMessage(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleError = (err) => {
+    setErrorMessage(err?.message || 'Google sign-in was interrupted.');
+  };
+
+  // Quick Demo Account Auto-Fill Helper for instant testing
+  const handleQuickDemo = (demoEmail, demoPassword) => {
+    setFormData({
+      email: demoEmail,
+      password: demoPassword,
+      rememberMe: true,
+    });
+    setErrors({});
+    setErrorMessage(null);
+  };
+
+  return (
+    <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Decorative background glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-100/60 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute bottom-10 right-1/4 w-72 h-72 bg-cyan-100/50 rounded-full blur-2xl pointer-events-none -z-10" />
+
+      <div className="max-w-md w-full space-y-6">
+        {/* Brand Header */}
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold mb-4 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Welcome to Student Career Platform</span>
+          </div>
+          <h1 className="text-3xl font-display font-bold text-brand-text tracking-tight">
+            Sign in to your account
+          </h1>
+          <p className="mt-2 text-sm text-brand-muted">
+            Access your projects, resume builder, and job application tracker.
+          </p>
+        </div>
+
+        {/* Login Card */}
+        <Card className="p-8 shadow-card border-brand-border bg-white/95 backdrop-blur-sm">
+          {isAuthenticated && (
+            <div className="mb-6 p-4 rounded-2xl bg-brand-veryLight border border-brand-border text-xs text-brand-text space-y-2.5">
+              <div className="flex items-center gap-2 font-semibold text-brand-primary">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Active Session Detected</span>
+              </div>
+              <p className="text-slate-600">
+                You are currently signed in as <strong>{user?.email}</strong> ({user?.role}).
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Button size="sm" variant="primary" onClick={() => navigate(redirectPath, { replace: true })}>
+                  Continue to {redirectPath.includes('admin') ? 'Admin Dashboard' : redirectPath.includes('projects') ? 'Project' : 'Dashboard'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={logout} leftIcon={LogOut}>
+                  Sign Out / Switch Account
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {location.state?.message && !isAuthenticated && (
+            <div className="mb-6 p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center gap-2.5">
+              <Lock className="w-4 h-4 text-brand-primary shrink-0" />
+              <span>{location.state.message}</span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <Alert
+              variant="error"
+              title="Authentication Failed"
+              className="mb-6"
+              onClose={() => setErrorMessage(null)}
+            >
+              {errorMessage}
+            </Alert>
+          )}
+
+          {/* Google Sign-In Option */}
+          <div className="mb-6">
+            <GoogleSignInButton
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              isLoading={isSubmitting}
+            />
+
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-brand-border/80" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white/95 px-3 text-brand-muted font-medium uppercase tracking-wider">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            {/* Email Input */}
+            <div>
+              <Input
+                label="Email Address"
+                id="login-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="name@university.edu"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
+                leftIcon={Mail}
+                required
+              />
+            </div>
+
+            {/* Password Input */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="login-password"
+                  className="block text-xs font-semibold text-brand-text"
+                >
+                  Password <span className="text-brand-error ml-1">*</span>
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-medium text-brand-primary hover:text-blue-700 hover:underline transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  leftIcon={Lock}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-3 top-[11px] text-brand-muted hover:text-brand-text focus:outline-none transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me */}
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                checked={formData.rememberMe}
+                onChange={handleChange}
+                className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-brand-border rounded cursor-pointer"
+              />
+              <label
+                htmlFor="rememberMe"
+                className="ml-2 block text-xs text-brand-muted cursor-pointer select-none"
+              >
+                Keep me signed in on this device
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              variant="gradient"
+              size="lg"
+              className="w-full shadow-sm hover:shadow"
+              isLoading={isSubmitting}
+              rightIcon={ArrowRight}
+            >
+              {isSubmitting ? 'Authenticating...' : 'Sign In'}
+            </Button>
+          </form>
+
+          {/* Quick Demo Fillers for Testing & Verification */}
+          <div className="mt-6 pt-5 border-t border-brand-border/70">
+            <p className="text-[11px] font-semibold text-brand-muted uppercase tracking-wider mb-2 text-center">
+              Quick Demo Fill (for testing)
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickDemo('student@university.edu', 'Student123!')
+                }
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-brand-veryLight text-brand-primary border border-brand-border hover:bg-brand-sky hover:border-blue-300 transition-colors"
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Student Demo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  handleQuickDemo('admin@careerplatform.com', 'Admin123!')
+                }
+                className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Admin Demo</span>
+              </button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Footer Register Redirect */}
+        <p className="text-center text-xs text-brand-muted">
+          Don't have an account yet?{' '}
+          <Link
+            to="/register"
+            className="text-brand-primary font-semibold hover:text-blue-700 hover:underline"
+          >
+            Create an account for free
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
