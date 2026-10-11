@@ -64,6 +64,13 @@ class Settings(BaseSettings):
         # Asyncpg uses 'ssl=require' instead of psycopg2's 'sslmode=require'
         if "postgresql+asyncpg://" in url and "sslmode=" in url:
             url = url.replace("sslmode=", "ssl=")
+        
+        # Asyncpg does not support libpq's channel_binding parameter
+        if "channel_binding=" in url:
+            import re
+            url = re.sub(r"[?&]channel_binding=[^&]+", "", url)
+            if "?" not in url and "&" in url:
+                url = url.replace("&", "?", 1)
         self.DATABASE_URL = url
 
         sync_url = self.SYNC_DATABASE_URL
