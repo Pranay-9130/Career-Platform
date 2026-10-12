@@ -20,7 +20,7 @@ import { dashboardService } from '@/services/dashboardService';
 
 export default function StudentLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [counts, setCounts] = useState({ projects: null, applications: null });
+  const [counts, setCounts] = useState({ projects: null, applications: null, saved: null });
   const location = useLocation();
   const { user } = useAuth();
 
@@ -32,6 +32,7 @@ export default function StudentLayout() {
         setCounts({
           projects: summary.stats.projects_count ?? 0,
           applications: summary.stats.active_applications_count ?? 0,
+          saved: summary.stats.saved_items_count ?? 0,
         });
       }
     } catch (err) {
@@ -39,6 +40,7 @@ export default function StudentLayout() {
       setCounts((prev) => ({
         projects: prev.projects ?? 0,
         applications: prev.applications ?? 0,
+        saved: prev.saved ?? 0,
       }));
     }
   }, [user]);
@@ -70,7 +72,12 @@ export default function StudentLayout() {
       icon: Send,
       badge: counts.applications !== null ? String(counts.applications) : null,
     },
-    { name: 'Saved Items', path: '/saved', icon: Bookmark },
+    {
+      name: 'Saved Items',
+      path: '/saved',
+      icon: Bookmark,
+      badge: counts.saved !== null && counts.saved > 0 ? String(counts.saved) : null,
+    },
     { name: 'Profile', path: '/profile', icon: User },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];

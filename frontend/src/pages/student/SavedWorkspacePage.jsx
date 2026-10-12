@@ -50,6 +50,7 @@ export default function SavedWorkspacePage() {
     try {
       await projectService.toggleBookmark(projectId);
       setSavedProjects((prev) => prev.filter((p) => p.id !== projectId));
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
     } catch (err) {
       console.error('Failed to remove project bookmark:', err);
     }
@@ -59,6 +60,7 @@ export default function SavedWorkspacePage() {
     try {
       await jobService.toggleJobBookmark(jobId);
       setSavedJobs((prev) => prev.filter((j) => j.id !== jobId));
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
     } catch (err) {
       console.error('Failed to remove job bookmark:', err);
     }

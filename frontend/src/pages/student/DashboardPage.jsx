@@ -195,7 +195,7 @@ export default function DashboardPage() {
             <span>
               {loading
                 ? 'Loading...'
-                : `${data?.stats?.projects_under_review ?? 0} in review`}
+                : `${data?.stats?.projects_under_review ?? 0} in review • ${data?.stats?.projects_draft ?? 0} drafts`}
             </span>
             <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-brand-primary group-hover:translate-x-1 transition-all" />
           </div>
@@ -221,9 +221,11 @@ export default function DashboardPage() {
               ) : (
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-extrabold font-display text-brand-text">
-                    {data?.stats?.resume_completion_percentage ?? 40}%
+                    {data?.has_resume ? `${data?.stats?.resume_completion_percentage ?? 0}%` : '0%'}
                   </span>
-                  <span className="text-xs font-medium text-slate-500">completed</span>
+                  <span className="text-xs font-medium text-slate-500">
+                    {data?.has_resume ? 'completed' : 'no resume'}
+                  </span>
                 </div>
               )}
             </div>
@@ -233,13 +235,15 @@ export default function DashboardPage() {
               <div
                 className="bg-brand-cyan h-full rounded-full transition-all duration-500"
                 style={{
-                  width: `${loading ? 0 : data?.stats?.resume_completion_percentage ?? 40}%`,
+                  width: `${loading ? 0 : data?.has_resume ? (data?.stats?.resume_completion_percentage ?? 0) : 0}%`,
                 }}
               />
             </div>
             <div className="flex items-center justify-between text-xs text-brand-muted">
-              <span>Tailored for tech roles</span>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-brand-cyan group-hover:translate-x-1 transition-all" />
+              <span className="truncate max-w-[150px]">
+                {data?.has_resume ? (data?.latest_resume_title || 'Active Resume') : 'Build first ATS resume'}
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-brand-cyan group-hover:translate-x-1 transition-all shrink-0" />
             </div>
           </div>
         </Link>
@@ -271,7 +275,7 @@ export default function DashboardPage() {
                   )}
                   {data?.stats?.ats_score ? (
                     <Badge variant="approved" size="sm" className="ml-auto">
-                      Strong Match
+                      Analyzed
                     </Badge>
                   ) : (
                     <Badge variant="neutral" size="sm" className="ml-auto">
@@ -284,7 +288,7 @@ export default function DashboardPage() {
           </div>
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-brand-muted">
             <span>
-              {data?.stats?.ats_score ? 'Top 15% of candidates' : 'Upload CV for check'}
+              {data?.stats?.ats_score ? 'Latest scanned match' : 'Upload CV for check'}
             </span>
             <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-brand-primary group-hover:translate-x-1 transition-all" />
           </div>
@@ -450,7 +454,205 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* 7. Main Two-Column Layout: Activity Feed & Recommended Opportunities */}
+      {/* 7. Overview Breakdowns: Projects & Applications */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Project Overview Card */}
+        <div className="bg-white rounded-card border border-brand-border shadow-card p-5 sm:p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-brand-primary flex items-center justify-center">
+                  <FolderGit2 className="w-4 h-4" />
+                </div>
+                <h3 className="font-display font-bold text-base text-brand-text">Project Overview</h3>
+              </div>
+              <Link to="/my-projects" className="text-xs font-semibold text-brand-primary hover:underline flex items-center gap-1">
+                <span>View all</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-slate-500 uppercase">Total</span>
+                <p className="text-xl font-extrabold text-brand-text mt-1">{data?.stats?.projects_count ?? 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-amber-700 uppercase">Drafts</span>
+                <p className="text-xl font-extrabold text-amber-700 mt-1">{data?.stats?.projects_draft ?? 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-blue-700 uppercase">In Review</span>
+                <p className="text-xl font-extrabold text-brand-primary mt-1">{data?.stats?.projects_under_review ?? 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-emerald-700 uppercase">Published</span>
+                <p className="text-xl font-extrabold text-emerald-700 mt-1">{data?.stats?.projects_published ?? 0}</p>
+              </div>
+            </div>
+          </div>
+
+          {(data?.stats?.projects_count ?? 0) === 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-brand-muted">
+              <span>No showcase projects created yet.</span>
+              <Link to="/my-projects" className="text-brand-primary font-bold hover:underline">
+                + Add Project
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Applications Overview Card */}
+        <div className="bg-white rounded-card border border-brand-border shadow-card p-5 sm:p-6 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Send className="w-4 h-4" />
+                </div>
+                <h3 className="font-display font-bold text-base text-brand-text">Applications Overview</h3>
+              </div>
+              <Link to="/applications" className="text-xs font-semibold text-brand-primary hover:underline flex items-center gap-1">
+                <span>Tracker</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-slate-500 uppercase">Submitted</span>
+                <p className="text-xl font-extrabold text-brand-text mt-1">{data?.stats?.active_applications_count ?? 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-sky-700 uppercase">In Review</span>
+                <p className="text-xl font-extrabold text-sky-700 mt-1">{data?.stats?.applications_applied ?? 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-purple-700 uppercase">Interview</span>
+                <p className="text-xl font-extrabold text-purple-700 mt-1">{data?.stats?.interviews_scheduled_count ?? 0}</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl text-center">
+                <span className="text-[11px] font-bold text-emerald-700 uppercase">Offers</span>
+                <p className="text-xl font-extrabold text-emerald-700 mt-1">{data?.stats?.applications_offer ?? 0}</p>
+              </div>
+            </div>
+          </div>
+
+          {(data?.stats?.active_applications_count ?? 0) === 0 && (
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-brand-muted">
+              <span>No submitted applications in pipeline.</span>
+              <Link to="/jobs" className="text-brand-primary font-bold hover:underline">
+                Explore Open Jobs
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 8. Recently Applied Section */}
+      <div className="bg-white rounded-card border border-brand-border shadow-card p-5 sm:p-6">
+        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-base text-brand-text">Recently Applied</h3>
+              <p className="text-xs text-brand-muted">Track your submitted job applications and status progression.</p>
+            </div>
+          </div>
+          <Link
+            to="/applications"
+            className="text-xs font-semibold text-brand-primary hover:underline inline-flex items-center gap-1"
+          >
+            <span>View all</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="mt-4">
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="p-3.5 border border-slate-100 rounded-xl space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+              ))}
+            </div>
+          ) : (data?.recent_applications || []).length === 0 ? (
+            <div className="py-10 text-center rounded-2xl bg-slate-50/60 border border-dashed border-slate-200 p-6">
+              <div className="w-12 h-12 rounded-2xl bg-white shadow-xs border border-slate-200 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-slate-800">You haven't applied to any jobs yet.</h4>
+              <p className="text-xs text-brand-muted mt-1 max-w-sm mx-auto">
+                Explore student internships, entry-level engineering roles, and apply to track your interviews here.
+              </p>
+              <div className="mt-4">
+                <Link to="/jobs">
+                  <Button size="sm" variant="primary" leftIcon={Briefcase}>
+                    Explore Jobs
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    <th className="pb-2.5">Position / Role</th>
+                    <th className="pb-2.5">Company</th>
+                    <th className="pb-2.5">Location</th>
+                    <th className="pb-2.5">Date Applied</th>
+                    <th className="pb-2.5">Status</th>
+                    <th className="pb-2.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(data?.recent_applications || []).map((app) => {
+                    const getStatusBadge = (st) => {
+                      switch (st) {
+                        case 'Interviewing':
+                          return <Badge variant="secondary">Interviewing</Badge>;
+                        case 'Offer':
+                          return <Badge variant="approved">Offer</Badge>;
+                        case 'Rejected':
+                          return <Badge variant="danger">Rejected</Badge>;
+                        case 'Applied':
+                        default:
+                          return <Badge variant="neutral">Applied</Badge>;
+                      }
+                    };
+
+                    return (
+                      <tr key={app.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 font-bold text-brand-text">{app.position_title}</td>
+                        <td className="py-3 text-slate-600 font-medium">{app.company_name}</td>
+                        <td className="py-3 text-slate-500">{app.job_location || 'Remote'}</td>
+                        <td className="py-3 text-slate-500">{formatRelativeTime(app.applied_date)}</td>
+                        <td className="py-3">{getStatusBadge(app.status)}</td>
+                        <td className="py-3 text-right">
+                          <Link
+                            to="/applications"
+                            className="text-brand-primary font-semibold hover:underline inline-flex items-center gap-1"
+                          >
+                            <span>Details</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 9. Main Two-Column Layout: Activity Feed & Recommended Opportunities */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Recent Activity Timeline (7 Cols) */}
         <div className="lg:col-span-7 bg-white rounded-card border border-brand-border shadow-card p-5 sm:p-6 flex flex-col">
@@ -484,7 +686,7 @@ export default function DashboardPage() {
             ) : (data?.recent_activity || []).length === 0 ? (
               <div className="py-12 text-center text-brand-muted">
                 <Compass className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                <p className="text-xs font-medium">No recent activity recorded yet.</p>
+                <p className="text-xs font-medium">No recent activity yet.</p>
                 <p className="text-[11px] mt-1 text-slate-400">
                   Actions you take on projects or applications will appear here.
                 </p>

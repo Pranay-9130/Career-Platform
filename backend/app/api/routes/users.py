@@ -12,10 +12,14 @@ from app.models.project import Project
 from app.models.job_application import JobApplication
 from app.models.project_bookmark import ProjectBookmark
 from app.models.job_bookmark import JobBookmark
+from app.models.resume import Resume
+from app.models.notification import Notification
+from app.models.job import Job
 from app.schemas.dashboard import (
     DashboardStats,
     DashboardActivity,
     DashboardRecommendation,
+    DashboardRecentApplication,
     DashboardSummaryResponse,
 )
 from app.schemas.profile import (
@@ -128,96 +132,127 @@ async def get_dashboard_summary(
     """
     Aggregates high-level workspace metrics for the authenticated student,
     including project counts, resume progress, recent activity history,
-    and curated project/job recommendations.
+    recent applications, and curated project/job recommendations.
     """
     now = datetime.now(timezone.utc)
 
+    # 1. Project counts by actual status
     projects_count = 0
+    projects_draft = 0
     projects_under_review = 0
+    projects_published = 0
+
+    # 2. Application pipeline counts
     active_applications_count = 0
+    applications_applied = 0
     interviews_scheduled_count = 0
+    applications_offer = 0
+    applications_rejected = 0
+    saved_jobs_count = 0
+
+    # 3. Saved items & notifications
     saved_items_count = 0
-    resume_completion = 40
+    unread_notifications_count = 0
+
+    # 4. Profile & Resume
+    resume_completion = 0
+    has_resume = False
+    latest_resume_title = None
+
+    # 5. Recent records
+    recent_applications = []
+    recent_activity = []
+    recommended_opportunities = []
 
     try:
-        # Fetch real user metrics from database
-        stmt_projects = select(func.count(Project.id)).where(Project.owner_id == current_user.id)
-        projects_count = (await db.scalar(stmt_projects)) or 0
-
-        stmt_under_review = select(func.count(Project.id)).where(
-            Project.owner_id == current_user.id,
-            Project.status == "Under Review",
+        # A. Projects Breakdown
+        stmt_p_all = (
+            select(Project.status, func.count(Project.id))
+            .where(Project.owner_id == current_user.id)
+            .group_by(Project.status)
         )
-        projects_under_review = (await db.scalar(stmt_under_review)) or 0
+        p_rows = (await db.execute(stmt_p_all)).all()
+        p_counts = {r[0]: r[1] for r in p_rows}
+        projects_count = sum(p_counts.values())
+        projects_draft = p_counts.get("Draft", 0)
+        projects_under_review = p_counts.get("Submitted", 0) + p_counts.get("Under Review", 0)
+        projects_published = p_counts.get("Published", 0)
 
-        stmt_apps = select(func.count(JobApplication.id)).where(JobApplication.user_id == current_user.id)
-        active_applications_count = (await db.scalar(stmt_apps)) or 0
-
-        stmt_interviews = select(func.count(JobApplication.id)).where(
-            JobApplication.user_id == current_user.id,
-            JobApplication.status == "Interviewing",
+        # B. Applications Breakdown (Excluding "Saved" from submitted applications)
+        stmt_a_all = (
+            select(JobApplication.status, func.count(JobApplication.id))
+            .where(JobApplication.user_id == current_user.id)
+            .group_by(JobApplication.status)
         )
-        interviews_scheduled_count = (await db.scalar(stmt_interviews)) or 0
+        a_rows = (await db.execute(stmt_a_all)).all()
+        a_counts = {r[0]: r[1] for r in a_rows}
+        applications_applied = a_counts.get("Applied", 0)
+        interviews_scheduled_count = a_counts.get("Interviewing", 0)
+        applications_offer = a_counts.get("Offer", 0)
+        applications_rejected = a_counts.get("Rejected", 0)
+        saved_jobs_count = a_counts.get("Saved", 0)
+        active_applications_count = (
+            applications_applied + interviews_scheduled_count + applications_offer + applications_rejected
+        )
 
+        # C. Bookmarks & Unread Notifications
         stmt_pb = select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == current_user.id)
         stmt_jb = select(func.count(JobBookmark.id)).where(JobBookmark.user_id == current_user.id)
-        saved_items_count = ((await db.scalar(stmt_pb)) or 0) + ((await db.scalar(stmt_jb)) or 0)
+        pb_count = (await db.scalar(stmt_pb)) or 0
+        jb_count = (await db.scalar(stmt_jb)) or 0
+        saved_items_count = pb_count + jb_count
 
-        # Calculate real profile completion
+        stmt_notif = (
+            select(func.count(Notification.id))
+            .where(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+        )
+        unread_notifications_count = (await db.scalar(stmt_notif)) or 0
+
+        # D. Profile Completion
         stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
-        profile = await db.scalar(stmt_prof)
+        profile = (await db.scalars(stmt_prof)).first()
         if profile:
             resume_completion = calculate_profile_completion(current_user, profile)
-    except Exception as db_err:
-        logger.warning("Error querying dashboard metrics from DB: %s", db_err)
+        elif current_user.full_name:
+            resume_completion = 25
 
-    stats = DashboardStats(
-        projects_count=projects_count,
-        projects_under_review=projects_under_review,
-        resume_completion_percentage=resume_completion,
-        ats_score=None,
-        active_applications_count=active_applications_count,
-        interviews_scheduled_count=interviews_scheduled_count,
-        saved_items_count=saved_items_count,
-    )
-
-    # Activity history tailored to real user state
-    recent_activity = [
-        DashboardActivity(
-            id="act-1",
-            action="Account Registered",
-            title=f"Welcome to Career Platform, {current_user.full_name}!",
-            timestamp=current_user.created_at or now,
-            category="account",
-            link="/profile",
-        ),
-    ]
-
-    if current_user.is_verified:
-        recent_activity.insert(
-            0,
-            DashboardActivity(
-                id="act-verified",
-                action="Security Verified",
-                title="Email identity verified. Student Workspace unlocked.",
-                timestamp=current_user.updated_at or now,
-                category="account",
-                link="/dashboard",
-            ),
+        # E. Resume Record Check
+        stmt_res = (
+            select(Resume)
+            .where(Resume.user_id == current_user.id)
+            .order_by(desc(Resume.is_primary), desc(Resume.updated_at))
+            .limit(1)
         )
+        user_resume = (await db.scalars(stmt_res)).first()
+        if user_resume:
+            has_resume = True
+            latest_resume_title = user_resume.title
 
-    try:
-        # Real applications activity
+        # F. Real Recently Applied Records (status != 'Saved')
         stmt_recent_apps = (
             select(JobApplication)
-            .where(JobApplication.user_id == current_user.id)
+            .where(JobApplication.user_id == current_user.id, JobApplication.status != "Saved")
             .order_by(desc(JobApplication.applied_date))
-            .limit(3)
+            .limit(5)
         )
-        recent_apps = (await db.scalars(stmt_recent_apps)).all()
-        for app in recent_apps:
-            recent_activity.insert(
-                0,
+        recent_app_records = (await db.scalars(stmt_recent_apps)).all()
+        for app in recent_app_records:
+            recent_applications.append(
+                DashboardRecentApplication(
+                    id=str(app.id),
+                    company_name=app.company_name,
+                    position_title=app.position_title,
+                    status=app.status,
+                    applied_date=app.applied_date or now,
+                    job_location=app.job_location or "Remote",
+                    work_mode=app.work_mode or "Remote",
+                    salary_or_stipend=app.salary_or_stipend,
+                )
+            )
+
+        # G. Genuine Recent Activity Timeline
+        for app in recent_app_records[:3]:
+            recent_activity.append(
                 DashboardActivity(
                     id=f"app-{app.id}",
                     action="Application Submitted",
@@ -225,10 +260,9 @@ async def get_dashboard_summary(
                     timestamp=app.applied_date or now,
                     category="application",
                     link="/applications",
-                ),
+                )
             )
 
-        # Real projects activity
         stmt_recent_proj = (
             select(Project)
             .where(Project.owner_id == current_user.id)
@@ -237,8 +271,7 @@ async def get_dashboard_summary(
         )
         recent_projs = (await db.scalars(stmt_recent_proj)).all()
         for proj in recent_projs:
-            recent_activity.insert(
-                0,
+            recent_activity.append(
                 DashboardActivity(
                     id=f"proj-{proj.id}",
                     action="Project Created",
@@ -246,65 +279,165 @@ async def get_dashboard_summary(
                     timestamp=proj.created_at or now,
                     category="project",
                     link="/my-projects",
-                ),
+                )
             )
-    except Exception as act_err:
-        logger.warning("Error querying recent activity from DB: %s", act_err)
 
-    # Curated recommendations based on student track
-    recommended_opportunities = [
-        DashboardRecommendation(
-            id="rec-1",
-            title="Full-Stack Career Platform Architecture",
-            organization="CareerPlatform Labs",
-            category="project",
-            domain="Full Stack / React / FastAPI",
-            tag="Intermediate",
-            location="Remote Guide",
-            link="/projects",
-        ),
-        DashboardRecommendation(
-            id="rec-2",
-            title="Junior Cloud & DevOps Engineering Intern",
-            organization="CloudScale Dynamics",
-            category="job",
-            domain="Cloud Architecture / Docker",
-            tag="$38/hr Stipend",
-            location="Remote",
-            link="/jobs",
-        ),
-        DashboardRecommendation(
-            id="rec-3",
-            title="AI Resume Parser & ATS Matching Engine",
-            organization="OpenSource Talent AI",
-            category="project",
-            domain="AI / NLP / Python",
-            tag="Advanced",
-            location="Open Source",
-            link="/projects",
-        ),
-        DashboardRecommendation(
-            id="rec-4",
-            title="Software Engineering Intern — Summer 2026",
-            organization="Stripe",
-            category="job",
-            domain="Backend Systems",
-            tag="$52/hr Stipend",
-            location="Hybrid (SF / Seattle)",
-            link="/jobs",
-        ),
-    ]
+        if user_resume:
+            recent_activity.append(
+                DashboardActivity(
+                    id=f"resume-{user_resume.id}",
+                    action="Resume Updated",
+                    title=f"Resume '{user_resume.title}' updated",
+                    timestamp=user_resume.updated_at or now,
+                    category="resume",
+                    link="/resume-builder",
+                )
+            )
 
-    readiness_score = 78 if current_user.is_verified else 45
-    readiness_stage = (
-        "Stage 3: Verified Creator"
-        if current_user.is_verified
-        else "Stage 1: Profile Setup"
-    )
-    next_milestone = (
-        "Complete your ATS scan for 'Junior Software Engineer' to unlock interview fast-track."
-        if current_user.is_verified
-        else "Verify your email address and upload your first academic project to unlock recruiter visibility."
+        recent_activity.append(
+            DashboardActivity(
+                id=f"user-{current_user.id}",
+                action="Account Registered",
+                title=f"Welcome to Career Platform, {current_user.full_name}!",
+                timestamp=current_user.created_at or now,
+                category="account",
+                link="/profile",
+            )
+        )
+
+        if current_user.is_verified:
+            recent_activity.append(
+                DashboardActivity(
+                    id=f"verified-{current_user.id}",
+                    action="Security Verified",
+                    title="Email identity verified. Student Workspace unlocked.",
+                    timestamp=current_user.updated_at or now,
+                    category="account",
+                    link="/dashboard",
+                )
+            )
+
+        recent_activity.sort(key=lambda x: x.timestamp, reverse=True)
+        recent_activity = recent_activity[:10]
+
+        # H. Recommendations: Active DB jobs and published showcase projects
+        stmt_live_jobs = (
+            select(Job)
+            .where(Job.is_active == True)
+            .order_by(desc(Job.is_featured), desc(Job.created_at))
+            .limit(3)
+        )
+        live_jobs = (await db.scalars(stmt_live_jobs)).all()
+        for j in live_jobs:
+            recommended_opportunities.append(
+                DashboardRecommendation(
+                    id=f"job-{j.id}",
+                    title=j.title,
+                    organization=j.company_name,
+                    category="job",
+                    domain=j.domain,
+                    tag=j.stipend_or_salary or j.job_type,
+                    location=j.location,
+                    link=f"/jobs/{j.id}",
+                )
+            )
+
+        stmt_pub_proj = (
+            select(Project)
+            .where(Project.status == "Published")
+            .order_by(desc(Project.stars_count), desc(Project.created_at))
+            .limit(3)
+        )
+        pub_projs = (await db.scalars(stmt_pub_proj)).all()
+        for p in pub_projs:
+            recommended_opportunities.append(
+                DashboardRecommendation(
+                    id=f"proj-{p.id}",
+                    title=p.title,
+                    organization="Community Showcase",
+                    category="project",
+                    domain=p.domain,
+                    tag=p.difficulty,
+                    location="Open Source",
+                    link=f"/projects/{p.slug}",
+                )
+            )
+
+    except Exception as db_err:
+        logger.warning("Error querying dashboard metrics from DB: %s", db_err)
+
+    # Fallback to standard platform project guides if DB has no opportunities (e.g., test suite)
+    if len(recommended_opportunities) < 2:
+        fallback_guides = [
+            DashboardRecommendation(
+                id="guide-1",
+                title="Full-Stack Career Platform Architecture",
+                organization="Platform Project Guide",
+                category="project",
+                domain="Full Stack / React / FastAPI",
+                tag="Intermediate",
+                location="Remote Guide",
+                link="/projects",
+            ),
+            DashboardRecommendation(
+                id="guide-2",
+                title="AI Resume Parser & ATS Matching Engine",
+                organization="Platform Project Guide",
+                category="project",
+                domain="AI / NLP / Python",
+                tag="Advanced",
+                location="Open Source Guide",
+                link="/projects",
+            ),
+        ]
+        for fg in fallback_guides:
+            if len(recommended_opportunities) < 4:
+                recommended_opportunities.append(fg)
+
+    # I. Dynamic Career Readiness Calculation
+    score = 0
+    if current_user.is_verified:
+        score += 25
+    score += int((resume_completion / 100) * 25)
+    if has_resume:
+        score += 20
+    if projects_count > 0:
+        score += 15
+    if projects_published > 0:
+        score += 15
+    readiness_score = min(max(score, 10), 100)
+
+    if readiness_score < 40:
+        readiness_stage = "Stage 1: Profile Setup"
+        next_milestone = (
+            "Verify your student email and complete profile fields to unlock recruiter discovery."
+        )
+    elif readiness_score < 70:
+        readiness_stage = "Stage 2: Skill Builder"
+        next_milestone = (
+            "Showcase your first practical project to reach Stage 3: Verified Creator."
+        )
+    else:
+        readiness_stage = "Stage 3: Verified Creator"
+        next_milestone = (
+            "Run an ATS scan in ATS Analyzer to optimize your match for target opportunities."
+        )
+
+    stats = DashboardStats(
+        projects_count=projects_count,
+        projects_draft=projects_draft,
+        projects_under_review=projects_under_review,
+        projects_published=projects_published,
+        resume_completion_percentage=resume_completion,
+        ats_score=None,
+        active_applications_count=active_applications_count,
+        applications_applied=applications_applied,
+        interviews_scheduled_count=interviews_scheduled_count,
+        applications_offer=applications_offer,
+        applications_rejected=applications_rejected,
+        saved_items_count=saved_items_count,
+        saved_jobs_count=saved_jobs_count,
+        unread_notifications_count=unread_notifications_count,
     )
 
     return DashboardSummaryResponse(
@@ -312,6 +445,9 @@ async def get_dashboard_summary(
         stats=stats,
         recent_activity=recent_activity,
         recommended_opportunities=recommended_opportunities,
+        recent_applications=recent_applications,
+        has_resume=has_resume,
+        latest_resume_title=latest_resume_title,
         readiness_score=readiness_score,
         readiness_stage=readiness_stage,
         next_milestone=next_milestone,
