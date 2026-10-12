@@ -169,6 +169,7 @@ export default function ApplicationsPage() {
       }
 
       fetchStats();
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
       setIsModalOpen(false);
     } catch (err) {
       console.error('Failed to save application:', err);
@@ -182,6 +183,7 @@ export default function ApplicationsPage() {
       const updated = await applicationService.updateApplication(appId, { status: newStatus });
       setApplications((prev) => prev.map((a) => (a.id === appId ? updated : a)));
       fetchStats();
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
     } catch (err) {
       console.error('Failed to change status:', err);
     }
@@ -195,6 +197,7 @@ export default function ApplicationsPage() {
       await applicationService.deleteApplication(appId);
       setApplications((prev) => prev.filter((a) => a.id !== appId));
       fetchStats();
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
     } catch (err) {
       console.error('Failed to delete application:', err);
     }

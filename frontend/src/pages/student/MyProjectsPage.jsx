@@ -68,6 +68,7 @@ export default function MyProjectsPage() {
     try {
       await projectService.deleteProject(projectToDelete.slug);
       setProjects((prev) => prev.filter((p) => p.id !== projectToDelete.id));
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
       showToast(`"${projectToDelete.title}" was successfully deleted.`);
       setProjectToDelete(null);
     } catch (err) {

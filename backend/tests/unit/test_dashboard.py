@@ -3,11 +3,34 @@ import pytest_asyncio
 import uuid
 from httpx import AsyncClient, ASGITransport
 
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from app.main import app
+from app.core.database import Base, get_db
 from app.models.user import User, UserRole
 from app.api.dependencies.auth import get_current_active_user
 
 from datetime import datetime, timezone
+
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session():
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    async with session_factory() as session:
+        yield session
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
 
 mock_active_student = User(
     id=uuid.UUID("33333333-3333-3333-3333-333333333333"),
@@ -46,9 +69,10 @@ async def test_unauthenticated_dashboard_rejected():
 
 
 @pytest.mark.asyncio
-async def test_authenticated_student_receives_dashboard_summary():
+async def test_authenticated_student_receives_dashboard_summary(db_session):
     """Authenticated student successfully receives personalized statistics and recommendations."""
     app.dependency_overrides[get_current_active_user] = lambda: mock_active_student
+    app.dependency_overrides[get_db] = lambda: db_session
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/users/dashboard-summary")
@@ -84,9 +108,10 @@ async def test_authenticated_student_receives_dashboard_summary():
 
 
 @pytest.mark.asyncio
-async def test_unverified_student_receives_profile_setup_stage():
+async def test_unverified_student_receives_profile_setup_stage(db_session):
     """Unverified student dashboard reflects initial onboarding stage and advice."""
     app.dependency_overrides[get_current_active_user] = lambda: mock_unverified_student
+    app.dependency_overrides[get_db] = lambda: db_session
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/users/dashboard-summary")

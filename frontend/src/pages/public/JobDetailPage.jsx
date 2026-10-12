@@ -74,6 +74,7 @@ export default function JobDetailPage() {
         status: 'Applied',
       });
       setTrackedSuccess(true);
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
     } catch (err) {
       console.error('Failed to track application:', err);
     } finally {

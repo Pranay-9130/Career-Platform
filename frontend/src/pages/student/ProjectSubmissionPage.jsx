@@ -433,6 +433,7 @@ export default function ProjectSubmissionPage() {
         res = await projectService.createProject(payload);
       }
       localStorage.removeItem(STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
       setSuccessData({ project: res, isDraft: true });
     } catch (err) {
       setSubmitError(
@@ -463,6 +464,7 @@ export default function ProjectSubmissionPage() {
         res = await projectService.createProject(payload);
       }
       localStorage.removeItem(STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent('workspace-counts-updated'));
       setSuccessData({ project: res, isDraft: false });
     } catch (err) {
       setSubmitError(

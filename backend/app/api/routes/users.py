@@ -1,13 +1,17 @@
 import re
+import logging
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.user import User
 from app.models.profile import Profile
 from app.models.project import Project
+from app.models.job_application import JobApplication
+from app.models.project_bookmark import ProjectBookmark
+from app.models.job_bookmark import JobBookmark
 from app.schemas.dashboard import (
     DashboardStats,
     DashboardActivity,
@@ -128,18 +132,56 @@ async def get_dashboard_summary(
     """
     now = datetime.now(timezone.utc)
 
-    # Base student metrics
+    projects_count = 0
+    projects_under_review = 0
+    active_applications_count = 0
+    interviews_scheduled_count = 0
+    saved_items_count = 0
+    resume_completion = 40
+
+    try:
+        # Fetch real user metrics from database
+        stmt_projects = select(func.count(Project.id)).where(Project.owner_id == current_user.id)
+        projects_count = (await db.scalar(stmt_projects)) or 0
+
+        stmt_under_review = select(func.count(Project.id)).where(
+            Project.owner_id == current_user.id,
+            Project.status == "Under Review",
+        )
+        projects_under_review = (await db.scalar(stmt_under_review)) or 0
+
+        stmt_apps = select(func.count(JobApplication.id)).where(JobApplication.user_id == current_user.id)
+        active_applications_count = (await db.scalar(stmt_apps)) or 0
+
+        stmt_interviews = select(func.count(JobApplication.id)).where(
+            JobApplication.user_id == current_user.id,
+            JobApplication.status == "Interviewing",
+        )
+        interviews_scheduled_count = (await db.scalar(stmt_interviews)) or 0
+
+        stmt_pb = select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == current_user.id)
+        stmt_jb = select(func.count(JobBookmark.id)).where(JobBookmark.user_id == current_user.id)
+        saved_items_count = ((await db.scalar(stmt_pb)) or 0) + ((await db.scalar(stmt_jb)) or 0)
+
+        # Calculate real profile completion
+        stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
+        profile = await db.scalar(stmt_prof)
+        if profile:
+            resume_completion = calculate_profile_completion(current_user, profile)
+    except Exception as db_err:
+        logger.warning("Error querying dashboard metrics from DB: %s", db_err)
+
     stats = DashboardStats(
-        projects_count=2 if current_user.is_verified else 0,
-        projects_under_review=1 if current_user.is_verified else 0,
-        resume_completion_percentage=75 if current_user.is_verified else 35,
-        ats_score=82 if current_user.is_verified else None,
-        active_applications_count=3 if current_user.is_verified else 0,
-        interviews_scheduled_count=1 if current_user.is_verified else 0,
-        saved_items_count=4,
+        projects_count=projects_count,
+        projects_under_review=projects_under_review,
+        resume_completion_percentage=resume_completion,
+        ats_score=None,
+        active_applications_count=active_applications_count,
+        interviews_scheduled_count=interviews_scheduled_count,
+        saved_items_count=saved_items_count,
     )
 
-    # Activity history tailored to current user state
+    # Activity history tailored to real user state
     recent_activity = [
         DashboardActivity(
             id="act-1",
@@ -155,36 +197,59 @@ async def get_dashboard_summary(
         recent_activity.insert(
             0,
             DashboardActivity(
-                id="act-2",
+                id="act-verified",
                 action="Security Verified",
                 title="Email identity verified. Student Workspace unlocked.",
-                timestamp=now - timedelta(hours=2),
+                timestamp=current_user.updated_at or now,
                 category="account",
                 link="/dashboard",
             ),
         )
-        recent_activity.insert(
-            0,
-            DashboardActivity(
-                id="act-3",
-                action="Resume Analyzed",
-                title="ATS Analyzer match score calculated: 82/100 (Strong Match)",
-                timestamp=now - timedelta(hours=5),
-                category="resume",
-                link="/ats-analyzer",
-            ),
+
+    try:
+        # Real applications activity
+        stmt_recent_apps = (
+            select(JobApplication)
+            .where(JobApplication.user_id == current_user.id)
+            .order_by(desc(JobApplication.applied_date))
+            .limit(3)
         )
-        recent_activity.insert(
-            0,
-            DashboardActivity(
-                id="act-4",
-                action="Application Submitted",
-                title="Applied for Frontend Engineering Intern at Stripe",
-                timestamp=now - timedelta(days=1),
-                category="application",
-                link="/applications",
-            ),
+        recent_apps = (await db.scalars(stmt_recent_apps)).all()
+        for app in recent_apps:
+            recent_activity.insert(
+                0,
+                DashboardActivity(
+                    id=f"app-{app.id}",
+                    action="Application Submitted",
+                    title=f"Applied for {app.position_title} at {app.company_name}",
+                    timestamp=app.applied_date or now,
+                    category="application",
+                    link="/applications",
+                ),
+            )
+
+        # Real projects activity
+        stmt_recent_proj = (
+            select(Project)
+            .where(Project.owner_id == current_user.id)
+            .order_by(desc(Project.created_at))
+            .limit(3)
         )
+        recent_projs = (await db.scalars(stmt_recent_proj)).all()
+        for proj in recent_projs:
+            recent_activity.insert(
+                0,
+                DashboardActivity(
+                    id=f"proj-{proj.id}",
+                    action="Project Created",
+                    title=f"Showcase project '{proj.title}' ({proj.status})",
+                    timestamp=proj.created_at or now,
+                    category="project",
+                    link="/my-projects",
+                ),
+            )
+    except Exception as act_err:
+        logger.warning("Error querying recent activity from DB: %s", act_err)
 
     # Curated recommendations based on student track
     recommended_opportunities = [

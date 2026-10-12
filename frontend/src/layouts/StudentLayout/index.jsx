@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -16,18 +16,60 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { StudentNavbar } from '@/components/navbar';
+import { dashboardService } from '@/services/dashboardService';
 
 export default function StudentLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [counts, setCounts] = useState({ projects: null, applications: null });
   const location = useLocation();
   const { user } = useAuth();
 
+  const fetchCounts = useCallback(async () => {
+    if (!user) return;
+    try {
+      const summary = await dashboardService.getSummary();
+      if (summary?.stats) {
+        setCounts({
+          projects: summary.stats.projects_count ?? 0,
+          applications: summary.stats.active_applications_count ?? 0,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load workspace counts for sidebar:', err);
+      setCounts((prev) => ({
+        projects: prev.projects ?? 0,
+        applications: prev.applications ?? 0,
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchCounts();
+    const handleWorkspaceUpdate = () => {
+      fetchCounts();
+    };
+    window.addEventListener('workspace-counts-updated', handleWorkspaceUpdate);
+    return () => {
+      window.removeEventListener('workspace-counts-updated', handleWorkspaceUpdate);
+    };
+  }, [fetchCounts, location.pathname]);
+
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'My Projects', path: '/my-projects', icon: FolderGit2, badge: '2' },
+    {
+      name: 'My Projects',
+      path: '/my-projects',
+      icon: FolderGit2,
+      badge: counts.projects !== null ? String(counts.projects) : null,
+    },
     { name: 'Resume Builder', path: '/resume-builder', icon: FileText },
     { name: 'ATS Analyzer', path: '/ats-analyzer', icon: Sparkles, badge: 'New' },
-    { name: 'Applications', path: '/applications', icon: Send, badge: '3' },
+    {
+      name: 'Applications',
+      path: '/applications',
+      icon: Send,
+      badge: counts.applications !== null ? String(counts.applications) : null,
+    },
     { name: 'Saved Items', path: '/saved', icon: Bookmark },
     { name: 'Profile', path: '/profile', icon: User },
     { name: 'Settings', path: '/settings', icon: Settings },
@@ -185,7 +227,7 @@ export default function StudentLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <StudentNavbar onToggleSidebar={() => setMobileSidebarOpen(true)} />
         <main id="main-content" tabIndex="-1" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto outline-none">
-          <Outlet />
+          <Outlet context={{ refreshSidebarCounts: fetchCounts }} />
         </main>
       </div>
     </div>
