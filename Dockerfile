@@ -1,9 +1,16 @@
-FROM node:22-bookworm-slim AS frontend-build
+FROM node:24-bookworm-slim AS frontend-build
 ARG NPM_VERSION=10.9.4
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install --global npm@${NPM_VERSION} --no-audit --no-fund \
-    && npm ci --include=dev --include=optional --no-audit --no-fund
+RUN npm install --global npm@${NPM_VERSION} --no-audit --no-fund
+# Normalize optional/native dependency metadata on Linux before the strict install.
+# npm install respects already locked versions; this does not discard the lockfile.
+RUN npm install --package-lock-only --ignore-scripts --include=dev --include=optional --no-audit --no-fund \
+    && (npm ci --include=dev --include=optional --no-audit --no-fund > /tmp/npm-ci.log 2>&1 \
+        || (cat /tmp/npm-ci.log; \
+            echo '--- npm install failure summary ---'; \
+            grep -E 'EUSAGE|Missing:|Invalid:|npm error code|only install|package.json|lock file|npm error path' /tmp/npm-ci.log | tail -n 20; \
+            exit 1))
 COPY frontend/ ./
 ENV VITE_API_BASE_URL=/api
 RUN npm run build
