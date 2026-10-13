@@ -123,7 +123,7 @@ The default Render blueprint packages the website and API on one domain, with
 database migrations, persistent ZIP storage, and revocable authentication sessions.
 
 ### Prerequisites
-- Node.js 18+ and npm 9+
+- Node.js 24.12+ and npm 10.9.4+ (Docker uses npm 10.9.4)
 - Python 3.11+
 - PostgreSQL 15+ (or local database instance)
 

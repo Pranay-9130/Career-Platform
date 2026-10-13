@@ -65,7 +65,7 @@ class Settings(BaseSettings):
         description="Async database connection string"
     )
     SYNC_DATABASE_URL: str = Field(
-        default="postgresql://postgres:postgres@localhost:5432/career_platform",
+        default="postgresql+psycopg://postgres:postgres@localhost:5432/career_platform",
         description="Synchronous database connection string for migrations"
     )
 
@@ -97,13 +97,15 @@ class Settings(BaseSettings):
 
         sync_url = self.SYNC_DATABASE_URL
         if "SYNC_DATABASE_URL" not in self.model_fields_set:
-            sync_url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            sync_url = url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
             sync_url = sync_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
             sync_url = sync_url.replace("ssl=", "sslmode=")
         if sync_url.startswith("postgres://"):
-            sync_url = sync_url.replace("postgres://", "postgresql://", 1)
+            sync_url = sync_url.replace("postgres://", "postgresql+psycopg://", 1)
         elif sync_url.startswith("postgresql+asyncpg://"):
-            sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+        elif sync_url.startswith("postgresql://"):
+            sync_url = sync_url.replace("postgresql://", "postgresql+psycopg://", 1)
         self.SYNC_DATABASE_URL = sync_url
 
         production_names = {"production", "prod", "release"}

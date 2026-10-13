@@ -98,7 +98,27 @@ def test_production_rejects_default_jwt_secret():
 def test_migrations_derive_the_application_database_url():
     configured = Settings(_env_file=None, DATABASE_URL='postgres://user:pass@database.example/test?sslmode=require')
     assert configured.DATABASE_URL == 'postgresql+asyncpg://user:pass@database.example/test?ssl=require'
-    assert configured.SYNC_DATABASE_URL == 'postgresql://user:pass@database.example/test?sslmode=require'
+    assert configured.SYNC_DATABASE_URL == 'postgresql+psycopg://user:pass@database.example/test?sslmode=require'
+
+
+@pytest.mark.parametrize('scheme', ['postgres', 'postgresql', 'postgresql+psycopg'])
+def test_migration_urls_select_the_installed_psycopg3_driver(scheme):
+    from sqlalchemy import create_engine
+    configured = Settings(_env_file=None, SYNC_DATABASE_URL=f'{scheme}://user:pass@database.example/test?sslmode=require')
+    assert configured.SYNC_DATABASE_URL == 'postgresql+psycopg://user:pass@database.example/test?sslmode=require'
+    # Creating an engine imports its DBAPI but does not connect to the database.
+    engine = create_engine(configured.SYNC_DATABASE_URL)
+    try:
+        assert engine.dialect.driver == 'psycopg'
+        assert engine.dialect.dbapi.__name__ == 'psycopg'
+    finally:
+        engine.dispose()
+
+
+def test_explicit_legacy_migration_driver_is_preserved():
+    legacy_url = 'postgresql+psycopg2://user:pass@database.example/test?sslmode=require'
+    configured = Settings(_env_file=None, SYNC_DATABASE_URL=legacy_url)
+    assert configured.SYNC_DATABASE_URL == legacy_url
 
 
 @pytest.mark.asyncio
