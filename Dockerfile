@@ -19,7 +19,8 @@ FROM python:3.11-slim AS application
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8000 FRONTEND_DIST_DIR=/app/frontend-dist
 WORKDIR /app
 COPY backend/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && python -c "import greenlet; from sqlalchemy.ext.asyncio import create_async_engine"
 COPY backend/ ./
 COPY --from=frontend-build /frontend/dist /app/frontend-dist
 RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
