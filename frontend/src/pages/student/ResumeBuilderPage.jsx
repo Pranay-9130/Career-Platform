@@ -25,6 +25,7 @@ import {
   Download,
 } from 'lucide-react';
 import { resumeService } from '../../services/resumeService';
+import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 
 export default function ResumeBuilderPage() {
@@ -74,12 +75,11 @@ export default function ResumeBuilderPage() {
           const target = data.items[0];
           loadResumeIntoState(target);
         } else {
-          // Auto-seed initial from profile
-          await handleAutoFillFromProfile(templateId);
+          // Load student profile into clean draft without creating fake database records
+          await loadProfileIntoDraft();
         }
       } catch (err) {
         console.error('Failed to initialize resume builder:', err);
-        // Fallback default state
         setDefaultFallbackData();
       } finally {
         setLoading(false);
@@ -101,85 +101,99 @@ export default function ResumeBuilderPage() {
     setCertifications(r.certifications || []);
   };
 
-  const setDefaultFallbackData = () => {
-    setPersonalInfo({
-      full_name: user?.full_name || 'Alex Rivera',
-      headline: 'Software Engineer',
-      email: user?.email || 'alex.rivera@example.com',
-      phone: '+1 (555) 019-2834',
-      location: 'San Francisco, CA',
-      github: 'github.com/developer',
-      linkedin: 'linkedin.com/in/developer',
-      portfolio: '',
-    });
-    setSummary(
-      'Results-driven Software Engineer with hands-on experience building full-stack web applications and scalable APIs. Passionate about automated testing, performance optimization, and clean architecture.'
-    );
-    setEducation([
-      {
-        institution: 'University of Washington',
-        degree: 'B.S. in Computer Science',
-        location: 'Seattle, WA',
-        start_date: '2021',
-        end_date: '2025',
-        gpa: '3.85 / 4.0',
-        highlights: "Algorithms, Distributed Systems, Database Management, Dean's List",
-      },
-    ]);
-    setExperience([
-      {
-        role: 'Software Engineering Intern',
-        company: 'CloudNova Systems',
-        location: 'Remote',
-        start_date: 'May 2024',
-        end_date: 'Aug 2024',
-        current: false,
-        bullets: [
-          'Engineered asynchronous REST APIs utilizing FastAPI and PostgreSQL, cutting P95 response latency by 32%.',
-          'Automated real-time event notifications via WebSockets with 99.9% delivery reliability.',
-          'Built end-to-end integration test runners in GitHub Actions achieving 94% test coverage.',
-        ],
-      },
-    ]);
-    setProjects([
-      {
-        name: 'NexusFlow: Real-Time Event Dispatcher',
-        tech_stack: 'Python, FastAPI, WebSocket, Redis, Docker',
-        link: 'github.com/developer/nexusflow',
-        bullets: [
-          'Constructed high-speed pub/sub message broadcaster handling 2,000 concurrent socket connections.',
-          'Designed fault-tolerant auto-reconnection and JWT authentication mechanisms.',
-        ],
-      },
-    ]);
-    setSkills([
-      'Python',
-      'FastAPI',
-      'JavaScript',
-      'React',
-      'TypeScript',
-      'PostgreSQL',
-      'Docker',
-      'Git',
-      'REST APIs',
-      'Tailwind CSS',
-    ]);
-    setCertifications([
-      { name: 'AWS Certified Cloud Practitioner', issuer: 'Amazon Web Services', date: '2024' },
-    ]);
+  const loadProfileIntoDraft = async () => {
+    try {
+      const prof = await userService.getProfile();
+      setPersonalInfo({
+        full_name: prof.full_name || user?.full_name || '',
+        headline: prof.headline || '',
+        email: prof.email || user?.email || '',
+        phone: '',
+        location: '',
+        github: prof.github_url || '',
+        linkedin: prof.linkedin_url || '',
+        portfolio: prof.portfolio_url || '',
+      });
+      setSummary(prof.bio || '');
+      if (prof.university || prof.degree) {
+        setEducation([
+          {
+            institution: prof.university || '',
+            degree: prof.degree || '',
+            location: '',
+            start_date: '',
+            end_date: prof.graduation_year ? String(prof.graduation_year) : '',
+            gpa: '',
+            highlights: '',
+          },
+        ]);
+      } else {
+        setEducation([]);
+      }
+      setExperience([]);
+      setProjects([]);
+      setSkills(Array.isArray(prof.skills) ? prof.skills : []);
+      setCertifications([]);
+    } catch {
+      setDefaultFallbackData();
+    }
   };
 
-  const handleAutoFillFromProfile = async (targetTemplate = templateId) => {
+  const setDefaultFallbackData = () => {
+    setPersonalInfo({
+      full_name: user?.full_name || '',
+      headline: '',
+      email: user?.email || '',
+      phone: '',
+      location: '',
+      github: '',
+      linkedin: '',
+      portfolio: '',
+    });
+    setSummary('');
+    setEducation([]);
+    setExperience([]);
+    setProjects([]);
+    setSkills([]);
+    setCertifications([]);
+  };
+
+  const handleAutoFillFromProfile = async () => {
     try {
       setSaving(true);
-      const seeded = await resumeService.seedFromProfile(targetTemplate);
-      loadResumeIntoState(seeded);
-      setResumesList((prev) => [seeded, ...prev.filter((item) => item.id !== seeded.id)]);
+      const prof = await userService.getProfile();
+      setPersonalInfo((prev) => ({
+        ...prev,
+        full_name: prof.full_name || prev.full_name || user?.full_name || '',
+        headline: prof.headline || prev.headline || '',
+        email: prof.email || prev.email || user?.email || '',
+        github: prof.github_url || prev.github || '',
+        linkedin: prof.linkedin_url || prev.linkedin || '',
+        portfolio: prof.portfolio_url || prev.portfolio || '',
+      }));
+      if (prof.bio) {
+        setSummary(prof.bio);
+      }
+      if (prof.university || prof.degree) {
+        setEducation([
+          {
+            institution: prof.university || '',
+            degree: prof.degree || '',
+            location: '',
+            start_date: '',
+            end_date: prof.graduation_year ? String(prof.graduation_year) : '',
+            gpa: '',
+            highlights: '',
+          },
+        ]);
+      }
+      if (Array.isArray(prof.skills) && prof.skills.length > 0) {
+        setSkills(prof.skills);
+      }
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (err) {
-      console.error('Failed to seed from profile:', err);
-      setDefaultFallbackData();
+      console.error('Failed to sync from profile:', err);
     } finally {
       setSaving(false);
     }

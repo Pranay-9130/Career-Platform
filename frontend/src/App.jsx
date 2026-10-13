@@ -82,11 +82,7 @@ export default function App() {
               />
               <Route
                 path="/projects/:slug"
-                element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']}>
-                    <ProjectDetailPage />
-                  </ProtectedRoute>
-                }
+                element={<ProjectDetailPage />}
               />
               <Route path="/submission-guidelines" element={<SubmissionGuidelinesPage />} />
               <Route path="/guidelines" element={<SubmissionGuidelinesPage />} />

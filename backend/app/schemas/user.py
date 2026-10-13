@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from app.models.user import UserRole
@@ -24,7 +24,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128, description="Account password (min 8 characters)")
     full_name: str = Field(..., min_length=2, max_length=150, description="Full name of user")
-    role: UserRole = UserRole.STUDENT
+    role: Literal[UserRole.STUDENT] = UserRole.STUDENT
     headline: Optional[str] = None
 
     @field_validator("password")
@@ -43,7 +43,7 @@ class UserCreate(BaseModel):
         return trimmed
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str = Field(..., min_length=1, max_length=255, description="Student email or administrator username")
     password: str = Field(..., min_length=1, description="Account password")
 
 class GoogleLoginRequest(BaseModel):

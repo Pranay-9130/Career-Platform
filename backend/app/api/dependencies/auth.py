@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import decode_token
 from app.models.user import User, UserRole
+from app.models.auth_session import AuthSession
 from app.schemas.token import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(
@@ -41,6 +43,7 @@ async def get_token_payload(token: Optional[str] = Depends(oauth2_scheme)) -> To
             email=payload_dict.get("email"),
             role=str(payload_dict.get("role", "STUDENT")),
             exp=payload_dict.get("exp"),
+            sid=payload_dict.get("sid"),
         )
     except Exception as exc:
         raise HTTPException(
@@ -77,7 +80,22 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if payload.sid and not await session_is_active(payload.sid, user_uuid, db):
+        raise HTTPException(status_code=401, detail="Session has been revoked.",
+                            headers={"WWW-Authenticate": "Bearer"})
     return user
+
+
+async def session_is_active(session_id: str, user_id: uuid.UUID, db: AsyncSession) -> bool:
+    try:
+        identifier = uuid.UUID(session_id)
+    except (ValueError, TypeError):
+        return False
+    return (await db.execute(select(AuthSession.id).where(
+        AuthSession.id == identifier, AuthSession.user_id == user_id,
+        AuthSession.invalidated_at.is_(None),
+        AuthSession.expires_at > datetime.now(timezone.utc),
+    ))).scalar_one_or_none() is not None
 
 
 async def get_current_active_user(
@@ -148,7 +166,9 @@ async def get_optional_current_user(
         return None
     try:
         user_uuid = uuid.UUID(str(payload_dict.get("sub")))
-        result = await db.execute(select(User).where(User.id == user_uuid))
+        if payload_dict.get("sid") and not await session_is_active(payload_dict["sid"], user_uuid, db):
+            return None
+        result = await db.execute(select(User).where(User.id == user_uuid, User.is_active.is_(True)))
         return result.scalar_one_or_none()
     except Exception:
         return None

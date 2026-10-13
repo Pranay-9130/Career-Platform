@@ -1,92 +1,44 @@
 import api from './api';
-
-const TOKEN_KEY = 'career_platform_token';
-const USER_KEY = 'career_platform_user';
+import { authStorage } from './authStorage';
 
 export const authService = {
-  getToken: () => {
+  getToken: () => authStorage.getToken(),
+
+  setToken: (token, persistent = true) => authStorage.setToken(token, persistent),
+
+  getUser: () => authStorage.getUser(),
+
+  setUser: (user) => authStorage.setUser(user),
+
+  clearAuth: () => authStorage.clear(),
+
+  logout: async () => {
+    authStorage.clear();
     try {
-      return localStorage.getItem(TOKEN_KEY);
-    } catch {
-      return null;
+      await api.post('/auth/logout');
+    } finally {
+      authStorage.clear();
     }
   },
 
-  setToken: (token) => {
-    try {
-      if (token) {
-        localStorage.setItem(TOKEN_KEY, token);
-      } else {
-        localStorage.removeItem(TOKEN_KEY);
-      }
-    } catch (err) {
-      console.error('Failed to set token in storage:', err);
-    }
-  },
-
-  getUser: () => {
-    try {
-      const stored = localStorage.getItem(USER_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  },
-
-  setUser: (user) => {
-    try {
-      if (user) {
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
-      } else {
-        localStorage.removeItem(USER_KEY);
-      }
-    } catch (err) {
-      console.error('Failed to set user in storage:', err);
-    }
-  },
-
-  clearAuth: () => {
-    try {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-    } catch (err) {
-      console.error('Failed to clear auth storage:', err);
-    }
-  },
-
-  login: async (credentials) => {
+  login: async (credentials, persistent = true) => {
     const response = await api.post('/auth/login', credentials);
     const { access_token, user } = response.data;
-    if (access_token) {
-      authService.setToken(access_token);
-    }
-    if (user) {
-      authService.setUser(user);
-    }
+    if (access_token && user) authStorage.setSession(access_token, user, persistent);
     return response.data;
   },
 
-  loginWithGoogle: async (credential) => {
+  loginWithGoogle: async (credential, persistent = true) => {
     const response = await api.post('/auth/google', { credential });
     const { access_token, user } = response.data;
-    if (access_token) {
-      authService.setToken(access_token);
-    }
-    if (user) {
-      authService.setUser(user);
-    }
+    if (access_token && user) authStorage.setSession(access_token, user, persistent);
     return response.data;
   },
 
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
     const { access_token, user } = response.data;
-    if (access_token) {
-      authService.setToken(access_token);
-    }
-    if (user) {
-      authService.setUser(user);
-    }
+    if (access_token && user) authStorage.setSession(access_token, user, true);
     return response.data;
   },
 
@@ -101,12 +53,7 @@ export const authService = {
   verifyOtp: async ({ email, otp, purpose = 'registration' }) => {
     const response = await api.post('/auth/verify-otp', { email, otp, purpose });
     const { access_token, user } = response.data;
-    if (access_token) {
-      authService.setToken(access_token);
-    }
-    if (user) {
-      authService.setUser(user);
-    }
+    if (access_token && user) authStorage.setSession(access_token, user, true);
     return response.data;
   },
 

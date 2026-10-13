@@ -86,6 +86,44 @@ def test_allowed_origins_parsing():
     ]
 
 
+def test_production_rejects_default_jwt_secret():
+    """Production cannot start with the public development signing secret."""
+    with pytest.raises(ValueError, match="JWT_SECRET"):
+        Settings(
+            ENVIRONMENT="production",
+            JWT_SECRET="development_secret_change_in_production_minimum_64_characters_random_hex",
+        )
+
+
+def test_migrations_derive_the_application_database_url():
+    configured = Settings(_env_file=None, DATABASE_URL='postgres://user:pass@database.example/test?sslmode=require')
+    assert configured.DATABASE_URL == 'postgresql+asyncpg://user:pass@database.example/test?ssl=require'
+    assert configured.SYNC_DATABASE_URL == 'postgresql://user:pass@database.example/test?sslmode=require'
+
+
+@pytest.mark.asyncio
+async def test_production_does_not_log_or_store_email_secrets(capsys, monkeypatch):
+    monkeypatch.setattr(settings, 'ENVIRONMENT', 'production')
+    monkeypatch.setattr(settings, 'EMAIL_PROVIDER', 'console')
+    EmailService.clear_dev_otps()
+    assert await EmailService.send_otp_email('secret@example.com', '123456') is False
+    assert await EmailService.send_password_reset_email('secret@example.com', 'secret-reset-token') is False
+    assert EmailService.get_last_dev_otp('secret@example.com') is None
+    assert EmailService.get_last_dev_reset_token('secret@example.com') is None
+    output = capsys.readouterr()
+    assert '123456' not in output.out + output.err
+    assert 'secret-reset-token' not in output.out + output.err
+
+
+@pytest.mark.asyncio
+async def test_email_provider_errors_are_propagated(monkeypatch):
+    monkeypatch.setattr(settings, 'EMAIL_PROVIDER', 'smtp')
+    monkeypatch.setattr(settings, 'SMTP_HOST', 'smtp.example.com')
+    monkeypatch.setattr('smtplib.SMTP', MagicMock(side_effect=OSError('unavailable')))
+    assert await EmailService.send_otp_email('delivery@example.com', '123456') is False
+    assert await EmailService.send_password_reset_email('delivery@example.com', 'reset-token') is False
+
+
 @pytest.mark.asyncio
 async def test_email_service_smtp_dispatch():
     """Verify SMTP email dispatch executes through smtplib with correct parameters."""
@@ -266,7 +304,8 @@ async def test_google_sign_in_invalid_token(client):
     mock_resp.status_code = 400
     mock_resp.json.return_value = {"error_description": "Invalid Value"}
 
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+         patch.object(settings, "GOOGLE_CLIENT_ID", "expected-client-id.apps.googleusercontent.com"):
         mock_get.return_value = mock_resp
 
         res = await client.post(

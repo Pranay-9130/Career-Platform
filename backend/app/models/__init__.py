@@ -11,6 +11,8 @@ from app.models.job_application import JobApplication
 from app.models.job_bookmark import JobBookmark
 from app.models.notification import Notification
 from app.models.resume import Resume
+from app.models.auth_session import AuthSession
+from app.models.stored_archive import StoredArchive
 
 __all__ = [
     "Base",
@@ -29,6 +31,8 @@ __all__ = [
     "JobBookmark",
     "Notification",
     "Resume",
+    "AuthSession",
+    "StoredArchive",
 ]
 
 

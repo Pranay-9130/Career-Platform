@@ -27,6 +27,8 @@ export default function Button({
       'bg-brand-primary text-white hover:bg-blue-600 focus:ring-brand-primary shadow-sm hover:shadow',
     secondary:
       'bg-brand-veryLight text-brand-primary border border-brand-border hover:bg-brand-sky hover:border-blue-300 focus:ring-brand-primary',
+    white:
+      'bg-white text-brand-primary hover:bg-blue-50 focus:ring-white shadow-sm font-semibold',
     outline:
       'bg-transparent text-brand-text border border-brand-border hover:bg-brand-veryLight hover:text-brand-primary hover:border-brand-primary focus:ring-brand-primary',
     ghost:

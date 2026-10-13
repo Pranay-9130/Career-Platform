@@ -5,6 +5,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Dict, Optional
+from urllib.parse import urlencode
 import httpx
 
 from app.core.config import settings
@@ -21,6 +22,10 @@ class EmailService:
     # Development in-memory registry of last dispatched OTPs and reset tokens for test verification
     _dev_otp_store: Dict[str, str] = {}
     _dev_reset_token_store: Dict[str, str] = {}
+
+    @staticmethod
+    def _development_dispatch() -> bool:
+        return settings.ENVIRONMENT.strip().lower() not in {"production", "prod", "release"}
 
     @classmethod
     async def _dispatch_email(
@@ -44,7 +49,7 @@ class EmailService:
                 logger.warning(
                     "[EMAIL SERVICE] EMAIL_PROVIDER is 'smtp' but SMTP_HOST is empty. Falling back to console dispatch."
                 )
-                return True
+                return cls._development_dispatch()
             try:
                 def _send_sync():
                     msg = MIMEMultipart("alternative")
@@ -72,7 +77,7 @@ class EmailService:
                 logger.info(f"[EMAIL SERVICE] Successfully sent email to {to_email} via SMTP ({settings.SMTP_HOST})")
                 return True
             except Exception as e:
-                logger.error(f"[EMAIL SERVICE ERROR] SMTP dispatch failed to {to_email}: {e}")
+                logger.error("SMTP dispatch failed (%s).", type(e).__name__)
                 return False
 
         # 2. Resend REST API Provider
@@ -81,7 +86,7 @@ class EmailService:
                 logger.warning(
                     "[EMAIL SERVICE] EMAIL_PROVIDER is 'resend' but EMAIL_API_KEY is not set. Falling back to console dispatch."
                 )
-                return True
+                return cls._development_dispatch()
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     resp = await client.post(
@@ -101,7 +106,7 @@ class EmailService:
                     logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via Resend API")
                     return True
             except Exception as e:
-                logger.error(f"[EMAIL SERVICE ERROR] Resend API dispatch failed to {to_email}: {e}")
+                logger.error("Resend dispatch failed (%s).", type(e).__name__)
                 return False
 
         # 3. SendGrid REST API Provider
@@ -110,7 +115,7 @@ class EmailService:
                 logger.warning(
                     "[EMAIL SERVICE] EMAIL_PROVIDER is 'sendgrid' but EMAIL_API_KEY is not set. Falling back to console dispatch."
                 )
-                return True
+                return cls._development_dispatch()
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     resp = await client.post(
@@ -130,10 +135,13 @@ class EmailService:
                     logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via SendGrid API")
                     return True
             except Exception as e:
-                logger.error(f"[EMAIL SERVICE ERROR] SendGrid API dispatch failed to {to_email}: {e}")
+                logger.error("SendGrid dispatch failed (%s).", type(e).__name__)
                 return False
 
         # 4. Console / Test Simulation Fallback
+        if provider != "console" or not cls._development_dispatch():
+            logger.error("Email provider is unavailable or console delivery is disabled in production.")
+            return False
         logger.info(f"[EMAIL SERVICE CONSOLE] Simulated dispatch to {to_email} (Subject: '{subject}')")
         return True
 
@@ -149,7 +157,8 @@ class EmailService:
         Dispatches an OTP verification code to the user's email address.
         """
         normalized_email = to_email.strip().lower()
-        cls._dev_otp_store[normalized_email] = otp_code
+        if cls._development_dispatch():
+            cls._dev_otp_store[normalized_email] = otp_code
 
         subject_map = {
             "registration": "Verify Your Career Platform Account",
@@ -194,16 +203,15 @@ class EmailService:
             f"[EMAIL SERVICE] Sent OTP to {normalized_email} (purpose: {purpose}). "
             f"Expiry: {settings.OTP_EXPIRE_MINUTES}m"
         )
-        print(f"\n[EMAIL SERVICE DEV DISPATCH] Recipient: {normalized_email} | OTP: {otp_code} | Purpose: {purpose}\n")
+        if cls._development_dispatch():
+            print(f"\n[EMAIL SERVICE DEV DISPATCH] Recipient: {normalized_email} | OTP: {otp_code} | Purpose: {purpose}\n")
 
         # Provider dispatch
-        await cls._dispatch_email(
+        return await cls._dispatch_email(
             to_email=normalized_email,
             subject=subject,
             html_body=html_body,
         )
-
-        return True
 
     @classmethod
     async def send_password_reset_email(
@@ -217,10 +225,11 @@ class EmailService:
         Dispatches a secure password reset link to the user's email address.
         """
         normalized_email = to_email.strip().lower()
-        cls._dev_reset_token_store[normalized_email] = reset_token
+        if cls._development_dispatch():
+            cls._dev_reset_token_store[normalized_email] = reset_token
 
         base_frontend = settings.FRONTEND_URL.rstrip("/")
-        final_url = reset_url or f"{base_frontend}/reset-password?token={reset_token}&email={normalized_email}"
+        final_url = reset_url or f"{base_frontend}/reset-password?{urlencode({'token': reset_token, 'email': normalized_email})}"
 
         html_body = f"""
         <!DOCTYPE html>
@@ -254,16 +263,15 @@ class EmailService:
         """
 
         logger.info(f"[EMAIL SERVICE] Sent password reset link to {normalized_email}")
-        print(f"\n[EMAIL SERVICE DEV DISPATCH] Password Reset Link for {normalized_email}: {final_url}\n")
+        if cls._development_dispatch():
+            print(f"\n[EMAIL SERVICE DEV DISPATCH] Password Reset Link for {normalized_email}: {final_url}\n")
 
         # Provider dispatch
-        await cls._dispatch_email(
+        return await cls._dispatch_email(
             to_email=normalized_email,
             subject="Reset Your Career Platform Password",
             html_body=html_body,
         )
-
-        return True
 
     @classmethod
     async def send_project_moderation_email(
@@ -334,18 +342,17 @@ class EmailService:
         logger.info(
             f"[EMAIL SERVICE] Sent moderation feedback email to {normalized_email} for project '{project_title}' (decision: {action})"
         )
-        print(
-            f"\n[EMAIL SERVICE DEV DISPATCH] Moderation Notification -> Recipient: {normalized_email} | Action: {action.upper()} | Project: '{project_title}' | Comments: '{reviewer_notes}'\n"
-        )
+        if cls._development_dispatch():
+            print(
+                f"\n[EMAIL SERVICE DEV DISPATCH] Moderation Notification -> Recipient: {normalized_email} | Action: {action.upper()} | Project: '{project_title}' | Comments: '{reviewer_notes}'\n"
+            )
 
         # Provider dispatch
-        await cls._dispatch_email(
+        return await cls._dispatch_email(
             to_email=normalized_email,
             subject=subject,
             html_body=html_body,
         )
-
-        return True
 
     @classmethod
     def get_last_dev_otp(cls, email: str) -> Optional[str]:

@@ -6,6 +6,8 @@ import zipfile
 from pathlib import Path
 from typing import Dict, Any, Tuple, Optional
 from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.stored_archive import StoredArchive
 
 # Security Constants
 ZIP_MAGIC_BYTES = b"PK\x03\x04"
@@ -25,6 +27,19 @@ SENSITIVE_FILENAMES = {
 SENSITIVE_EXTENSIONS = {".pem", ".key", ".pfx", ".p12"}
 
 UPLOAD_BASE_DIR = Path("uploads/projects")
+
+
+async def persist_zip_archive(
+    file_bytes: bytes, original_filename: str, owner_id: uuid.UUID,
+    db: AsyncSession, project_identifier: Optional[str] = None,
+) -> str:
+    """Persist validated source files in the database, never an ephemeral host disk."""
+    safe_name = re.sub(r"[^a-zA-Z0-9._-]", "_", Path(original_filename).name)
+    folder = project_identifier or "staging"
+    storage_key = f"{folder}/{Path(safe_name).stem}_{uuid.uuid4().hex}.zip"
+    db.add(StoredArchive(storage_key=storage_key, owner_id=owner_id, content=file_bytes))
+    await db.flush()
+    return storage_key
 
 
 def validate_and_inspect_zip(file_bytes: bytes, filename: str = "project.zip") -> Dict[str, Any]:
@@ -160,7 +175,7 @@ def get_zip_file_path(storage_key: str) -> Optional[Path]:
     full_path = (UPLOAD_BASE_DIR / clean_key).resolve()
     base_resolved = UPLOAD_BASE_DIR.resolve()
 
-    if not str(full_path).startswith(str(base_resolved)):
+    if not full_path.is_relative_to(base_resolved):
         return None
 
     if full_path.exists() and full_path.is_file():

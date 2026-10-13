@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Mail,
@@ -6,9 +6,7 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  ShieldCheck,
   Sparkles,
-  UserCheck,
   CheckCircle2,
   LogOut,
 } from 'lucide-react';
@@ -32,17 +30,31 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  const redirectPath = location.state?.from?.pathname || (user?.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+  const getRequestedPath = () => {
+    const from = location.state?.from;
+    const statePath = from
+      ? `${from.pathname || ''}${from.search || ''}${from.hash || ''}`
+      : '';
+    const queryPath = new URLSearchParams(location.search).get('redirect') || '';
+    const requested = statePath || queryPath;
+    return requested.startsWith('/') && !requested.startsWith('//') ? requested : '';
+  };
+
+  const getDestination = (account) => {
+    if (!account?.is_verified) return '/verify-otp';
+    const requested = getRequestedPath();
+    if (requested.startsWith('/admin') && account.role !== 'ADMIN') return '/dashboard';
+    return requested || (account.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+  };
+
+  const redirectPath = getDestination(user);
 
   // Client-side form validation
   const validate = () => {
     const errs = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!formData.email.trim()) {
-      errs.email = 'Email address is required.';
-    } else if (!emailRegex.test(formData.email.trim())) {
-      errs.email = 'Please provide a valid email address.';
+      errs.email = 'Email address or admin username is required.';
     }
 
     if (!formData.password) {
@@ -78,14 +90,16 @@ export default function LoginPage() {
     try {
       const response = await loginWithCredentials(
         formData.email.trim(),
-        formData.password
+        formData.password,
+        formData.rememberMe
       );
 
-      const targetPath =
-        location.state?.from?.pathname ||
-        (response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+      const targetPath = getDestination(response.user);
 
-      navigate(targetPath, { replace: true });
+      navigate(targetPath, {
+        replace: true,
+        state: targetPath === '/verify-otp' ? { email: response.user.email } : undefined,
+      });
     } catch (err) {
       const message =
         err.response?.data?.detail ||
@@ -102,9 +116,7 @@ export default function LoginPage() {
     setErrorMessage(null);
     try {
       const response = await loginWithGoogle(credential);
-      const targetPath =
-        location.state?.from?.pathname ||
-        (response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+      const targetPath = getDestination(response.user);
 
       navigate(targetPath, { replace: true });
     } catch (err) {
@@ -120,17 +132,6 @@ export default function LoginPage() {
 
   const handleGoogleError = (err) => {
     setErrorMessage(err?.message || 'Google sign-in was interrupted.');
-  };
-
-  // Quick Demo Account Auto-Fill Helper for instant testing
-  const handleQuickDemo = (demoEmail, demoPassword) => {
-    setFormData({
-      email: demoEmail,
-      password: demoPassword,
-      rememberMe: true,
-    });
-    setErrors({});
-    setErrorMessage(null);
   };
 
   return (
@@ -218,12 +219,12 @@ export default function LoginPage() {
             {/* Email Input */}
             <div>
               <Input
-                label="Email Address"
+                label="Email Address or Admin Username"
                 id="login-email"
                 name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="name@university.edu"
+                type="text"
+                autoComplete="username"
+                placeholder="Your email or admin username"
                 value={formData.email}
                 onChange={handleChange}
                 error={errors.email}
@@ -308,34 +309,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Fillers for Testing & Verification */}
-          <div className="mt-6 pt-5 border-t border-brand-border/70">
-            <p className="text-[11px] font-semibold text-brand-muted uppercase tracking-wider mb-2 text-center">
-              Quick Demo Fill (for testing)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickDemo('student@university.edu', 'Student123!')
-                }
-                className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-brand-veryLight text-brand-primary border border-brand-border hover:bg-brand-sky hover:border-blue-300 transition-colors"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>Student Demo</span>
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickDemo('admin@careerplatform.com', 'Admin123!')
-                }
-                className="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-colors"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Admin Demo</span>
-              </button>
-            </div>
-          </div>
         </Card>
 
         {/* Footer Register Redirect */}

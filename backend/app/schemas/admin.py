@@ -38,14 +38,29 @@ class StudentAdminRead(BaseModel):
     projects_count: int = 0
 
 class ResumeTemplateCreate(BaseModel):
-    id: str = Field(..., max_length=50)
+    id: Optional[str] = Field(None, max_length=50)
     name: str = Field(..., max_length=100)
-    tagline: str = Field(..., max_length=250)
+    tagline: Optional[str] = Field("", max_length=250)
     description: str = Field(..., max_length=1000)
-    badge: Optional[str] = Field("Popular", max_length=50)
+    badge: Optional[str] = Field("Professional", max_length=50)
     ats_score: Optional[str] = Field("95/100", max_length=20)
     best_for: Optional[str] = Field("General Engineering", max_length=150)
-    preview_accent: Optional[str] = Field("#3B82F6", max_length=20)
+    preview_accent: Optional[str] = Field("#F97316", max_length=20)
+    preview_image_url: Optional[str] = Field(None)
+    download_url: Optional[str] = Field(None)
+    is_active: bool = Field(True)
+
+class ResumeTemplateUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    tagline: Optional[str] = Field(None, max_length=250)
+    description: Optional[str] = Field(None, max_length=1000)
+    badge: Optional[str] = Field(None, max_length=50)
+    ats_score: Optional[str] = Field(None, max_length=20)
+    best_for: Optional[str] = Field(None, max_length=150)
+    preview_accent: Optional[str] = Field(None, max_length=20)
+    preview_image_url: Optional[str] = Field(None)
+    download_url: Optional[str] = Field(None)
+    is_active: Optional[bool] = Field(None)
 
 class ResumeTemplateRead(ResumeTemplateCreate):
     is_custom: bool = True

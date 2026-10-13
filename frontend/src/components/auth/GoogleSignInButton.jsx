@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import api from '@/services/api';
 
 /**
  * Google Sign-In Button component integrating Google Identity Services SDK.
@@ -12,28 +13,48 @@ export default function GoogleSignInButton({
   text = 'Continue with Google',
 }) {
   const buttonContainerRef = useRef(null);
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const [clientId, setClientId] = useState(import.meta.env.VITE_GOOGLE_CLIENT_ID || '');
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [missingIdNotice, setMissingIdNotice] = useState(false);
+  const [sdkError, setSdkError] = useState(false);
+  const handlers = useRef({ onSuccess, onError });
+  handlers.current = { onSuccess, onError };
+
+  useEffect(() => {
+    if (import.meta.env.VITE_GOOGLE_CLIENT_ID) return;
+    let active = true;
+    api.get('/auth/config').then(({ data }) => {
+      if (active) setClientId(data.google_client_id || '');
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!clientId) {
       return;
     }
 
-    // Check if script already on page
+    if (window.google?.accounts?.id) {
+      setSdkLoaded(true);
+      return;
+    }
     const existingScript = document.getElementById('google-gsi-client');
+    const script = existingScript || document.createElement('script');
+    const loaded = () => { setSdkLoaded(true); setSdkError(false); };
+    const failed = () => setSdkError(true);
+    script.addEventListener('load', loaded);
+    script.addEventListener('error', failed);
     if (!existingScript) {
-      const script = document.createElement('script');
       script.id = 'google-gsi-client';
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = () => setSdkLoaded(true);
       document.body.appendChild(script);
-    } else {
-      setSdkLoaded(true);
     }
+    return () => {
+      script.removeEventListener('load', loaded);
+      script.removeEventListener('error', failed);
+    };
   }, [clientId]);
 
   useEffect(() => {
@@ -45,9 +66,9 @@ export default function GoogleSignInButton({
           client_id: clientId,
           callback: (response) => {
             if (response.credential) {
-              onSuccess?.(response.credential);
+              handlers.current.onSuccess?.(response.credential);
             } else {
-              onError?.(new Error('No credential returned from Google'));
+              handlers.current.onError?.(new Error('No credential returned from Google'));
             }
           },
           auto_select: false,
@@ -66,9 +87,9 @@ export default function GoogleSignInButton({
         });
       }
     } catch (err) {
-      console.warn('Failed to initialize Google Sign-In button:', err);
+      setSdkError(true);
     }
-  }, [sdkLoaded, clientId, onSuccess, onError]);
+  }, [sdkLoaded, clientId]);
 
   const handleFallbackClick = () => {
     if (!clientId) {
@@ -83,7 +104,8 @@ export default function GoogleSignInButton({
       {clientId ? (
         <div
           ref={buttonContainerRef}
-          className="w-full flex justify-center min-h-[44px]"
+          className={`w-full flex justify-center min-h-[44px] ${isLoading ? 'pointer-events-none opacity-60' : ''}`}
+          aria-busy={isLoading || !sdkLoaded}
         />
       ) : (
         <button
@@ -115,6 +137,11 @@ export default function GoogleSignInButton({
         </button>
       )}
 
+      {sdkError && (
+        <p role="alert" className="text-xs text-red-700">
+          Google sign-in could not load. Refresh the page or sign in with email.
+        </p>
+      )}
       {missingIdNotice && (
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 animate-fadeIn">
           <p className="font-semibold mb-0.5">Google Client ID Setup Required</p>

@@ -1,16 +1,24 @@
 import hashlib
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, desc
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from sqlalchemy import select, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import verify_password, get_password_hash, create_access_token
+from app.core.security import (
+    verify_password,
+    get_password_hash,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+)
 from app.models.user import User, UserRole
 from app.models.otp import OTPVerification
 from app.models.password_reset import PasswordResetToken
+from app.models.auth_session import AuthSession
 from app.schemas.user import UserRead, UserCreate, UserLogin, GoogleLoginRequest, AuthResponse
 from app.schemas.otp import (
     OTPRequest,
@@ -33,6 +41,46 @@ from app.api.dependencies.auth import (
 from app.core.rate_limiter import auth_rate_limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Accounts"])
+REFRESH_COOKIE_NAME = "career_platform_refresh"
+
+
+@router.get('/config')
+async def public_auth_config():
+    # Google web client IDs are public identifiers, never API credentials.
+    return {'google_client_id': settings.GOOGLE_CLIENT_ID}
+
+
+async def set_refresh_cookie(response: Response, user: User, db: AsyncSession) -> str:
+    """Store a rotated refresh credential where browser JavaScript cannot read it."""
+    session_id = uuid.uuid4()
+    refresh_token = create_refresh_token({"sub": str(user.id), "sid": str(session_id)})
+    db.add(AuthSession(
+        id=session_id, user_id=user.id,
+        token_hash=hashlib.sha256(refresh_token.encode()).hexdigest(),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+    ))
+    await db.commit()
+    is_production = settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release"}
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        httponly=True,
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+        path="/api/auth",
+    )
+    return create_access_token({
+        "sub": str(user.id), "email": user.email, "role": user.role.value,
+        "sid": str(session_id),
+    })
+
+
+def validate_session_origin(request: Request):
+    """Cookie-authenticated mutations must originate from an allowed frontend."""
+    origin = request.headers.get("origin")
+    if origin and origin.rstrip("/") not in settings.ALLOWED_ORIGINS:
+        raise HTTPException(status_code=403, detail="Session request origin is not allowed.")
 
 
 @router.post(
@@ -44,6 +92,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication & Accounts"])
 )
 async def register_user(
     user_in: UserCreate,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -51,6 +100,11 @@ async def register_user(
     Issues an initial session access token and dispatches an email OTP verification code.
     """
     normalized_email = user_in.email.strip().lower()
+    if normalized_email == settings.ADMIN_EMAIL.strip().lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This address is reserved for the administrator.",
+        )
 
     # Verify email uniqueness
     existing_user_query = await db.execute(
@@ -70,14 +124,14 @@ async def register_user(
         email=normalized_email,
         hashed_password=hashed_password,
         full_name=user_in.full_name.strip(),
-        role=user_in.role,
+        role=UserRole.STUDENT,
         headline=user_in.headline,
         is_active=True,
         is_verified=False,
     )
 
     db.add(new_user)
-    await db.commit()
+    await db.flush()
     await db.refresh(new_user)
 
     # Generate initial 6-digit verification OTP
@@ -93,15 +147,18 @@ async def register_user(
         expires_at=expires_at,
     )
     db.add(otp_record)
-    await db.commit()
+    await db.flush()
 
     # Dispatch email OTP asynchronously
-    await EmailService.send_otp_email(
+    delivered = await EmailService.send_otp_email(
         to_email=normalized_email,
         otp_code=otp_code,
         recipient_name=new_user.full_name,
         purpose="registration",
     )
+    if not delivered:
+        await db.rollback()
+        raise HTTPException(status_code=503, detail="Verification email could not be delivered. Please try again later.")
 
     # Issue initial session access token
     access_token = create_access_token(
@@ -111,6 +168,7 @@ async def register_user(
             "role": new_user.role.value,
         }
     )
+    access_token = await set_refresh_cookie(response, new_user, db)
 
     return AuthResponse(
         access_token=access_token,
@@ -215,15 +273,19 @@ async def send_or_resend_otp(
         expires_at=expires_at,
     )
     db.add(new_otp_record)
-    await db.commit()
+    await db.flush()
 
     # Dispatch email
-    await EmailService.send_otp_email(
+    delivered = await EmailService.send_otp_email(
         to_email=normalized_email,
         otp_code=otp_code,
         recipient_name=user.full_name,
         purpose=req.purpose,
     )
+    if not delivered:
+        await db.rollback()
+        raise HTTPException(status_code=503, detail="Verification email could not be delivered. Please try again later.")
+    await db.commit()
 
     return OTPResponse(
         success=True,
@@ -242,6 +304,7 @@ async def send_or_resend_otp(
 )
 async def verify_otp(
     req: OTPVerifyRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -334,6 +397,7 @@ async def verify_otp(
             "role": user.role.value,
         }
     )
+    access_token = await set_refresh_cookie(response, user, db)
 
     return OTPVerificationSuccessResponse(
         success=True,
@@ -353,6 +417,7 @@ async def verify_otp(
 )
 async def login_user(
     credentials: UserLogin,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -360,6 +425,9 @@ async def login_user(
     Dispatches a signed JWT bearer token on success.
     """
     normalized_email = credentials.email.strip().lower()
+    using_admin_username = normalized_email == settings.ADMIN_USERNAME.strip().lower()
+    if using_admin_username:
+        normalized_email = settings.ADMIN_EMAIL.strip().lower()
 
     # Lookup user record
     result = await db.execute(
@@ -367,7 +435,11 @@ async def login_user(
     )
     user = result.scalar_one_or_none()
 
-    if not user or not verify_password(credentials.password, user.hashed_password):
+    if (
+        not user
+        or (using_admin_username and user.role != UserRole.ADMIN)
+        or not verify_password(credentials.password, user.hashed_password)
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password.",
@@ -388,6 +460,7 @@ async def login_user(
             "role": user.role.value,
         }
     )
+    access_token = await set_refresh_cookie(response, user, db)
 
     return AuthResponse(
         access_token=access_token,
@@ -406,6 +479,7 @@ async def login_user(
 )
 async def google_auth(
     req: GoogleLoginRequest,
+    response: Response,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -413,6 +487,12 @@ async def google_auth(
     If the user exists, logs them in; if not, registers a verified student account.
     """
     import httpx
+
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google authentication is not configured on this server.",
+        )
 
     # Verify ID token against Google OAuth2 tokeninfo endpoint
     try:
@@ -507,6 +587,7 @@ async def google_auth(
             "role": user.role.value,
         }
     )
+    access_token = await set_refresh_cookie(response, user, db)
 
     return AuthResponse(
         access_token=access_token,
@@ -514,6 +595,86 @@ async def google_auth(
         user=user,
         message="Google authentication successful. Welcome!",
     )
+
+
+@router.post("/refresh", response_model=AuthResponse, status_code=status.HTTP_200_OK,
+             dependencies=[Depends(validate_session_origin)])
+async def refresh_session(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+    db: AsyncSession = Depends(get_db),
+):
+    """Rotate a valid refresh cookie and issue a fresh short-lived access token."""
+    payload = decode_token(refresh_token, expected_type="refresh") if refresh_token else None
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh session is missing, invalid, or expired.",
+        )
+
+    try:
+        user_id = uuid.UUID(str(payload["sub"]))
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh session contains an invalid user identifier.",
+        )
+
+    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="The user session is no longer active.",
+        )
+
+    now = datetime.now(timezone.utc)
+    consumed = await db.execute(update(AuthSession).where(
+        AuthSession.user_id == user_id,
+        AuthSession.token_hash == hashlib.sha256(refresh_token.encode()).hexdigest(),
+        AuthSession.invalidated_at.is_(None),
+        AuthSession.expires_at > now,
+    ).values(invalidated_at=now).returning(AuthSession.id))
+    if consumed.scalar_one_or_none() is None:
+        await db.rollback()
+        raise HTTPException(status_code=401, detail="Session has been revoked or already refreshed.")
+
+    access_token = create_access_token({
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role.value,
+    })
+    access_token = await set_refresh_cookie(response, user, db)
+    return AuthResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user=user,
+        message="Session refreshed successfully.",
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT,
+             dependencies=[Depends(validate_session_origin)])
+async def logout_user(
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+    db: AsyncSession = Depends(get_db),
+):
+    """End the browser session by removing its HttpOnly refresh credential."""
+    is_production = settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release"}
+    if refresh_token:
+        await db.execute(update(AuthSession).where(
+            AuthSession.token_hash == hashlib.sha256(refresh_token.encode()).hexdigest(),
+            AuthSession.invalidated_at.is_(None),
+        ).values(invalidated_at=datetime.now(timezone.utc)))
+        await db.commit()
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        httponly=True,
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+        path="/api/auth",
+    )
+    return response
 
 
 @router.post(
@@ -563,18 +724,22 @@ async def forgot_password(
             expires_at=expires_at,
         )
         db.add(reset_record)
-        await db.commit()
+        await db.flush()
 
         # Dispatch reset email
-        await EmailService.send_password_reset_email(
+        delivered = await EmailService.send_password_reset_email(
             to_email=normalized_email,
             reset_token=raw_token,
             recipient_name=user.full_name,
         )
+        if delivered:
+            await db.commit()
+        else:
+            await db.rollback()
 
     return PasswordResetResponse(
         success=True,
-        message="If an account with that email exists, we have sent a password reset link to your inbox.",
+        message="If an account with that email exists, we have sent a password reset link to your inbox. If it does not arrive, please try again later.",
     )
 
 
@@ -686,6 +851,9 @@ async def reset_password(
 
     # Hash new password securely
     user.hashed_password = get_password_hash(req.new_password)
+    await db.execute(update(AuthSession).where(
+        AuthSession.user_id == user.id, AuthSession.invalidated_at.is_(None),
+    ).values(invalidated_at=now_utc))
     # Single-use consumption
     token_record.invalidated_at = now_utc
 

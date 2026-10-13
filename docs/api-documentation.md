@@ -52,13 +52,13 @@
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/auth/register` | Public | Register new student account and trigger email OTP |
-| `POST` | `/api/auth/login` | Public | Verify credentials, dispatch login OTP, return temporary challenge |
-| `POST` | `/api/auth/verify-otp` | Public | Validate 6-digit OTP; issue active JWT session |
+| `POST` | `/api/auth/login` | Public | Verify credentials and issue an access token plus HttpOnly refresh cookie |
+| `POST` | `/api/auth/verify-otp` | Public | Validate the registration OTP and mark the account verified |
 | `POST` | `/api/auth/resend-otp` | Public | Re-dispatch 6-digit OTP (subject to 60s cooldown) |
 | `POST` | `/api/auth/forgot-password` | Public | Send password reset token to user email |
 | `POST` | `/api/auth/reset-password` | Public | Reset account password with verified reset token |
-| `POST` | `/api/auth/refresh` | Auth | Refresh expired access token using refresh token |
-| `POST` | `/api/auth/logout` | Auth | Invalidate session tokens |
+| `POST` | `/api/auth/refresh` | Refresh cookie | Rotate the HttpOnly refresh cookie and issue a new access token |
+| `POST` | `/api/auth/logout` | Browser session | Clear the HttpOnly refresh cookie |
 
 ---
 

@@ -380,7 +380,8 @@ export default function DashboardPage() {
               <Link to="/resume-builder" className="flex-1 sm:flex-initial">
                 <Button
                   size="sm"
-                  className="bg-white text-brand-primary hover:bg-blue-50 border-none font-semibold shadow-sm w-full"
+                  variant="white"
+                  className="w-full font-bold shadow-sm"
                 >
                   Boost Score
                 </Button>
@@ -389,7 +390,7 @@ export default function DashboardPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-white hover:bg-white/10 w-full"
+                  className="text-white hover:bg-white/10 w-full font-semibold border border-white/20"
                 >
                   View Criteria
                 </Button>

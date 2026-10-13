@@ -77,6 +77,54 @@ def calculate_profile_completion(user: User, profile: Profile) -> int:
     return min(score, 100)
 
 
+def calculate_resume_completion(resume: Resume | None) -> int:
+    """
+    Computes percentage (0-100) of resume completeness across standard resume sections.
+    Returns 0 if no resume exists.
+    """
+    if not resume:
+        return 0
+
+    score = 0
+    pi = resume.personal_info or {}
+
+    # 1. Contact / Personal Info (20%)
+    if pi.get("full_name") and pi.get("email"):
+        score += 10
+    if pi.get("phone") or pi.get("location"):
+        score += 10
+
+    # 2. Professional Summary (15%)
+    if resume.summary and len(str(resume.summary).strip()) >= 20:
+        score += 15
+    elif resume.summary and len(str(resume.summary).strip()) > 0:
+        score += 5
+
+    # 3. Education (20%)
+    edu = resume.education or []
+    if isinstance(edu, list) and len(edu) > 0 and any(isinstance(e, dict) and e.get("institution") for e in edu):
+        score += 20
+
+    # 4. Experience (20%)
+    exp = resume.experience or []
+    if isinstance(exp, list) and len(exp) > 0 and any(isinstance(e, dict) and (e.get("role") or e.get("company")) for e in exp):
+        score += 20
+
+    # 5. Projects (15%)
+    proj = resume.projects or []
+    if isinstance(proj, list) and len(proj) > 0 and any(isinstance(p, dict) and p.get("name") for p in proj):
+        score += 15
+
+    # 6. Skills (10%)
+    skills = resume.skills or []
+    if isinstance(skills, list) and len(skills) >= 3:
+        score += 10
+    elif isinstance(skills, list) and len(skills) > 0:
+        score += 5
+
+    return min(score, 100)
+
+
 async def get_or_create_user_profile(user: User, db: AsyncSession) -> Profile:
     """
     Retrieves or lazily initializes a student's profile with a unique username slug.
@@ -211,12 +259,9 @@ async def get_dashboard_summary(
         # D. Profile Completion
         stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
         profile = (await db.scalars(stmt_prof)).first()
-        if profile:
-            resume_completion = calculate_profile_completion(current_user, profile)
-        elif current_user.full_name:
-            resume_completion = 25
+        profile_completion = calculate_profile_completion(current_user, profile) if profile else (25 if current_user.full_name else 0)
 
-        # E. Resume Record Check
+        # E. Resume Record Check & Accurate Resume Completion
         stmt_res = (
             select(Resume)
             .where(Resume.user_id == current_user.id)
@@ -224,9 +269,13 @@ async def get_dashboard_summary(
             .limit(1)
         )
         user_resume = (await db.scalars(stmt_res)).first()
-        if user_resume:
+        resume_completion = calculate_resume_completion(user_resume)
+        if user_resume and resume_completion > 0:
             has_resume = True
             latest_resume_title = user_resume.title
+        else:
+            has_resume = False
+            latest_resume_title = None
 
         # F. Real Recently Applied Records (status != 'Saved')
         stmt_recent_apps = (
@@ -398,9 +447,8 @@ async def get_dashboard_summary(
     score = 0
     if current_user.is_verified:
         score += 25
-    score += int((resume_completion / 100) * 25)
-    if has_resume:
-        score += 20
+    score += int((profile_completion / 100) * 25)
+    score += int((resume_completion / 100) * 20)
     if projects_count > 0:
         score += 15
     if projects_published > 0:

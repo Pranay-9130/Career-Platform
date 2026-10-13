@@ -19,6 +19,7 @@ from app.schemas.admin import (
     AdminStats,
     StudentAdminRead,
     ResumeTemplateCreate,
+    ResumeTemplateUpdate,
 )
 from app.api.dependencies.auth import require_role
 from app.api.routes.projects import _map_project_to_detail_read
@@ -214,6 +215,66 @@ async def moderate_project(
             pass
 
     return _map_project_to_detail_read(refreshed, is_bookmarked=False)
+
+
+@router.delete(
+    "/projects/{identifier}",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def delete_project_as_admin(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Permanently delete a project submission from the platform.
+    Restricted to administrators.
+    """
+    project = None
+    try:
+        project_uuid = uuid.UUID(identifier)
+        stmt = select(Project).where(Project.id == project_uuid)
+        project = (await db.execute(stmt)).scalar_one_or_none()
+    except ValueError:
+        pass
+
+    if not project:
+        stmt = select(Project).where(Project.slug == identifier)
+        project = (await db.execute(stmt)).scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Project '{identifier}' was not found.",
+        )
+
+    title = project.title
+    await db.delete(project)
+    await db.commit()
+
+    return {"message": f"Project '{title}' has been permanently deleted."}
+
+
+@router.post(
+    "/projects/clear-all",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def clear_all_projects_as_admin(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Permanently delete all project submissions from the platform.
+    Restricted to administrators.
+    """
+    stmt = select(Project)
+    projects = (await db.execute(stmt)).scalars().all()
+    count = len(projects)
+    for p in projects:
+        await db.delete(p)
+    await db.commit()
+
+    return {"message": f"All {count} projects have been deleted."}
 
 
 # =========================================================================
@@ -478,7 +539,7 @@ async def get_admin_students(
 )
 async def get_admin_templates():
     """
-    Retrieve all active ATS resume templates in the catalog.
+    Retrieve all ATS resume templates in the catalog for administration.
     """
     return AVAILABLE_TEMPLATES
 
@@ -493,18 +554,71 @@ async def create_resume_template(payload: ResumeTemplateCreate):
     """
     Add a new ATS-compatible resume template to the platform catalog.
     """
-    # Check for duplicate ID
-    for t in AVAILABLE_TEMPLATES:
-        if t["id"].lower() == payload.id.lower():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Template ID '{payload.id}' already exists.",
-            )
+    import re
+    # Generate ID if not provided
+    template_id = payload.id
+    if not template_id or not template_id.strip():
+        slug = re.sub(r"[^a-zA-Z0-9]+", "-", payload.name.lower()).strip("-")
+        template_id = slug or "custom-template"
+
+    # Ensure unique ID
+    candidate_id = template_id
+    counter = 1
+    while any(t["id"].lower() == candidate_id.lower() for t in AVAILABLE_TEMPLATES):
+        candidate_id = f"{template_id}-{counter}"
+        counter += 1
 
     new_template = payload.model_dump()
+    new_template["id"] = candidate_id
     new_template["is_custom"] = True
+    new_template["is_active"] = payload.is_active if payload.is_active is not None else True
     AVAILABLE_TEMPLATES.append(new_template)
     return new_template
+
+
+@router.put(
+    "/templates/{template_id}",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def update_resume_template(template_id: str, payload: ResumeTemplateUpdate):
+    """
+    Update an existing template's title, description, badge, preview or download link.
+    """
+    for t in AVAILABLE_TEMPLATES:
+        if t["id"] == template_id:
+            update_data = payload.model_dump(exclude_unset=True)
+            for k, v in update_data.items():
+                if v is not None:
+                    t[k] = v
+            return t
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Template '{template_id}' was not found.",
+    )
+
+
+@router.patch(
+    "/templates/{template_id}/toggle-status",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def toggle_resume_template_status(template_id: str):
+    """
+    Toggle a template between Active (visible to candidates) and Inactive (hidden draft).
+    """
+    for t in AVAILABLE_TEMPLATES:
+        if t["id"] == template_id:
+            t["is_active"] = not t.get("is_active", True)
+            return {"id": t["id"], "is_active": t["is_active"], "message": "Status updated successfully."}
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Template '{template_id}' was not found.",
+    )
 
 
 @router.delete(
@@ -514,7 +628,7 @@ async def create_resume_template(payload: ResumeTemplateCreate):
 )
 async def delete_resume_template(template_id: str):
     """
-    Remove a custom template from the platform catalog.
+    Remove a template from the platform catalog.
     """
     found_idx = None
     for idx, t in enumerate(AVAILABLE_TEMPLATES):
@@ -530,3 +644,81 @@ async def delete_resume_template(template_id: str):
 
     removed = AVAILABLE_TEMPLATES.pop(found_idx)
     return {"message": f"Template '{template_id}' removed successfully.", "removed": removed}
+
+
+@router.post(
+    "/templates/seed-defaults",
+    response_model=List[Dict[str, Any]],
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def seed_default_templates():
+    """
+    Seed/restore the clean Resume Templates (Template 1, Template 2, Template 3) as displayed in the templates section.
+    """
+    demo_defaults = [
+        {
+            "id": "template-1",
+            "name": "Template 1",
+            "badge": "Professional",
+            "description": "Ready-to-use professional resume format",
+            "tagline": "Standard single-column layout preferred by tech recruiters and ATS systems.",
+            "ats_score": "98/100",
+            "best_for": "Software Engineers, Backend Developers, DevOps",
+            "preview_accent": "#F97316",
+            "preview_image_url": "",
+            "download_url": "",
+            "is_active": True,
+            "is_custom": False,
+        },
+        {
+            "id": "template-2",
+            "name": "Template 2",
+            "badge": "Professional",
+            "description": "Ready-to-use professional resume format",
+            "tagline": "Clean modern hierarchy with subtle slate dividers and high readability.",
+            "ats_score": "95/100",
+            "best_for": "Full Stack Engineers, Frontend Developers, Product Designers",
+            "preview_accent": "#F97316",
+            "preview_image_url": "",
+            "download_url": "",
+            "is_active": True,
+            "is_custom": False,
+        },
+        {
+            "id": "template-3",
+            "name": "Template 3",
+            "badge": "Professional",
+            "description": "Ready-to-use professional resume format",
+            "tagline": "Structured academic and engineering format highlighting education and projects.",
+            "ats_score": "96/100",
+            "best_for": "Data Scientists, ML Researchers, Graduate Applicants",
+            "preview_accent": "#F97316",
+            "preview_image_url": "",
+            "download_url": "",
+            "is_active": True,
+            "is_custom": False,
+        },
+    ]
+
+    # Prepend or add if not already present
+    existing_ids = {t["id"] for t in AVAILABLE_TEMPLATES}
+    for item in demo_defaults:
+        if item["id"] not in existing_ids:
+            AVAILABLE_TEMPLATES.insert(0, item)
+
+    return AVAILABLE_TEMPLATES
+
+
+@router.post(
+    "/templates/clear-all",
+    response_model=Dict[str, str],
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def clear_all_templates():
+    """
+    Clear all templates from the catalog so the admin can add their own from scratch.
+    """
+    AVAILABLE_TEMPLATES.clear()
+    return {"message": "All templates cleared. Catalog is now empty."}

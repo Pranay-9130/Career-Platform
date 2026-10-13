@@ -118,6 +118,10 @@ To become a trusted career development platform for students worldwide, making c
 
 ## 5. Local Setup & Getting Started
 
+For production deployment, follow [deploy-now.md](docs/deploy-now.md).
+The default Render blueprint packages the website and API on one domain, with
+database migrations, persistent ZIP storage, and revocable authentication sessions.
+
 ### Prerequisites
 - Node.js 18+ and npm 9+
 - Python 3.11+
@@ -149,6 +153,10 @@ uvicorn app.main:app --reload --port 8000
 ```
 Backend API interactive documentation will be available at `http://localhost:8000/docs`.
 
+For local email verification without an external provider, set
+`EMAIL_PROVIDER=console` in `backend/.env`. OTPs and password-reset links will be
+printed by the backend process.
+
 ### 4. Frontend Setup
 ```bash
 cd frontend
@@ -156,6 +164,24 @@ npm install
 npm run dev
 ```
 Frontend development server will be available at `http://localhost:5173`.
+
+### Authentication workflow
+
+Public registration creates students only. Demo login accounts are not seeded.
+Provision an administrator from `backend` with `py scripts/provision_admin.py`.
+The script prompts for a password and stores its hash in the configured database.
+`ADMIN_USERNAME` and `ADMIN_EMAIL` configure the administrator login alias and
+internal email identity. Keep administrator passwords out of source control.
+
+1. Register with email and password; the app sends a six-digit registration OTP.
+2. Verify the OTP to mark the account verified and continue to the dashboard.
+3. Later sign-ins issue a short-lived bearer token and a rotating HttpOnly refresh cookie.
+4. The client validates restored sessions on startup and automatically refreshes an expired access token once.
+5. Signing out clears both browser storage and the refresh cookie.
+
+Google sign-in requires the same client ID in `backend/.env` (`GOOGLE_CLIENT_ID`)
+and `frontend/.env` (`VITE_GOOGLE_CLIENT_ID`). The frontend and backend public
+origins must also be listed in Google Cloud and `ALLOWED_ORIGINS` respectively.
 
 ---
 

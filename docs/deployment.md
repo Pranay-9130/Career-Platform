@@ -1,5 +1,8 @@
 # Deployment & Production Blueprint — Student Career Platform
 
+For the current single-domain Render/Docker deployment, follow
+[deploy-now.md](deploy-now.md). The two-host examples below describe the older setup.
+
 **Document Version:** 2.0.0  
 **Target Environments:** Immediate Launch (Temporary URLs on Vercel & Render) ➔ Future Custom Domain  
 **Backend Framework:** FastAPI (Python 3.11+) on Render  
@@ -260,8 +263,8 @@ After completing the steps above, run through this verification checklist agains
 | **CORS Handshake** | Inspect Network tab on homepage API calls | HTTP 200 with `access-control-allow-origin: https://<vercel-url>` |
 | **Registration & OTP** | Register new account on `https://<vercel-url>/register` | 6-digit OTP email arrives in inbox within 15 seconds; verification succeeds |
 | **Google Sign-In** | Click "Continue with Google" on `/login` | Google OAuth modal appears, user completes auth, and is redirected to `/dashboard` |
-| **Demo Login** | Click "Student Demo" button on `/login` | Signs in immediately as Alex Student (`student@university.edu`) |
-| **Admin Clearance** | Click "Admin Demo" button on `/login` | Signs in as Morgan Admin (`admin@careerplatform.com`) and loads admin stats |
+| **Student Login** | Register a student, verify their email, and sign in on `/login` | Opens the student dashboard |
+| **Admin Clearance** | Sign in with the privately provisioned administrator username/password | Opens the admin dashboard; students cannot access it |
 | **Database Persistence** | Submit a project or bookmark an item | Reload page; persisted data is retrieved from PostgreSQL database |
 | **Deep Link Routing** | Directly load `https://<vercel-url>/projects/ai-resume-matcher` | Page renders cleanly without 404 |
 

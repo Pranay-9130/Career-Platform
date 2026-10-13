@@ -6,7 +6,40 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => authService.getUser());
   const [token, setToken] = useState(() => authService.getToken());
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => Boolean(authService.getToken()));
+
+  // Validate a restored session before allowing protected content to render.
+  useEffect(() => {
+    let active = true;
+    const restoredToken = authService.getToken();
+
+    if (!restoredToken) {
+      authService.clearAuth();
+      setUser(null);
+      setIsLoading(false);
+      return () => { active = false; };
+    }
+
+    authService.getCurrentUser()
+      .then((currentUser) => {
+        if (active) {
+          setToken(restoredToken);
+          setUser(currentUser);
+        }
+      })
+      .catch(() => {
+        authService.clearAuth();
+        if (active) {
+          setToken(null);
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => { active = false; };
+  }, []);
 
   // Listen for unauthorized 401 events dispatched by API interceptor
   useEffect(() => {
@@ -26,10 +59,10 @@ export function AuthProvider({ children }) {
     setUser(newUser);
   }, []);
 
-  const loginWithCredentials = useCallback(async (email, password) => {
+  const loginWithCredentials = useCallback(async (email, password, persistent = true) => {
     setIsLoading(true);
     try {
-      const data = await authService.login({ email, password });
+      const data = await authService.login({ email, password }, persistent);
       setToken(data.access_token);
       setUser(data.user);
       return data;
@@ -63,7 +96,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
-    authService.clearAuth();
+    authService.logout().catch(() => {});
     setToken(null);
     setUser(null);
   }, []);

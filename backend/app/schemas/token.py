@@ -10,3 +10,4 @@ class TokenPayload(BaseModel):
     email: Optional[str] = None
     role: str = "STUDENT"
     exp: Optional[int] = None
+    sid: Optional[str] = None

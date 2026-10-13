@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     PORT: int = 8000
     DEBUG: bool = True
+    FRONTEND_DIST_DIR: str = ""
+    RENDER_EXTERNAL_URL: str = ""
     ALLOWED_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -17,6 +19,20 @@ class Settings(BaseSettings):
         default="http://localhost:5173",
         description="Public frontend base URL for sitemap and canonical links",
     )
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug_flag(cls, value):
+        """Accept the boolean and environment-name values used by common hosts."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug", "development", "dev"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "production", "prod"}:
+                return False
+        return value
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
@@ -55,6 +71,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def assemble_database_urls(self):
+        if self.RENDER_EXTERNAL_URL:
+            if "FRONTEND_URL" not in self.model_fields_set:
+                self.FRONTEND_URL = self.RENDER_EXTERNAL_URL.rstrip("/")
+            self.ALLOWED_ORIGINS = list(dict.fromkeys([
+                *self.ALLOWED_ORIGINS, self.RENDER_EXTERNAL_URL.rstrip("/"),
+            ]))
         url = self.DATABASE_URL
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
@@ -74,11 +96,25 @@ class Settings(BaseSettings):
         self.DATABASE_URL = url
 
         sync_url = self.SYNC_DATABASE_URL
+        if "SYNC_DATABASE_URL" not in self.model_fields_set:
+            sync_url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+            sync_url = sync_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+            sync_url = sync_url.replace("ssl=", "sslmode=")
         if sync_url.startswith("postgres://"):
             sync_url = sync_url.replace("postgres://", "postgresql://", 1)
         elif sync_url.startswith("postgresql+asyncpg://"):
             sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql://", 1)
         self.SYNC_DATABASE_URL = sync_url
+
+        production_names = {"production", "prod", "release"}
+        weak_secrets = {
+            "development_secret_change_in_production_minimum_64_characters_random_hex",
+            "replace_with_a_secure_random_64_character_hex_key",
+        }
+        if self.ENVIRONMENT.strip().lower() in production_names and (
+            len(self.JWT_SECRET) < 32 or self.JWT_SECRET in weak_secrets
+        ):
+            raise ValueError("JWT_SECRET must be a unique high-entropy secret in production.")
         return self
 
     # Security & Tokens
@@ -86,6 +122,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ADMIN_USERNAME: str = "pranay"
+    ADMIN_EMAIL: str = "pranay@careerplatform.com"
 
     # Google Authentication (OAuth2 / Identity Services)
     GOOGLE_CLIENT_ID: str = ""
@@ -109,7 +147,7 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-1.5-pro"
 
     # Storage
-    STORAGE_PROVIDER: str = "s3"
+    STORAGE_PROVIDER: str = "database"
     STORAGE_BUCKET: str = "student-career-platform-uploads"
     STORAGE_REGION: str = "us-east-1"
     STORAGE_ACCESS_KEY: str = ""

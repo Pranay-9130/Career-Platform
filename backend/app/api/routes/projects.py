@@ -4,7 +4,7 @@ import secrets
 import uuid
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select, func, or_, cast, String, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -15,9 +15,11 @@ from app.models.project_screenshot import ProjectScreenshot
 from app.models.project_bookmark import ProjectBookmark
 from app.models.profile import Profile
 from app.models.user import User, UserRole
+from app.models.stored_archive import StoredArchive
 from app.services.zip_service import (
     validate_and_inspect_zip,
-    save_zip_archive,
+    persist_zip_archive,
+    MAX_ZIP_UPLOAD_SIZE,
     get_zip_file_path,
 )
 from app.schemas.project import (
@@ -454,18 +456,22 @@ async def get_my_submitted_projects(
 async def upload_standalone_zip(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Validates binary ZIP magic bytes (PK\\x03\\x04), size limits (<= 50MB), uncompressed ratios,
     and security rules for a new project submission draft.
     """
-    file_bytes = await file.read()
+    file_bytes = await file.read(MAX_ZIP_UPLOAD_SIZE + 1)
     inspection = validate_and_inspect_zip(file_bytes, filename=file.filename or "project.zip")
-    storage_key, _ = save_zip_archive(
+    storage_key = await persist_zip_archive(
         file_bytes,
         original_filename=file.filename or "project.zip",
+        owner_id=current_user.id,
+        db=db,
         project_identifier=f"draft_{current_user.id.hex[:8]}",
     )
+    await db.commit()
     return {
         "message": "ZIP package verified and stored successfully.",
         "zip_storage_key": storage_key,
@@ -570,6 +576,20 @@ async def download_project_zip(
             detail="No source ZIP archive has been uploaded for this project.",
         )
 
+    archive = (await db.execute(select(StoredArchive).where(
+        StoredArchive.storage_key == project.zip_storage_key
+    ))).scalar_one_or_none()
+    if archive:
+        return Response(
+            content=archive.content,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{project.slug}-source.zip"',
+                "Cache-Control": "private, no-store",
+            },
+        )
+
+    # Compatibility for archives uploaded before database storage was introduced.
     file_path = get_zip_file_path(project.zip_storage_key)
     if not file_path or not file_path.exists():
         raise HTTPException(
@@ -913,11 +933,13 @@ async def upload_project_zip(
             detail="You do not have permission to attach files to this project.",
         )
 
-    file_bytes = await file.read()
+    file_bytes = await file.read(MAX_ZIP_UPLOAD_SIZE + 1)
     inspection = validate_and_inspect_zip(file_bytes, filename=file.filename or "project.zip")
-    storage_key, _ = save_zip_archive(
+    storage_key = await persist_zip_archive(
         file_bytes,
         original_filename=file.filename or "project.zip",
+        owner_id=project.owner_id,
+        db=db,
         project_identifier=str(project.id),
     )
 

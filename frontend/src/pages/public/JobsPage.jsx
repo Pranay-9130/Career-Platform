@@ -123,22 +123,22 @@ export default function JobsPage() {
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Hero Section */}
         <div className="relative rounded-3xl bg-gradient-to-br from-brand-primary/10 via-sky-50 to-white border border-brand-border p-8 sm:p-12 overflow-hidden shadow-sm">
-          <div className="relative z-10 max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 border border-brand-border text-xs font-semibold text-brand-primary backdrop-blur-sm shadow-xs">
+          <div className="relative z-10 max-w-3xl mx-auto text-center space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 border border-brand-border text-xs font-semibold text-brand-primary backdrop-blur-sm shadow-xs mx-auto">
               <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
               Verified Student Opportunities
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-extrabold text-slate-900 tracking-tight">
               Launch Your Career With Curated Tech Roles
             </h1>
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl">
+            <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
               Browse vetted software engineering internships, junior developer jobs, and entry-level
               postings aligned with your projects and portfolio.
             </p>
 
             {/* Live Search Bar */}
             <div className="pt-2">
-              <div className="relative max-w-2xl flex items-center shadow-md rounded-2xl bg-white border border-brand-border overflow-hidden focus-within:ring-2 focus-within:ring-brand-primary/30 transition">
+              <div className="relative max-w-2xl mx-auto flex items-center shadow-md rounded-2xl bg-white border border-brand-border overflow-hidden focus-within:ring-2 focus-within:ring-brand-primary/30 transition text-left">
                 <Search className="w-5 h-5 text-slate-400 ml-4 shrink-0" />
                 <input
                   type="text"
@@ -158,7 +158,7 @@ export default function JobsPage() {
               </div>
 
               {/* Quick tags */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-3 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 text-xs text-slate-500">
                 <span className="font-medium text-slate-400">Popular:</span>
                 {['Remote', 'Frontend', 'Internship', 'AI / Machine Learning', 'Entry Level'].map((tag) => (
                   <button

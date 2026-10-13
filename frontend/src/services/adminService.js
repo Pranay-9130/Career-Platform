@@ -33,6 +33,22 @@ export const adminService = {
   },
 
   /**
+   * Permanently delete a project submission.
+   */
+  async deleteProject(identifier) {
+    const response = await api.delete(`/admin/projects/${identifier}`);
+    return response.data;
+  },
+
+  /**
+   * Permanently delete all project submissions.
+   */
+  async clearAllProjects() {
+    const response = await api.post('/admin/projects/clear-all');
+    return response.data;
+  },
+
+  /**
    * Retrieve all jobs including drafts and unpublished listings for admin management.
    */
   async getJobs(params = {}) {
@@ -101,6 +117,38 @@ export const adminService = {
    */
   async deleteTemplate(templateId) {
     const response = await api.delete(`/admin/templates/${templateId}`);
+    return response.data;
+  },
+
+  /**
+   * Update an existing template's information.
+   */
+  async updateTemplate(templateId, templateData) {
+    const response = await api.put(`/admin/templates/${templateId}`, templateData);
+    return response.data;
+  },
+
+  /**
+   * Toggle template publication status (active / draft).
+   */
+  async toggleTemplateStatus(templateId) {
+    const response = await api.patch(`/admin/templates/${templateId}/toggle-status`);
+    return response.data;
+  },
+
+  /**
+   * Seed/restore default templates matching screenshot (Template 1, Template 2, Template 3).
+   */
+  async seedDefaultTemplates() {
+    const response = await api.post('/admin/templates/seed-defaults');
+    return response.data;
+  },
+
+  /**
+   * Clear all templates so admin can start completely fresh.
+   */
+  async clearAllTemplates() {
+    const response = await api.post('/admin/templates/clear-all');
     return response.data;
   },
 };

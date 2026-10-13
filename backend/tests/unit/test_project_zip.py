@@ -9,6 +9,8 @@ from app.main import app
 from app.core.database import Base, get_db
 from app.models.user import User, UserRole
 from app.models.project import Project
+from app.models.stored_archive import StoredArchive
+from sqlalchemy import select
 from app.core.security import get_password_hash
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -215,6 +217,13 @@ async def test_upload_project_zip_and_download_lifecycle(client, db_session):
     assert upload_resp.status_code == 200
     upload_data = upload_resp.json()
     assert upload_data["zip_file_size_bytes"] == len(zip_bytes)
+    stored = (await db_session.execute(select(StoredArchive).where(
+        StoredArchive.storage_key == upload_data['zip_storage_key']
+    ))).scalar_one()
+    assert stored.content == zip_bytes
+    assert stored.owner_id == student.id
+    # Clear the identity map: download must retrieve persistent database bytes.
+    db_session.expunge(stored)
 
     # 2. Download ZIP file
     download_resp = await client.get(f"/api/projects/{project.slug}/download")

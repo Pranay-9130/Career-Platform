@@ -74,7 +74,7 @@ async def list_templates():
     """
     Public catalogue of ATS resume templates.
     """
-    return AVAILABLE_TEMPLATES
+    return [t for t in AVAILABLE_TEMPLATES if t.get("is_active", True)]
 
 
 @router.get("", response_model=ResumeListResponse)
@@ -162,60 +162,32 @@ async def seed_resume_from_profile(
     )
     user_projects = (await db.execute(proj_stmt)).scalars().all()
 
-    full_name = current_user.full_name or "Student Developer"
+    full_name = current_user.full_name or ""
     personal_info = {
         "full_name": full_name,
         "email": current_user.email,
-        "phone": "+1 (555) 019-2834",
-        "location": "San Francisco, CA",
-        "github": profile.github_url if profile and profile.github_url else "github.com/developer",
-        "linkedin": profile.linkedin_url if profile and profile.linkedin_url else "linkedin.com/in/developer",
+        "phone": "",
+        "location": "",
+        "github": profile.github_url if profile and profile.github_url else "",
+        "linkedin": profile.linkedin_url if profile and profile.linkedin_url else "",
         "portfolio": profile.portfolio_url if profile and profile.portfolio_url else "",
     }
 
-    summary = (
-        profile.bio
-        if profile and profile.bio
-        else f"Driven Software Engineer with hands-on experience building full-stack web applications and scalable APIs. Passionate about clean code, performance optimization, and solving real-world challenges."
-    )
+    summary = profile.bio if profile and profile.bio else ""
 
     education = []
-    if profile and profile.university:
+    if profile and (profile.university or profile.degree):
         education.append({
-            "institution": profile.university,
-            "degree": profile.degree or "Bachelor of Science in Computer Science",
-            "location": "Campus",
-            "start_date": "2021",
-            "end_date": str(profile.graduation_year) if profile.graduation_year else "2025",
-            "gpa": "3.8 / 4.0",
-            "highlights": "Dean's Honor List, Algorithms, Distributed Systems, Database Management",
-        })
-    else:
-        education.append({
-            "institution": "University of Technology",
-            "degree": "B.S. in Computer Science",
-            "location": "Austin, TX",
-            "start_date": "2021",
-            "end_date": "2025",
-            "gpa": "3.85 / 4.0",
-            "highlights": "Data Structures, Cloud Computing, Object-Oriented Software Design",
+            "institution": profile.university or "",
+            "degree": profile.degree or "",
+            "location": "",
+            "start_date": "",
+            "end_date": str(profile.graduation_year) if profile.graduation_year else "",
+            "gpa": "",
+            "highlights": "",
         })
 
-    experience = [
-        {
-            "role": "Software Engineering Intern",
-            "company": "TechNova Solutions",
-            "location": "Remote",
-            "start_date": "May 2024",
-            "end_date": "Aug 2024",
-            "current": False,
-            "bullets": [
-                "Architected asynchronous microservice endpoints utilizing FastAPI and PostgreSQL, reducing latency by 32%.",
-                "Constructed high-speed real-time event notifications via WebSockets with 99.9% delivery reliability.",
-                "Engineered automated Pytest integration pipelines with 94% test coverage.",
-            ],
-        }
-    ]
+    experience = []
 
     projects = []
     if user_projects:
@@ -225,40 +197,12 @@ async def seed_resume_from_profile(
                 "tech_stack": ", ".join(p.tech_stack) if isinstance(p.tech_stack, list) else str(p.tech_stack or ""),
                 "link": p.github_url or p.live_demo_url or "",
                 "bullets": [
-                    p.short_description or "Full-stack cloud-native application.",
-                    "Implemented responsive frontend components with seamless REST API integration.",
-                ],
+                    p.short_description or "",
+                ] if p.short_description else [""],
             })
-    else:
-        projects = [
-            {
-                "name": "CloudHire - Real-Time Hiring & Project Ecosystem",
-                "tech_stack": "React, Tailwind CSS, FastAPI, PostgreSQL, Redis",
-                "link": "github.com/developer/cloudhire",
-                "bullets": [
-                    "Engineered role-based authentication, real-time application pipelines, and interactive ATS resume builder.",
-                    "Optimized database indices and asynchronous query execution achieving sub-40ms response times.",
-                ],
-            },
-            {
-                "name": "DevPulse - Automated CI/CD Metrics Dashboard",
-                "tech_stack": "Python, Docker, GitHub Actions, Chart.js",
-                "link": "github.com/developer/devpulse",
-                "bullets": [
-                    "Built developer productivity monitor collecting webhook telemetry across 50+ repositories.",
-                    "Designed intuitive telemetry charts for tracking deployment frequency and lead time.",
-                ],
-            },
-        ]
 
-    skills = profile.skills if profile and profile.skills else [
-        "Python", "FastAPI", "JavaScript", "React", "TypeScript", "PostgreSQL", "Docker", "Git", "REST APIs", "Tailwind CSS"
-    ]
-
-    certifications = [
-        {"name": "AWS Certified Cloud Practitioner", "issuer": "Amazon Web Services", "date": "2024"},
-        {"name": "Meta Front-End Developer Professional Certificate", "issuer": "Coursera", "date": "2023"},
-    ]
+    skills = profile.skills if profile and profile.skills else []
+    certifications = []
 
     resume = Resume(
         user_id=current_user.id,

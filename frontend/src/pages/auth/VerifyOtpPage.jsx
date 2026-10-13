@@ -29,7 +29,9 @@ export default function VerifyOtpPage() {
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(
+    email ? null : 'No email address was provided. Please register or sign in again.'
+  );
   const [successMessage, setSuccessMessage] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
 
@@ -73,7 +75,7 @@ export default function VerifyOtpPage() {
   const handleVerify = useCallback(
     async (codeToVerify) => {
       const code = codeToVerify || otpDigits.join('');
-      if (code.length !== 6) return;
+      if (!email || code.length !== 6) return;
 
       setIsSubmitting(true);
       setErrorMessage(null);
@@ -113,7 +115,7 @@ export default function VerifyOtpPage() {
   );
 
   const handleResend = async () => {
-    if (cooldown > 0 || isResending) return;
+    if (!email || cooldown > 0 || isResending) return;
 
     setIsResending(true);
     setErrorMessage(null);
@@ -237,7 +239,7 @@ export default function VerifyOtpPage() {
                 size="lg"
                 className="w-full shadow-sm hover:shadow"
                 onClick={() => handleVerify()}
-                disabled={otpDigits.some((d) => !d) || isSubmitting}
+                disabled={!email || otpDigits.some((d) => !d) || isSubmitting}
                 isLoading={isSubmitting}
                 rightIcon={ArrowRight}
               >

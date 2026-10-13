@@ -126,18 +126,24 @@ export default function AdminDashboardPage() {
   const [templatesList, setTemplatesList] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
   const [templateFormSubmitting, setTemplateFormSubmitting] = useState(false);
   const [templateActionFeedback, setTemplateActionFeedback] = useState(null);
+  const [templateSearchQuery, setTemplateSearchQuery] = useState('');
+  const [templateStatusFilter, setTemplateStatusFilter] = useState('ALL');
 
   const initialTemplateFormData = {
     id: '',
     name: '',
-    tagline: '',
+    badge: 'Professional',
     description: '',
-    badge: 'Popular',
-    ats_score: '96/100',
-    best_for: 'Full Stack, Cloud & AI Developers',
-    preview_accent: '#3B82F6',
+    tagline: '',
+    preview_image_url: '',
+    download_url: '',
+    ats_score: '98/100',
+    best_for: 'Software Engineers, Freshers, All Domains',
+    preview_accent: '#F97316',
+    is_active: true,
   };
   const [templateFormData, setTemplateFormData] = useState(initialTemplateFormData);
 
@@ -404,48 +410,151 @@ export default function AdminDashboardPage() {
   // =========================================================================
 
   const handleOpenCreateTemplate = () => {
+    setEditingTemplate(null);
     setTemplateFormData(initialTemplateFormData);
     setTemplateActionFeedback(null);
     setIsTemplateModalOpen(true);
   };
 
+  const handleOpenEditTemplate = (tpl) => {
+    setEditingTemplate(tpl);
+    setTemplateFormData({
+      id: tpl.id || '',
+      name: tpl.name || '',
+      badge: tpl.badge || 'Professional',
+      description: tpl.description || '',
+      tagline: tpl.tagline || '',
+      preview_image_url: tpl.preview_image_url || '',
+      download_url: tpl.download_url || '',
+      ats_score: tpl.ats_score || '98/100',
+      best_for: tpl.best_for || 'Software Engineers, Freshers, All Domains',
+      preview_accent: tpl.preview_accent || '#F97316',
+      is_active: tpl.is_active ?? true,
+    });
+    setTemplateActionFeedback(null);
+    setIsTemplateModalOpen(true);
+  };
+
+  const handlePreFillSample = (sampleNum = 1) => {
+    setTemplateFormData({
+      id: `template-${sampleNum}`,
+      name: `Template ${sampleNum}`,
+      badge: 'Professional',
+      description: 'Ready-to-use professional resume format',
+      tagline: 'Standard single-column layout preferred by tech recruiters and ATS systems.',
+      preview_image_url: '',
+      download_url: '',
+      ats_score: '98/100',
+      best_for: 'Software Engineers, Backend Developers, DevOps',
+      preview_accent: '#F97316',
+      is_active: true,
+    });
+  };
+
+  const handleTemplateImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please upload an image smaller than 5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setTemplateFormData((prev) => ({
+        ...prev,
+        preview_image_url: event.target.result,
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveTemplate = async (e) => {
     e.preventDefault();
-    if (!templateFormData.id.trim() || !templateFormData.name.trim() || !templateFormData.description.trim()) {
-      setTemplateActionFeedback({ type: 'error', text: 'Template ID, Name, and Description are required.' });
+    if (!templateFormData.name.trim() || !templateFormData.description.trim()) {
+      setTemplateActionFeedback({ type: 'error', text: 'Template Name and Description are required.' });
       return;
     }
 
     try {
       setTemplateFormSubmitting(true);
-      await adminService.createTemplate({
+      const generatedId = templateFormData.id.trim()
+        ? templateFormData.id.trim().toLowerCase().replace(/\s+/g, '-')
+        : templateFormData.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+      const payload = {
         ...templateFormData,
-        id: templateFormData.id.trim().toLowerCase().replace(/\s+/g, '-'),
-      });
-      setTemplateActionFeedback({ type: 'success', text: 'Template registered into the catalog!' });
+        id: generatedId,
+        badge: templateFormData.badge.trim() || 'Professional',
+      };
+
+      if (editingTemplate) {
+        await adminService.updateTemplate(editingTemplate.id, payload);
+        setTemplateActionFeedback({ type: 'success', text: 'Template updated successfully!' });
+      } else {
+        await adminService.createTemplate(payload);
+        setTemplateActionFeedback({ type: 'success', text: 'Template registered and published!' });
+      }
+
       fetchTemplates();
       setTimeout(() => {
         setIsTemplateModalOpen(false);
         setTemplateActionFeedback(null);
+        setEditingTemplate(null);
       }, 1000);
     } catch (err) {
       console.error('Template save failed:', err);
       setTemplateActionFeedback({
         type: 'error',
-        text: err?.response?.data?.detail || 'Failed to register template.',
+        text: err?.response?.data?.detail || 'Failed to save template. Please check the fields.',
       });
     } finally {
       setTemplateFormSubmitting(false);
     }
   };
 
+  const handleToggleTemplateStatus = async (templateId) => {
+    try {
+      await adminService.toggleTemplateStatus(templateId);
+      setTemplatesList((prev) =>
+        prev.map((t) => (t.id === templateId ? { ...t, is_active: !t.is_active } : t))
+      );
+    } catch (err) {
+      console.error('Failed to toggle template status:', err);
+    }
+  };
+
   const handleDeleteTemplate = async (templateId, name) => {
-    if (!window.confirm(`Remove template '${name}' (${templateId})?`)) return;
+    if (!window.confirm(`Permanently remove template '${name}' (${templateId})?`)) return;
     try {
       await adminService.deleteTemplate(templateId);
       setTemplatesList((prev) => prev.filter((t) => t.id !== templateId));
     } catch (err) {
       console.error('Delete template failed:', err);
+    }
+  };
+
+  const handleSeedScreenshotTemplates = async () => {
+    try {
+      setLoadingTemplates(true);
+      await adminService.seedDefaultTemplates();
+      await fetchTemplates();
+    } catch (err) {
+      console.error('Failed to seed templates:', err);
+    } finally {
+      setLoadingTemplates(false);
+    }
+  };
+
+  const handleClearAllTemplates = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL templates? The catalog will be completely empty.')) return;
+    try {
+      setLoadingTemplates(true);
+      await adminService.clearAllTemplates();
+      setTemplatesList([]);
+    } catch (err) {
+      console.error('Failed to clear templates:', err);
+    } finally {
+      setLoadingTemplates(false);
     }
   };
 
@@ -471,6 +580,21 @@ export default function AdminDashboardPage() {
         s.university?.toLowerCase().includes(q)
     );
   }, [studentsList, studentSearchQuery]);
+
+  const filteredTemplates = useMemo(() => {
+    return templatesList.filter((t) => {
+      if (templateStatusFilter === 'ACTIVE' && t.is_active === false) return false;
+      if (templateStatusFilter === 'INACTIVE' && t.is_active !== false) return false;
+      if (templateSearchQuery.trim()) {
+        const q = templateSearchQuery.toLowerCase();
+        const matchesName = (t.name || '').toLowerCase().includes(q);
+        const matchesBadge = (t.badge || '').toLowerCase().includes(q);
+        const matchesDesc = (t.description || '').toLowerCase().includes(q);
+        return matchesName || matchesBadge || matchesDesc;
+      }
+      return true;
+    });
+  }, [templatesList, templateStatusFilter, templateSearchQuery]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-16">
@@ -1072,71 +1196,299 @@ export default function AdminDashboardPage() {
       {/* ========================================================================= */}
       {activeTab === 'templates' && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Top Bar with Clear Header and Action Controls */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
             <div>
-              <h2 className="font-display font-bold text-xl text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-brand-primary" />
-                ATS Resume Templates Catalog
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-brand-veryLight text-brand-primary border border-brand-border">
+                  Candidate Catalog
+                </span>
+                <span className="text-xs text-slate-400">Total: {templatesList.length} templates</span>
+              </div>
+              <h2 className="font-display font-bold text-2xl text-slate-900 flex items-center gap-2 mt-1">
+                <FileText className="w-6 h-6 text-brand-primary" />
+                Resume Templates Manager
               </h2>
-              <p className="text-xs text-slate-500">
-                Manage and add new single-column ATS resume layouts available to students in the Resume Builder.
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-2xl leading-relaxed">
+                Add and customize the resume templates available to candidates. Each template card features a 
+                <strong> Title</strong>, <strong>Category Badge</strong> (e.g. Professional), <strong>Description</strong>, 
+                <strong>Preview Mockup</strong>, and download actions.
               </p>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              leftIcon={Plus}
-              onClick={handleOpenCreateTemplate}
-              className="shadow-sm"
-            >
-              Add New Resume Template
-            </Button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                to="/templates"
+                target="_blank"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors inline-flex items-center gap-1.5"
+                title="Open Candidate Resume Templates Page"
+              >
+                <span>View Candidate Page</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleSeedScreenshotTemplates}
+                disabled={loadingTemplates}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-brand-primary bg-brand-veryLight hover:bg-blue-100 border border-brand-border transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+                title="Populate the 3 templates from the screenshot (Template 1, 2, 3)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Seed (Template 1, 2, 3)</span>
+              </button>
+
+              {templatesList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllTemplates}
+                  disabled={loadingTemplates}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors inline-flex items-center gap-1"
+                  title="Clear all templates to start completely fresh"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear All</span>
+                </button>
+              )}
+
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={Plus}
+                onClick={handleOpenCreateTemplate}
+                className="font-bold shadow-sm"
+              >
+                Add New Template
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templatesList.map((tpl) => (
-              <div
-                key={tpl.id}
-                className="bg-white rounded-2xl border border-brand-border p-6 shadow-xs flex flex-col justify-between space-y-4 relative overflow-hidden"
-              >
-                <div
-                  className="absolute top-0 inset-x-0 h-1.5"
-                  style={{ backgroundColor: tpl.preview_accent || '#3B82F6' }}
-                />
+          {/* Quick Guide Card */}
+          <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/50 p-5 rounded-2xl border border-brand-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-brand-primary" />
+                How to Add a Template with Clear Description
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">
+                When adding a template, provide a recognizable <strong>Template Title</strong> (e.g. <em>Template 1</em>), 
+                a <strong>Category Badge</strong> (e.g. <em>Professional</em>), and a <strong>Short Description</strong> 
+                (e.g. <em>Ready-to-use professional resume format</em>). You can upload a preview image or let the platform auto-generate a document preview.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenCreateTemplate}
+              className="shrink-0 px-4 py-2 bg-white text-brand-primary font-bold text-xs rounded-xl border border-brand-border shadow-xs hover:bg-brand-veryLight transition"
+            >
+              + Create Template
+            </button>
+          </div>
 
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                      {tpl.badge || 'Template'}
+          {/* Search & Filter Toolbar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={templateSearchQuery}
+                onChange={(e) => setTemplateSearchQuery(e.target.value)}
+                placeholder="Search templates by title, badge, or description..."
+                className="w-full text-xs pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium">Filter:</span>
+              {['ALL', 'ACTIVE', 'INACTIVE'].map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setTemplateStatusFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                    templateStatusFilter === f
+                      ? 'bg-brand-primary text-white shadow-xs'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  {f === 'ALL' ? 'All' : f === 'ACTIVE' ? 'Published' : 'Hidden'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Loading Indicator */}
+          {loadingTemplates && (
+            <div className="py-16 text-center space-y-2">
+              <div className="w-8 h-8 border-3 border-brand-border border-t-brand-primary rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-slate-500 font-medium">Refreshing catalog...</p>
+            </div>
+          )}
+
+          {/* Empty Catalog State */}
+          {!loadingTemplates && filteredTemplates.length === 0 && (
+            <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-12 text-center space-y-4 max-w-xl mx-auto">
+              <div className="w-14 h-14 bg-brand-veryLight text-brand-primary rounded-2xl flex items-center justify-center mx-auto">
+                <FileText className="w-7 h-7" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">No Templates Found</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  {templateSearchQuery.trim()
+                    ? `No templates matching "${templateSearchQuery}". Try clearing search.`
+                    : 'The resume templates catalog is currently empty. Add your own template or load default sample templates.'}
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSeedScreenshotTemplates}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-brand-veryLight text-brand-primary hover:bg-blue-100 border border-brand-border transition"
+                >
+                  Load Sample Templates (1, 2, 3)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenCreateTemplate}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-brand-primary text-white hover:bg-brand-primaryHover shadow-sm transition"
+                >
+                  + Add New Template
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Cards Grid */}
+          {!loadingTemplates && filteredTemplates.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTemplates.map((tpl, index) => (
+                <div
+                  key={tpl.id || index}
+                  className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:shadow-lg transition-all overflow-hidden flex flex-col justify-between"
+                >
+                  {/* Top Bar with Status and Action Buttons */}
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        tpl.is_active !== false
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-300'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${tpl.is_active !== false ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                      {tpl.is_active !== false ? 'Published' : 'Hidden Draft'}
                     </span>
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      ATS {tpl.ats_score || '95/100'}
-                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTemplateStatus(tpl.id)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition"
+                        title={tpl.is_active !== false ? 'Hide from candidates' : 'Publish to candidates'}
+                      >
+                        {tpl.is_active !== false ? <Eye className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-slate-300" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditTemplate(tpl)}
+                        className="p-1 rounded-lg text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition"
+                        title="Edit template details"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTemplate(tpl.id, tpl.name)}
+                        className="p-1 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition"
+                        title="Delete template"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
-                  <h3 className="font-display font-bold text-lg text-slate-900">{tpl.name}</h3>
-                  <div className="text-[11px] font-mono text-slate-400">ID: {tpl.id}</div>
-                  <p className="text-xs text-brand-primary font-medium">{tpl.tagline}</p>
-                  <p className="text-xs text-slate-500 leading-relaxed">{tpl.description}</p>
-                </div>
+                  {/* Document Preview Mockup Box matching candidate view */}
+                  <div className="h-64 bg-[#1e232a] relative overflow-hidden flex items-center justify-center p-3 border-b border-slate-200">
+                    {tpl.preview_image_url ? (
+                      <img
+                        src={tpl.preview_image_url}
+                        alt={tpl.name}
+                        className="w-full h-full object-contain rounded shadow"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-white rounded shadow-md p-3 text-[7px] text-slate-700 overflow-y-auto space-y-1.5 pointer-events-none select-none">
+                        <div className="text-center pb-1 border-b border-slate-200">
+                          <div className="font-extrabold text-[9px] text-slate-900 tracking-wider">
+                            {tpl.name ? tpl.name.toUpperCase() : 'RESUME TEMPLATE'}
+                          </div>
+                          <div className="text-[6px] text-slate-500">
+                            Mobile: +91 9391033355 | Email: student@example.com
+                          </div>
+                        </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400 text-[11px]">Best for: {tpl.best_for}</span>
-                  {tpl.is_custom && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTemplate(tpl.id, tpl.name)}
-                      className="text-rose-600 hover:text-rose-800 text-xs font-semibold p-1 hover:bg-rose-50 rounded"
-                      title="Remove Template"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                        <div>
+                          <div className="font-bold text-[7px] uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5">
+                            PROFILE SUMMARY
+                          </div>
+                          <div className="text-[6px] text-slate-500 mt-0.5 leading-tight">
+                            {tpl.description || 'Ready-to-use professional resume format'}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-bold text-[7px] uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5">
+                            EDUCATION
+                          </div>
+                          <div className="flex justify-between items-center text-[6.5px] text-slate-800 font-semibold mt-0.5">
+                            <span>University of Technology</span>
+                            <span>CGPA: 8.5/10</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-bold text-[7px] uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5">
+                            TECHNICAL SKILLS
+                          </div>
+                          <div className="text-[6px] text-slate-600 mt-0.5">
+                            Python, JavaScript, React, Node.js, SQL, Git
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Card Content Information */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h3 className="font-bold text-base text-slate-900">{tpl.name}</h3>
+                      <div className="mt-1.5">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-veryLight text-brand-primary border border-brand-border">
+                          {tpl.badge || 'Professional'}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500 leading-relaxed line-clamp-2">
+                        {tpl.description || 'Ready-to-use professional resume format'}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                      <span>ID: <code className="font-mono text-slate-600">{tpl.id}</code></span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditTemplate(tpl)}
+                        className="text-xs font-bold text-[#F97316] hover:underline"
+                      >
+                        Edit Details →
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1536,142 +1888,364 @@ export default function AdminDashboardPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 3: ADD RESUME TEMPLATE */}
+      {/* MODAL 3: ADD / EDIT RESUME TEMPLATE (With Clear Field Descriptions & Live Card Preview) */}
       {/* ========================================================================= */}
       {isTemplateModalOpen && (
         <Modal
           isOpen={isTemplateModalOpen}
-          onClose={() => setIsTemplateModalOpen(false)}
-          title="Register New ATS Resume Template"
-          size="md"
+          onClose={() => {
+            setIsTemplateModalOpen(false);
+            setEditingTemplate(null);
+          }}
+          title={editingTemplate ? `Edit Template: ${editingTemplate.name}` : 'Add New Resume Template'}
+          size="xl"
         >
-          <form onSubmit={handleSaveTemplate} className="space-y-4 text-xs">
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
             {templateActionFeedback && (
-              <Alert variant={templateActionFeedback.type} className="mb-3">
+              <Alert variant={templateActionFeedback.type} className="mb-2">
                 {templateActionFeedback.text}
               </Alert>
             )}
 
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Template Identifier ID *</label>
-              <input
-                type="text"
-                required
-                value={templateFormData.id}
-                onChange={(e) => setTemplateFormData({ ...templateFormData, id: e.target.value })}
-                placeholder="e.g. silicon-valley, clean-academic"
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg font-mono"
-              />
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Unique machine identifier (hyphen-separated)</span>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Display Name *</label>
-              <input
-                type="text"
-                required
-                value={templateFormData.name}
-                onChange={(e) => setTemplateFormData({ ...templateFormData, name: e.target.value })}
-                placeholder="e.g. Silicon Valley Executive"
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Badge Tag</label>
-                <input
-                  type="text"
-                  value={templateFormData.badge}
-                  onChange={(e) => setTemplateFormData({ ...templateFormData, badge: e.target.value })}
-                  placeholder="e.g. Executive, New"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">ATS Score Benchmark</label>
-                <input
-                  type="text"
-                  value={templateFormData.ats_score}
-                  onChange={(e) => setTemplateFormData({ ...templateFormData, ats_score: e.target.value })}
-                  placeholder="e.g. 98/100"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Tagline</label>
-              <input
-                type="text"
-                value={templateFormData.tagline}
-                onChange={(e) => setTemplateFormData({ ...templateFormData, tagline: e.target.value })}
-                placeholder="Ultra-clean single column layout optimized for FAANG applicant systems."
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Detailed Description *</label>
-              <textarea
-                rows={3}
-                required
-                value={templateFormData.description}
-                onChange={(e) => setTemplateFormData({ ...templateFormData, description: e.target.value })}
-                placeholder="High-density section layout with structured technical skills categorization..."
-                className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Best For Roles</label>
-                <input
-                  type="text"
-                  value={templateFormData.best_for}
-                  onChange={(e) => setTemplateFormData({ ...templateFormData, best_for: e.target.value })}
-                  placeholder="e.g. Backend Engineers, DevOps"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Accent Color Hex</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={templateFormData.preview_accent}
-                    onChange={(e) => setTemplateFormData({ ...templateFormData, preview_accent: e.target.value })}
-                    className="w-8 h-8 rounded border p-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={templateFormData.preview_accent}
-                    onChange={(e) => setTemplateFormData({ ...templateFormData, preview_accent: e.target.value })}
-                    className="w-full text-xs p-2 border border-slate-200 rounded-lg font-mono"
-                  />
+            {/* Quick pre-fill toolbar */}
+            {!editingTemplate && (
+              <div className="p-3 rounded-xl bg-brand-veryLight border border-brand-border flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-brand-text flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                  Need a quick start? Click an example to pre-fill:
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handlePreFillSample(1)}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white border border-brand-border text-brand-primary hover:bg-blue-50 transition"
+                  >
+                    Template 1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePreFillSample(2)}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white border border-brand-border text-brand-primary hover:bg-blue-50 transition"
+                  >
+                    Template 2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePreFillSample(3)}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white border border-brand-border text-brand-primary hover:bg-blue-50 transition"
+                  >
+                    Template 3
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setIsTemplateModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={templateFormSubmitting}
-                className="px-5 py-2 rounded-xl bg-brand-primary text-white font-bold hover:bg-brand-primary-hover shadow-sm disabled:opacity-50"
-              >
-                {templateFormSubmitting ? 'Registering...' : 'Add Template'}
-              </button>
+            {/* Two-Column Form & Live Preview */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Form Fields with Clear Descriptions */}
+              <form onSubmit={handleSaveTemplate} className="lg:col-span-7 space-y-4 text-xs">
+                {/* 1. Template Title */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-800">
+                      1. Template Title <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Card headline</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={templateFormData.name}
+                    onChange={(e) => setTemplateFormData({ ...templateFormData, name: e.target.value })}
+                    placeholder="e.g. Template 1, Modern Tech Resume, Executive Minimal"
+                    className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                  />
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    The prominent bold title displayed directly below the preview mockup.
+                  </span>
+                </div>
+
+                {/* 2. Category Badge Tag */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-800">
+                      2. Category Badge (Card Tag) <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Pill tag under title</span>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={templateFormData.badge}
+                    onChange={(e) => setTemplateFormData({ ...templateFormData, badge: e.target.value })}
+                    placeholder="e.g. Professional"
+                    className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                  />
+
+                  {/* Preset Badge Chips */}
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 font-medium">Suggestions:</span>
+                    {['Professional', 'Entry-Level', 'Tech / IT', 'Executive', 'Academic', 'Creative'].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setTemplateFormData({ ...templateFormData, badge: tag })}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 hover:bg-brand-veryLight hover:text-brand-primary text-slate-600 transition"
+                      >
+                        +{tag}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    Displays as the styled badge (e.g. <em>Professional</em>) on the template card.
+                  </span>
+                </div>
+
+                {/* 3. Short Description */}
+                <div>
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-800">
+                      3. Short Description <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Card description</span>
+                  </div>
+                  <textarea
+                    rows={2}
+                    required
+                    value={templateFormData.description}
+                    onChange={(e) => setTemplateFormData({ ...templateFormData, description: e.target.value })}
+                    placeholder="e.g. Ready-to-use professional resume format"
+                    className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                  />
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    Explains what the template is suited for (e.g. <em>Ready-to-use professional resume format</em>).
+                  </span>
+                </div>
+
+                {/* 4. Document Mockup Preview Image */}
+                <div>
+                  <label className="block font-bold text-slate-800">
+                    4. Template Preview Mockup (Image or Auto Document)
+                  </label>
+                  <span className="text-[11px] text-slate-500 mb-1.5 block">
+                    Upload a screenshot image of the template or enter an image URL. If left empty, an automated clean document layout will be displayed.
+                  </span>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition inline-flex items-center gap-1.5 border border-slate-200">
+                        <Palette className="w-3.5 h-3.5 text-brand-primary" />
+                        <span>Upload Screenshot Image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleTemplateImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <span className="text-slate-400 text-xs">or paste image URL:</span>
+                    </div>
+
+                    <input
+                      type="url"
+                      value={templateFormData.preview_image_url}
+                      onChange={(e) => setTemplateFormData({ ...templateFormData, preview_image_url: e.target.value })}
+                      placeholder="https://example.com/resume-preview.png"
+                      className="w-full text-xs p-2 border border-slate-200 rounded-xl"
+                    />
+
+                    {templateFormData.preview_image_url && (
+                      <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                        <img
+                          src={templateFormData.preview_image_url}
+                          alt="Preview"
+                          className="w-10 h-10 object-cover rounded border"
+                        />
+                        <span className="text-[10px] text-slate-500 truncate flex-1">
+                          Image attached for preview mockup
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setTemplateFormData({ ...templateFormData, preview_image_url: '' })}
+                          className="text-rose-600 hover:text-rose-800 text-[10px] font-bold"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Direct Download URL */}
+                <div>
+                  <label className="block font-bold text-slate-800">
+                    5. Download File URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={templateFormData.download_url}
+                    onChange={(e) => setTemplateFormData({ ...templateFormData, download_url: e.target.value })}
+                    placeholder="https://example.com/template.pdf (optional)"
+                    className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl"
+                  />
+                  <span className="text-[11px] text-slate-500 mt-1 block">
+                    Leave blank to automatically use the platform's ATS PDF generator when candidates click Download.
+                  </span>
+                </div>
+
+                {/* 6. Template Machine Key */}
+                <div>
+                  <label className="block font-bold text-slate-800">
+                    6. Machine Key / Slug ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={templateFormData.id}
+                    onChange={(e) => setTemplateFormData({ ...templateFormData, id: e.target.value })}
+                    placeholder="e.g. template-1 (auto-generated if empty)"
+                    className="mt-1 w-full text-xs p-2 border border-slate-200 rounded-xl font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    Unique identifier used for routing and compiler mapping.
+                  </span>
+                </div>
+
+                {/* 7. Active Status Toggle */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <span className="font-bold text-slate-800 block">Published to Candidates</span>
+                    <span className="text-[10px] text-slate-500">
+                      When active, this template is immediately visible on the /templates page.
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={templateFormData.is_active}
+                      onChange={(e) => setTemplateFormData({ ...templateFormData, is_active: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary" />
+                  </label>
+                </div>
+
+                {/* Form Buttons */}
+                <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsTemplateModalOpen(false);
+                      setEditingTemplate(null);
+                    }}
+                    className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={templateFormSubmitting}
+                    className="px-6 py-2.5 rounded-xl bg-brand-primary text-white font-bold hover:bg-brand-primaryHover shadow-sm disabled:opacity-50 transition"
+                  >
+                    {templateFormSubmitting
+                      ? 'Saving...'
+                      : editingTemplate
+                      ? 'Update Template'
+                      : 'Publish Template'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Right Column: Live Candidate Card Preview */}
+              <div className="lg:col-span-5 bg-slate-50 p-4 rounded-2xl border border-slate-200 lg:sticky lg:top-0 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Eye className="w-4 h-4 text-brand-primary" />
+                    Live Candidate Card Preview
+                  </span>
+                  <span className="text-[10px] text-slate-400">Updates as you type</span>
+                </div>
+
+                {/* Candidate Card Exact Rendering */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden flex flex-col justify-between">
+                  {/* Top Document Mockup */}
+                  <div className="h-60 bg-[#1e232a] relative overflow-hidden flex items-center justify-center p-3 border-b border-slate-200">
+                    {templateFormData.preview_image_url ? (
+                      <img
+                        src={templateFormData.preview_image_url}
+                        alt="Preview"
+                        className="w-full h-full object-contain rounded shadow"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-white rounded shadow-md p-3 text-[7px] text-slate-700 overflow-y-auto space-y-1.5 select-none pointer-events-none">
+                        <div className="text-center pb-1 border-b border-slate-200">
+                          <div className="font-extrabold text-[9px] text-slate-900 tracking-wider">
+                            {templateFormData.name ? templateFormData.name.toUpperCase() : 'RESUME TEMPLATE'}
+                          </div>
+                          <div className="text-[6px] text-slate-500">
+                            Mobile: +91 9391033355 | Email: student@example.com
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-bold text-[7px] uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5">
+                            PROFILE SUMMARY
+                          </div>
+                          <div className="text-[6px] text-slate-500 mt-0.5 leading-tight">
+                            {templateFormData.description || 'Ready-to-use professional resume format'}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="font-bold text-[7px] uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-0.5">
+                            EDUCATION
+                          </div>
+                          <div className="flex justify-between items-center text-[6.5px] text-slate-800 font-semibold mt-0.5">
+                            <span>University of Technology</span>
+                            <span>CGPA: 8.5/10</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Body Content */}
+                  <div className="p-5 space-y-3">
+                    <div>
+                      <h4 className="font-bold text-lg text-slate-900 tracking-tight">
+                        {templateFormData.name || 'Template Name'}
+                      </h4>
+
+                      <div className="mt-1.5">
+                        <span className="inline-block px-3 py-0.5 rounded-full text-xs font-semibold bg-brand-veryLight text-brand-primary border border-brand-border">
+                          {templateFormData.badge || 'Professional'}
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-xs text-slate-500 leading-relaxed line-clamp-2">
+                        {templateFormData.description || 'Ready-to-use professional resume format'}
+                      </p>
+                    </div>
+
+                    {/* Action Buttons Mock */}
+                    <div className="flex items-center gap-2.5 pt-2">
+                      <div className="flex-1 py-2 px-3 rounded-xl bg-brand-primary text-white font-semibold text-xs flex items-center justify-center gap-1 shadow-xs">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>ViewFull</span>
+                      </div>
+                      <div className="flex-1 py-2 px-3 rounded-xl border border-brand-primary text-brand-primary font-semibold text-xs flex items-center justify-center gap-1">
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 text-center">
+                  This preview mirrors the candidate view on <code>/templates</code>.
+                </p>
+              </div>
             </div>
-          </form>
+          </div>
         </Modal>
       )}
     </div>

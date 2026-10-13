@@ -58,7 +58,18 @@ def generate_resume_pdf(resume_data: Dict[str, Any]) -> bytes:
     Generates a high-fidelity, ATS-compliant PDF resume from resume data dictionary.
     Supports templates: 'classic-tech', 'modern-minimal', 'research-academic', 'compact-dense'.
     """
-    template_id = resume_data.get("template_id", "classic-tech")
+    raw_template_id = str(resume_data.get("template_id") or "classic-tech").lower().strip()
+    alias_map = {
+        "template-1": "classic-tech",
+        "template-2": "modern-minimal",
+        "template-3": "research-academic",
+        "template-4": "compact-dense",
+        "template 1": "classic-tech",
+        "template 2": "modern-minimal",
+        "template 3": "research-academic",
+        "template 4": "compact-dense",
+    }
+    template_id = alias_map.get(raw_template_id, raw_template_id)
     personal_info = resume_data.get("personal_info") or {}
     summary = resume_data.get("summary") or ""
     education = resume_data.get("education") or []

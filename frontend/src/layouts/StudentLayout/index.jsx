@@ -65,7 +65,7 @@ export default function StudentLayout() {
       badge: counts.projects !== null ? String(counts.projects) : null,
     },
     { name: 'Resume Builder', path: '/resume-builder', icon: FileText },
-    { name: 'ATS Analyzer', path: '/ats-analyzer', icon: Sparkles, badge: 'New' },
+    { name: 'ATS Analyzer', path: '/ats-analyzer', icon: Sparkles },
     {
       name: 'Applications',
       path: '/applications',
