@@ -3,7 +3,7 @@ import api from '@/services/api';
 
 /**
  * Google Sign-In Button component integrating Google Identity Services SDK.
- * Reads VITE_GOOGLE_CLIENT_ID from environment variables.
+ * Reads the server's runtime client ID so token audiences always match.
  * Gracefully provides fallback messaging when the Client ID is not yet provided.
  */
 export default function GoogleSignInButton({
@@ -13,7 +13,8 @@ export default function GoogleSignInButton({
   text = 'Continue with Google',
 }) {
   const buttonContainerRef = useRef(null);
-  const [clientId, setClientId] = useState(import.meta.env.VITE_GOOGLE_CLIENT_ID || '');
+  const [clientId, setClientId] = useState('');
+  const [configError, setConfigError] = useState(false);
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [missingIdNotice, setMissingIdNotice] = useState(false);
   const [sdkError, setSdkError] = useState(false);
@@ -21,11 +22,10 @@ export default function GoogleSignInButton({
   handlers.current = { onSuccess, onError };
 
   useEffect(() => {
-    if (import.meta.env.VITE_GOOGLE_CLIENT_ID) return;
     let active = true;
     api.get('/auth/config').then(({ data }) => {
       if (active) setClientId(data.google_client_id || '');
-    }).catch(() => {});
+    }).catch(() => { if (active) setConfigError(true); });
     return () => { active = false; };
   }, []);
 
@@ -146,7 +146,9 @@ export default function GoogleSignInButton({
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 animate-fadeIn">
           <p className="font-semibold mb-0.5">Google Client ID Setup Required</p>
           <p>
-            Please set <code className="bg-amber-100 px-1 py-0.5 rounded font-mono">VITE_GOOGLE_CLIENT_ID</code> in your frontend deployment environment variables (obtained from your Google Cloud Console project).
+            {configError
+              ? 'Sign-in configuration could not load. Refresh the page or contact support.'
+              : 'Google sign-in is not configured on the server. Contact support.'}
           </p>
         </div>
       )}

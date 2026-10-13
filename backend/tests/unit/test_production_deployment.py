@@ -145,6 +145,31 @@ async def test_email_provider_errors_are_propagated(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize('status', [401, 403, 429, 503])
+async def test_email_http_errors_have_safe_actionable_logs(status, monkeypatch, caplog):
+    import httpx
+    monkeypatch.setattr(settings, 'ENVIRONMENT', 'production')
+    monkeypatch.setattr(settings, 'EMAIL_PROVIDER', 'resend')
+    monkeypatch.setattr(settings, 'EMAIL_API_KEY', 'private-api-key')
+    response = httpx.Response(status, request=httpx.Request('POST', 'https://api.resend.com/emails'),
+                              json={'message': 'private-api-key secret-otp recipient@example.com'})
+    monkeypatch.setattr(httpx.AsyncClient, 'post', AsyncMock(return_value=response))
+    assert await EmailService._dispatch_email('recipient@example.com', 'Verify', 'secret-otp') is False
+    assert f'Resend dispatch failed (HTTP {status})' in caplog.text
+    assert 'Check' in caplog.text
+    for secret in ('private-api-key', 'secret-otp', 'recipient@example.com'):
+        assert secret not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_public_google_configuration_uses_server_id(client, monkeypatch):
+    monkeypatch.setattr(settings, 'GOOGLE_CLIENT_ID', 'server-client.apps.googleusercontent.com')
+    response = await client.get('/api/auth/config')
+    assert response.status_code == 200
+    assert response.json() == {'google_client_id': 'server-client.apps.googleusercontent.com'}
+
+
+@pytest.mark.asyncio
 async def test_email_service_smtp_dispatch():
     """Verify SMTP email dispatch executes through smtplib with correct parameters."""
     with patch("smtplib.SMTP") as mock_smtp_cls, \
@@ -230,7 +255,8 @@ async def test_email_service_sendgrid_dispatch():
 @pytest.mark.asyncio
 async def test_email_service_console_fallback():
     """Verify Console provider logs OTP and updates dev registry."""
-    with patch.object(settings, "EMAIL_PROVIDER", "console"):
+    with patch.object(settings, "EMAIL_PROVIDER", "console"), \
+         patch.object(settings, "ENVIRONMENT", "development"):
         EmailService.clear_dev_otps()
         success = await EmailService.send_otp_email(
             to_email="console_test@university.edu",

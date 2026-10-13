@@ -27,6 +27,23 @@ class EmailService:
     def _development_dispatch() -> bool:
         return settings.ENVIRONMENT.strip().lower() not in {"production", "prod", "release"}
 
+    @staticmethod
+    def _log_api_failure(provider: str, error: Exception) -> None:
+        """Log actionable diagnostics without response bodies, keys, or OTPs."""
+        if isinstance(error, httpx.HTTPStatusError):
+            status = error.response.status_code
+            hint = {
+                400: "Check the sender address and email payload in the provider dashboard.",
+                401: "Check EMAIL_API_KEY in the deployment environment.",
+                403: "Check sender/domain verification, API key permissions, and test-recipient restrictions.",
+                422: "Check the sender address and email payload in the provider dashboard.",
+                429: "Check the provider sending quota and rate limits.",
+            }.get(status, "Check provider availability and its dashboard logs.")
+            logger.error("%s dispatch failed (HTTP %s). %s", provider, status, hint)
+        else:
+            logger.error("%s dispatch failed (%s). Check outbound HTTPS connectivity and provider availability.",
+                         provider, type(error).__name__)
+
     @classmethod
     async def _dispatch_email(
         cls,
@@ -78,6 +95,8 @@ class EmailService:
                 return True
             except Exception as e:
                 logger.error("SMTP dispatch failed (%s).", type(e).__name__)
+                if settings.RENDER_EXTERNAL_URL and settings.SMTP_PORT in {25, 465, 587}:
+                    logger.error("Render free services block standard SMTP ports. Configure an HTTPS email provider such as Resend or SendGrid, or use a paid service.")
                 return False
 
         # 2. Resend REST API Provider
@@ -106,7 +125,7 @@ class EmailService:
                     logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via Resend API")
                     return True
             except Exception as e:
-                logger.error("Resend dispatch failed (%s).", type(e).__name__)
+                cls._log_api_failure("Resend", e)
                 return False
 
         # 3. SendGrid REST API Provider
@@ -135,7 +154,7 @@ class EmailService:
                     logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via SendGrid API")
                     return True
             except Exception as e:
-                logger.error("SendGrid dispatch failed (%s).", type(e).__name__)
+                cls._log_api_failure("SendGrid", e)
                 return False
 
         # 4. Console / Test Simulation Fallback
@@ -200,7 +219,7 @@ class EmailService:
 
         # Log dispatch in development/test environment
         logger.info(
-            f"[EMAIL SERVICE] Sent OTP to {normalized_email} (purpose: {purpose}). "
+            f"[EMAIL SERVICE] Dispatching OTP to {normalized_email} (purpose: {purpose}). "
             f"Expiry: {settings.OTP_EXPIRE_MINUTES}m"
         )
         if cls._development_dispatch():
@@ -262,7 +281,7 @@ class EmailService:
         </html>
         """
 
-        logger.info(f"[EMAIL SERVICE] Sent password reset link to {normalized_email}")
+        logger.info(f"[EMAIL SERVICE] Dispatching password reset link to {normalized_email}")
         if cls._development_dispatch():
             print(f"\n[EMAIL SERVICE DEV DISPATCH] Password Reset Link for {normalized_email}: {final_url}\n")
 
