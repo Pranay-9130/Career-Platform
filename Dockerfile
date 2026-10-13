@@ -1,7 +1,9 @@
 FROM node:22-bookworm-slim AS frontend-build
+ARG NPM_VERSION=10.9.4
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN npm install --global npm@${NPM_VERSION} --no-audit --no-fund \
+    && npm ci --include=dev --include=optional --no-audit --no-fund
 COPY frontend/ ./
 ENV VITE_API_BASE_URL=/api
 RUN npm run build
