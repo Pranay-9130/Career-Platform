@@ -6,6 +6,7 @@ from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.profile_links import clean_social_profile_url
 from app.models.resume import Resume
 from app.models.user import User
 from app.models.profile import Profile
@@ -168,8 +169,8 @@ async def seed_resume_from_profile(
         "email": current_user.email,
         "phone": "",
         "location": "",
-        "github": profile.github_url if profile and profile.github_url else "",
-        "linkedin": profile.linkedin_url if profile and profile.linkedin_url else "",
+        "github": clean_social_profile_url(profile.github_url, "github") if profile else "",
+        "linkedin": clean_social_profile_url(profile.linkedin_url, "linkedin") if profile else "",
         "portfolio": profile.portfolio_url if profile and profile.portfolio_url else "",
     }
 

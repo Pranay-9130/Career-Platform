@@ -18,7 +18,7 @@ import {
   Sparkles,
   Info
 } from 'lucide-react';
-import { Button, Card, Badge } from '@/components/common';
+import { Button, Card, Badge, Breadcrumbs } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
 
 const FAQS = [
@@ -126,6 +126,15 @@ export default function SubmissionGuidelinesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-24">
+      {/* Standard Accessible Breadcrumb Navigation */}
+      <Breadcrumbs
+        items={[
+          { label: 'Projects', path: '/projects' },
+          { label: 'Submission Guidelines' },
+        ]}
+        backLink={{ label: 'Back to Projects', path: '/projects' }}
+      />
+
       {/* Hero Header */}
       <section className="bg-gradient-to-b from-blue-50/80 via-white to-slate-50/60 border-b border-brand-border py-12 lg:py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

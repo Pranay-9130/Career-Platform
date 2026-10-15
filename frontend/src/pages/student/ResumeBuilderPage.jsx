@@ -27,6 +27,7 @@ import {
 import { resumeService } from '../../services/resumeService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
+import { cleanSocialProfileUrl } from '@/utils/profileLinks';
 
 export default function ResumeBuilderPage() {
   const [searchParams] = useSearchParams();
@@ -92,7 +93,12 @@ export default function ResumeBuilderPage() {
     setCurrentResumeId(r.id);
     setTitle(r.title || 'Software Engineering Resume');
     setTemplateId(r.template_id || 'classic-tech');
-    setPersonalInfo(r.personal_info || {});
+    const info = r.personal_info || {};
+    setPersonalInfo({
+      ...info,
+      github: cleanSocialProfileUrl(info.github, 'github'),
+      linkedin: cleanSocialProfileUrl(info.linkedin, 'linkedin'),
+    });
     setSummary(r.summary || '');
     setEducation(r.education || []);
     setExperience(r.experience || []);
@@ -110,8 +116,8 @@ export default function ResumeBuilderPage() {
         email: prof.email || user?.email || '',
         phone: '',
         location: '',
-        github: prof.github_url || '',
-        linkedin: prof.linkedin_url || '',
+        github: cleanSocialProfileUrl(prof.github_url, 'github'),
+        linkedin: cleanSocialProfileUrl(prof.linkedin_url, 'linkedin'),
         portfolio: prof.portfolio_url || '',
       });
       setSummary(prof.bio || '');
@@ -167,8 +173,8 @@ export default function ResumeBuilderPage() {
         full_name: prof.full_name || prev.full_name || user?.full_name || '',
         headline: prof.headline || prev.headline || '',
         email: prof.email || prev.email || user?.email || '',
-        github: prof.github_url || prev.github || '',
-        linkedin: prof.linkedin_url || prev.linkedin || '',
+        github: cleanSocialProfileUrl(prof.github_url, 'github') || prev.github || '',
+        linkedin: cleanSocialProfileUrl(prof.linkedin_url, 'linkedin') || prev.linkedin || '',
         portfolio: prof.portfolio_url || prev.portfolio || '',
       }));
       if (prof.bio) {
@@ -205,7 +211,11 @@ export default function ResumeBuilderPage() {
       const payload = {
         title,
         template_id: templateId,
-        personal_info: personalInfo,
+        personal_info: {
+          ...personalInfo,
+          github: cleanSocialProfileUrl(personalInfo.github, 'github'),
+          linkedin: cleanSocialProfileUrl(personalInfo.linkedin, 'linkedin'),
+        },
         summary,
         education,
         experience,
@@ -254,7 +264,11 @@ export default function ResumeBuilderPage() {
       const payload = {
         title,
         template_id: templateId,
-        personal_info: personalInfo,
+        personal_info: {
+          ...personalInfo,
+          github: cleanSocialProfileUrl(personalInfo.github, 'github'),
+          linkedin: cleanSocialProfileUrl(personalInfo.linkedin, 'linkedin'),
+        },
         summary,
         education,
         experience,
@@ -477,6 +491,9 @@ export default function ResumeBuilderPage() {
   };
 
   const { score: atsScore, items: checklistItems } = computeAtsScore();
+
+  const visibleGithub = cleanSocialProfileUrl(personalInfo.github, 'github');
+  const visibleLinkedin = cleanSocialProfileUrl(personalInfo.linkedin, 'linkedin');
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -750,6 +767,10 @@ export default function ResumeBuilderPage() {
                       type="text"
                       value={personalInfo.github || ''}
                       onChange={(e) => setPersonalInfo({ ...personalInfo, github: e.target.value })}
+                      onBlur={() => setPersonalInfo((prev) => ({
+                        ...prev,
+                        github: cleanSocialProfileUrl(prev.github, 'github'),
+                      }))}
                       className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
                       placeholder="github.com/alexrivera"
                     />
@@ -760,6 +781,10 @@ export default function ResumeBuilderPage() {
                       type="text"
                       value={personalInfo.linkedin || ''}
                       onChange={(e) => setPersonalInfo({ ...personalInfo, linkedin: e.target.value })}
+                      onBlur={() => setPersonalInfo((prev) => ({
+                        ...prev,
+                        linkedin: cleanSocialProfileUrl(prev.linkedin, 'linkedin'),
+                      }))}
                       className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
                       placeholder="linkedin.com/in/alexrivera"
                     />
@@ -1193,10 +1218,10 @@ export default function ResumeBuilderPage() {
                   {personalInfo.phone && <span> • {personalInfo.phone}</span>}
                   {personalInfo.location && <span> • {personalInfo.location}</span>}
                 </div>
-                {(personalInfo.github || personalInfo.linkedin) && (
+                {(visibleGithub || visibleLinkedin) && (
                   <div className="text-sky-700 font-medium">
-                    {personalInfo.github && <span>{personalInfo.github}</span>}
-                    {personalInfo.linkedin && <span> • {personalInfo.linkedin}</span>}
+                    {visibleGithub && <span>{visibleGithub}</span>}
+                    {visibleLinkedin && <span> • {visibleLinkedin}</span>}
                   </div>
                 )}
               </div>

@@ -6,6 +6,7 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.profile_links import clean_social_profile_url
 from app.models.user import User
 from app.models.profile import Profile
 from app.models.project import Project
@@ -67,7 +68,11 @@ def calculate_profile_completion(user: User, profile: Profile) -> int:
         score += 5
 
     # 7. Social / Portfolio Links (10%)
-    if profile and (profile.github_url or profile.linkedin_url or profile.portfolio_url):
+    if profile and (
+        clean_social_profile_url(profile.github_url, "github")
+        or clean_social_profile_url(profile.linkedin_url, "linkedin")
+        or profile.portfolio_url
+    ):
         score += 10
 
     # 8. Avatar URL (10%)
@@ -157,8 +162,8 @@ async def get_or_create_user_profile(user: User, db: AsyncSession) -> Profile:
         degree="B.S. in Computer Science",
         graduation_year=2026,
         skills=["React", "Python", "FastAPI", "Tailwind CSS"],
-        github_url="https://github.com",
-        linkedin_url="https://linkedin.com",
+        github_url=None,
+        linkedin_url=None,
         portfolio_url=None,
     )
     db.add(profile)
@@ -530,8 +535,8 @@ async def get_my_profile(
         university=profile.university,
         degree=profile.degree,
         graduation_year=profile.graduation_year,
-        github_url=profile.github_url,
-        linkedin_url=profile.linkedin_url,
+        github_url=clean_social_profile_url(profile.github_url, "github"),
+        linkedin_url=clean_social_profile_url(profile.linkedin_url, "linkedin"),
         portfolio_url=profile.portfolio_url,
         skills=profile.skills or [],
         is_verified=current_user.is_verified,
@@ -603,10 +608,10 @@ async def update_my_profile(
         profile.graduation_year = update_data.graduation_year
 
     if update_data.github_url is not None:
-        profile.github_url = update_data.github_url.strip() if update_data.github_url else None
+        profile.github_url = clean_social_profile_url(update_data.github_url, "github")
 
     if update_data.linkedin_url is not None:
-        profile.linkedin_url = update_data.linkedin_url.strip() if update_data.linkedin_url else None
+        profile.linkedin_url = clean_social_profile_url(update_data.linkedin_url, "linkedin")
 
     if update_data.portfolio_url is not None:
         profile.portfolio_url = update_data.portfolio_url.strip() if update_data.portfolio_url else None
@@ -637,8 +642,8 @@ async def update_my_profile(
         university=profile.university,
         degree=profile.degree,
         graduation_year=profile.graduation_year,
-        github_url=profile.github_url,
-        linkedin_url=profile.linkedin_url,
+        github_url=clean_social_profile_url(profile.github_url, "github"),
+        linkedin_url=clean_social_profile_url(profile.linkedin_url, "linkedin"),
         portfolio_url=profile.portfolio_url,
         skills=profile.skills or [],
         is_verified=current_user.is_verified,
@@ -727,9 +732,10 @@ async def get_public_profile(
     # Process co-authored projects
     username_lower = profile.username.lower()
     full_name_lower = user.full_name.lower() if user and user.full_name else ""
+    github_profile_url = clean_social_profile_url(profile.github_url, "github")
     github_handle = (
-        (profile.github_url or "").rstrip("/").split("/")[-1].lower()
-        if profile.github_url
+        github_profile_url.rstrip("/").split("/")[-1].lower()
+        if github_profile_url
         else ""
     )
 
@@ -785,8 +791,8 @@ async def get_public_profile(
         university=profile.university,
         degree=profile.degree,
         graduation_year=profile.graduation_year,
-        github_url=profile.github_url,
-        linkedin_url=profile.linkedin_url,
+        github_url=clean_social_profile_url(profile.github_url, "github"),
+        linkedin_url=clean_social_profile_url(profile.linkedin_url, "linkedin"),
         portfolio_url=profile.portfolio_url,
         skills=profile.skills or [],
         is_verified=user.is_verified if user else False,

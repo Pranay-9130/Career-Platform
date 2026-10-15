@@ -25,6 +25,7 @@ import { userService } from '@/services/userService';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import Skeleton from '@/components/common/Skeleton';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 
 export default function PublicProfilePage() {
   const { username } = useParams();
@@ -114,7 +115,34 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="min-h-screen bg-slate-50/50 pb-16">
+      {/* Standard Accessible Breadcrumb Navigation */}
+      <Breadcrumbs
+        items={[
+          { label: 'Projects', path: '/projects' },
+          { label: profile?.full_name ? `${profile.full_name}'s Portfolio` : `@${username}` },
+        ]}
+        backLink={{ label: 'Explore Projects', path: '/projects' }}
+        actions={
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-brand-border rounded-xl shadow-xs hover:bg-slate-50 transition"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" /> Copied!
+              </>
+            ) : (
+              <>
+                <Share2 className="w-3.5 h-3.5 text-brand-primary" /> Share Portfolio
+              </>
+            )}
+          </button>
+        }
+      />
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* 1. Header Profile Hero Card */}
       <div className="bg-white rounded-3xl border border-brand-border shadow-card p-6 sm:p-8 relative overflow-hidden">
         {/* Decorative background accent */}
@@ -478,6 +506,7 @@ export default function PublicProfilePage() {
             Create Your Profile
           </Button>
         </Link>
+      </div>
       </div>
     </div>
   );

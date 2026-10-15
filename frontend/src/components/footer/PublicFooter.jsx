@@ -82,12 +82,12 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/login" className="text-brand-muted hover:text-brand-primary transition-colors">
+                <Link to="/resume-builder" className="text-brand-muted hover:text-brand-primary transition-colors">
                   Resume Builder
                 </Link>
               </li>
               <li>
-                <Link to="/login" className="text-brand-muted hover:text-brand-primary transition-colors">
+                <Link to="/ats-analyzer" className="text-brand-muted hover:text-brand-primary transition-colors">
                   AI ATS Analyzer
                 </Link>
               </li>

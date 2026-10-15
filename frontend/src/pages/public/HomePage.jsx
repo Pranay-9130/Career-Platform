@@ -23,9 +23,10 @@ import { ProjectCard, JobCard } from '@/components/cards';
 import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getWebsiteSchema, getOrganizationSchema } from '@/utils/seoSchemas';
+import { getDashboardPath } from '@/utils/navigation';
 
 export default function HomePage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [selectedDomain, setSelectedDomain] = useState('all');
 
   const domainFilters = [
@@ -161,7 +162,7 @@ export default function HomePage() {
           {/* CTA Buttons */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             {isAuthenticated ? (
-              <Link to="/dashboard" className="w-full sm:w-auto">
+              <Link to={getDashboardPath(user)} className="w-full sm:w-auto">
                 <Button size="lg" variant="gradient" rightIcon={ArrowRight} className="w-full sm:w-auto text-base px-8 py-3.5 shadow-card hover:shadow-card-hover">
                   Go to Dashboard
                 </Button>
@@ -630,7 +631,7 @@ export default function HomePage() {
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               {isAuthenticated ? (
-                <Link to="/dashboard" className="w-full sm:w-auto">
+                <Link to={getDashboardPath(user)} className="w-full sm:w-auto">
                   <Button size="lg" className="w-full sm:w-auto bg-white text-brand-primary hover:bg-slate-50 font-bold px-8 py-3.5 shadow-lg">
                     Go to Dashboard
                   </Button>

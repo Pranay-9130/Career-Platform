@@ -110,6 +110,16 @@ export const projectService = {
     return response.data;
   },
 
+  /** Upload a validated project cover image or screenshot (PNG, JPEG, WebP, or GIF). */
+  async uploadProjectImage(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/projects/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
   /**
    * Attach a validated ZIP archive to an existing project.
    * @param {string} idOrSlug

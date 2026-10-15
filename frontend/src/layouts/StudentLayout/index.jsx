@@ -8,11 +8,14 @@ import {
   Send,
   Bookmark,
   User,
-  Settings,
   X,
   ShieldCheck,
   ExternalLink,
   ChevronRight,
+  PlusCircle,
+  Briefcase,
+  Compass,
+  FileCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { StudentNavbar } from '@/components/navbar';
@@ -56,30 +59,79 @@ export default function StudentLayout() {
     };
   }, [fetchCounts, location.pathname]);
 
-  const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  const navSections = [
     {
-      name: 'My Projects',
-      path: '/my-projects',
-      icon: FolderGit2,
-      badge: counts.projects !== null ? String(counts.projects) : null,
+      title: 'Workspace',
+      items: [
+        {
+          name: 'Dashboard',
+          path: '/dashboard',
+          icon: LayoutDashboard,
+          description: 'Overview & metrics',
+        },
+        {
+          name: 'My Projects',
+          path: '/my-projects',
+          icon: FolderGit2,
+          badge: counts.projects !== null ? String(counts.projects) : null,
+          description: 'Blueprints & submissions',
+        },
+        {
+          name: 'Applications',
+          path: '/applications',
+          icon: Send,
+          badge: counts.applications !== null ? String(counts.applications) : null,
+          description: 'Job tracking & status',
+        },
+        {
+          name: 'Saved Items',
+          path: '/saved',
+          icon: Bookmark,
+          badge: counts.saved !== null && counts.saved > 0 ? String(counts.saved) : null,
+          description: 'Bookmarked jobs & projects',
+        },
+      ],
     },
-    { name: 'Resume Builder', path: '/resume-builder', icon: FileText },
-    { name: 'ATS Analyzer', path: '/ats-analyzer', icon: Sparkles },
     {
-      name: 'Applications',
-      path: '/applications',
-      icon: Send,
-      badge: counts.applications !== null ? String(counts.applications) : null,
+      title: 'Career Tools',
+      items: [
+        {
+          name: 'Resume Builder',
+          path: '/resume-builder',
+          icon: FileText,
+          description: 'Tailored tech resumes',
+        },
+        {
+          name: 'ATS Analyzer',
+          path: '/ats-analyzer',
+          icon: Sparkles,
+          description: 'AI match & optimization',
+        },
+      ],
     },
     {
-      name: 'Saved Items',
-      path: '/saved',
-      icon: Bookmark,
-      badge: counts.saved !== null && counts.saved > 0 ? String(counts.saved) : null,
+      title: 'Explore Platform',
+      items: [
+        {
+          name: 'Browse Projects',
+          path: '/projects',
+          icon: Compass,
+          description: 'Peer showcase & ideas',
+        },
+        {
+          name: 'Find Jobs',
+          path: '/jobs',
+          icon: Briefcase,
+          description: 'Verified opportunities',
+        },
+        {
+          name: 'Resume Templates',
+          path: '/templates',
+          icon: FileCheck,
+          description: 'Industry-standard formats',
+        },
+      ],
     },
-    { name: 'Profile', path: '/profile', icon: User },
-    { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
   const getInitials = (name) => {
@@ -96,46 +148,68 @@ export default function StudentLayout() {
   const displayHeadline = user?.headline || 'Computer Science Student';
 
   const renderNavLinks = () => (
-    <nav className="p-3 space-y-1">
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.path;
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={() => setMobileSidebarOpen(false)}
-            className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-              isActive
-                ? 'bg-brand-veryLight text-brand-primary shadow-xs'
-                : 'text-brand-muted hover:bg-slate-50 hover:text-brand-text'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Icon
-                className={`w-4 h-4 ${
-                  isActive ? 'text-brand-primary' : 'text-slate-400'
-                }`}
-              />
-              <span>{item.name}</span>
-            </div>
-            {item.badge && (
-              <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                  item.badge === 'New'
-                    ? 'bg-brand-primary text-white'
-                    : isActive
-                    ? 'bg-blue-100 text-brand-primary'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
-              >
-                {item.badge}
-              </span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="p-3 space-y-6">
+      {/* Quick Action: Submit Project */}
+      <div className="px-1">
+        <Link
+          to="/projects/submit"
+          onClick={() => setMobileSidebarOpen(false)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-primary to-blue-600 hover:from-blue-600 hover:to-brand-primary shadow-sm hover:shadow transition-all group"
+        >
+          <PlusCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
+          <span>+ Submit Project</span>
+        </Link>
+      </div>
+
+      {/* Categorized Nav Sections */}
+      {navSections.map((section) => (
+        <div key={section.title} className="space-y-1">
+          <div className="px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+            {section.title}
+          </div>
+          <nav className="space-y-0.5" aria-label={section.title}>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileSidebarOpen(false)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all relative ${
+                    isActive
+                      ? 'bg-brand-veryLight text-brand-primary font-bold shadow-xs border-l-4 border-brand-primary'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-l-4 border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon
+                      className={`w-4 h-4 shrink-0 transition-colors ${
+                        isActive ? 'text-brand-primary' : 'text-slate-400'
+                      }`}
+                    />
+                    <span className="truncate">{item.name}</span>
+                  </div>
+
+                  {item.badge && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                        isActive
+                          ? 'bg-brand-primary text-white'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      ))}
+    </div>
   );
 
   return (
@@ -154,14 +228,19 @@ export default function StudentLayout() {
         <div className="h-16 flex items-center px-6 border-b border-brand-border justify-between">
           <Link
             to="/dashboard"
-            className="flex items-center gap-2.5 font-display font-extrabold text-base text-brand-text"
+            className="flex items-center gap-2.5 font-display font-extrabold text-base text-brand-text group"
           >
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-xs font-bold shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-xs font-bold shadow-sm group-hover:shadow transition-all">
               CP
             </div>
-            <span className="tracking-tight">
-              Career<span className="text-brand-primary">Platform</span>
-            </span>
+            <div className="flex flex-col">
+              <span className="tracking-tight leading-none">
+                Career<span className="text-brand-primary">Platform</span>
+              </span>
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-1">
+                Student Workspace
+              </span>
+            </div>
           </Link>
         </div>
 
@@ -169,29 +248,41 @@ export default function StudentLayout() {
         <div className="flex-1 overflow-y-auto py-2">{renderNavLinks()}</div>
 
         {/* Sidebar Footer User Card */}
-        <div className="p-3 border-t border-brand-border bg-slate-50/60">
+        <div className="p-3 border-t border-brand-border bg-slate-50/60 space-y-2">
           <Link
             to="/profile"
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-brand-border transition-all"
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-xs border border-transparent hover:border-brand-border transition-all"
           >
             <div className="w-9 h-9 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary flex items-center justify-center font-bold text-xs shrink-0">
               {getInitials(displayName)}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1">
-                <p className="text-xs font-semibold text-brand-text truncate">
+                <p className="text-xs font-bold text-brand-text truncate">
                   {displayName}
                 </p>
                 {user?.is_verified && (
                   <ShieldCheck className="w-3.5 h-3.5 text-brand-primary shrink-0" />
                 )}
               </div>
-              <p className="text-[11px] text-brand-muted truncate">
+              <p className="text-[11px] text-slate-400 truncate">
                 {displayHeadline}
               </p>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
           </Link>
+
+          {user?.username && (
+            <Link
+              to={`/u/${user.username}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-brand-primary hover:bg-brand-veryLight transition-colors"
+            >
+              <span>View Public Portfolio</span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -204,7 +295,7 @@ export default function StudentLayout() {
             aria-hidden="true"
           />
 
-          <div className="relative w-64 max-w-[80vw] h-full bg-white border-r border-brand-border shadow-xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
+          <div className="relative w-72 max-w-[85vw] h-full bg-white border-r border-brand-border shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
             <div className="h-16 flex items-center justify-between px-6 border-b border-brand-border">
               <Link
                 to="/dashboard"
@@ -214,18 +305,36 @@ export default function StudentLayout() {
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-xs font-bold">
                   CP
                 </div>
-                <span>Workspace</span>
+                <span>Student Workspace</span>
               </Link>
               <button
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-brand-text hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-brand-text hover:bg-slate-100 transition-colors"
                 aria-label="Close sidebar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
             <div className="flex-1 overflow-y-auto">{renderNavLinks()}</div>
+
+            <div className="p-3 border-t border-brand-border bg-slate-50/60">
+              <Link
+                to="/profile"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="flex items-center gap-3 p-2 rounded-xl hover:bg-white"
+              >
+                <div className="w-8 h-8 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary flex items-center justify-center font-bold text-xs">
+                  {getInitials(displayName)}
+                </div>
+                <div className="flex-1 min-w-0 text-xs">
+                  <p className="font-bold text-brand-text truncate">{displayName}</p>
+                  <p className="text-[10px] text-slate-400">Settings & Profile</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -233,7 +342,11 @@ export default function StudentLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <StudentNavbar onToggleSidebar={() => setMobileSidebarOpen(true)} />
-        <main id="main-content" tabIndex="-1" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto outline-none">
+        <main
+          id="main-content"
+          tabIndex="-1"
+          className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto outline-none"
+        >
           <Outlet context={{ refreshSidebarCounts: fetchCounts }} />
         </main>
       </div>

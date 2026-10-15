@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, RoleGuard } from './components/auth';
 import PageLoadingFallback from './components/common/PageLoadingFallback';
+import ScrollToTop from './components/common/ScrollToTop';
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout';
@@ -48,6 +49,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Suspense fallback={<PageLoadingFallback />}>
           <Routes>
             {/* Public Marketing, Discovery & Portfolio Routes */}
@@ -113,7 +115,7 @@ export default function App() {
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/saved" element={<SavedWorkspacePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/settings" element={<DashboardPage />} />
+                <Route path="/settings" element={<Navigate to="/profile" replace />} />
               </Route>
             </Route>
 

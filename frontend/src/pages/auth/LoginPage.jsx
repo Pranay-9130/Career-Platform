@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
+import { getDashboardPath, getInternalPath } from '@/utils/navigation';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -31,19 +32,16 @@ export default function LoginPage() {
 
   const getRequestedPath = () => {
     const from = location.state?.from;
-    const statePath = from
-      ? `${from.pathname || ''}${from.search || ''}${from.hash || ''}`
-      : '';
-    const queryPath = new URLSearchParams(location.search).get('redirect') || '';
-    const requested = statePath || queryPath;
-    return requested.startsWith('/') && !requested.startsWith('//') ? requested : '';
+    const statePath = getInternalPath(from);
+    const queryPath = getInternalPath(new URLSearchParams(location.search).get('redirect'));
+    return statePath || queryPath;
   };
 
   const getDestination = (account) => {
     const requested = getRequestedPath();
     const isAdmin = account?.role === 'ADMIN';
     if (requested.startsWith('/admin') && !isAdmin) return '/dashboard';
-    return requested || (isAdmin ? '/admin/dashboard' : '/dashboard');
+    return requested || getDashboardPath(account);
   };
 
   const redirectPath = getDestination(user);

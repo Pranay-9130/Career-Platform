@@ -10,6 +10,7 @@ from app.core.database import Base, get_db
 from app.models.user import User, UserRole
 from app.models.project import Project
 from app.models.stored_archive import StoredArchive
+from app.models.stored_image import StoredImage
 from sqlalchemy import select
 from app.core.security import get_password_hash
 
@@ -169,6 +170,79 @@ async def test_upload_standalone_zip_sensitive_env_file(client, db_session):
 
     assert response.status_code == 400
     assert "Sensitive credential or secret key file detected" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_upload_zip_removes_generated_dependency_folders(client, db_session):
+    student, _ = await seed_user_and_project(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "SecretPass123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+    zip_bytes = create_in_memory_zip({
+        "src/main.py": "print('source')",
+        "node_modules/package/index.js": "generated",
+        "dist/bundle.js": "generated",
+    })
+
+    response = await client.post(
+        "/api/projects/upload-zip",
+        files={"file": ("project.zip", zip_bytes, "application/zip")},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["files_count"] == 1
+    assert response.json()["ignored_files_count"] == 2
+    stored = (await db_session.execute(select(StoredArchive))).scalar_one()
+    with zipfile.ZipFile(io.BytesIO(stored.content)) as cleaned:
+        assert cleaned.namelist() == ["src/main.py"]
+
+
+@pytest.mark.asyncio
+async def test_upload_and_serve_project_image(client, db_session):
+    student, _ = await seed_user_and_project(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "SecretPass123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+    png_bytes = b"\x89PNG\r\n\x1a\n" + b"test-image-data"
+
+    upload = await client.post(
+        "/api/projects/upload-image",
+        files={"file": ("screen.png", png_bytes, "image/png")},
+        headers=headers,
+    )
+
+    assert upload.status_code == 200
+    image_url = upload.json()["image_url"]
+    stored = (await db_session.execute(select(StoredImage))).scalar_one()
+    assert stored.owner_id == student.id
+    image = await client.get(image_url)
+    assert image.status_code == 200
+    assert image.headers["content-type"] == "image/png"
+    assert image.content == png_bytes
+
+
+@pytest.mark.asyncio
+async def test_project_image_rejects_spoofed_content(client, db_session):
+    student, _ = await seed_user_and_project(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "SecretPass123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+
+    response = await client.post(
+        "/api/projects/upload-image",
+        files={"file": ("fake.png", b"not-an-image", "image/png")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400
+    assert "Unsupported image" in response.json()["detail"]
 
 
 @pytest.mark.asyncio

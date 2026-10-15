@@ -27,7 +27,7 @@ import {
   Linkedin,
   Globe,
 } from 'lucide-react';
-import { Button, Badge, Card, Skeleton } from '@/components/common';
+import { Button, Badge, Card, Skeleton, Breadcrumbs } from '@/components/common';
 import ProjectCard from '@/components/cards/ProjectCard';
 import { projectService } from '@/services/projectService';
 import { useAuth } from '@/context/AuthContext';
@@ -228,26 +228,15 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {/* Breadcrumb Navigation Bar */}
-      <div className="border-b border-brand-border bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-brand-muted">
-            <Link to="/" className="hover:text-brand-primary transition-colors">Home</Link>
-            <span>/</span>
-            <Link to="/projects" className="hover:text-brand-primary transition-colors">Projects</Link>
-            <span>/</span>
-            <span className="text-slate-800 font-medium truncate max-w-[200px] sm:max-w-xs">{project.title}</span>
-          </div>
+      {/* Standard Accessible Breadcrumb Navigation */}
+      <Breadcrumbs
+        items={[
+          { label: 'Projects', path: '/projects' },
+          { label: project.title },
+        ]}
+        backLink={{ label: 'Back to Discovery', path: '/projects' }}
+      />
 
-          <Link
-            to="/projects"
-            className="inline-flex items-center gap-1.5 text-xs text-brand-primary hover:text-brand-secondary font-medium transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Discovery</span>
-          </Link>
-        </div>
-      </div>
 
       {/* Main Content Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">

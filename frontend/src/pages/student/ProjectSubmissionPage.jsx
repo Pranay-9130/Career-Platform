@@ -94,6 +94,7 @@ const INITIAL_FORM_STATE = {
   zip_storage_key: '',
   zip_file_size_bytes: 0,
   zip_filename: '',
+  zip_ignored_files_count: 0,
 };
 
 export default function ProjectSubmissionPage() {
@@ -113,8 +114,6 @@ export default function ProjectSubmissionPage() {
   // Field input states for dynamic lists
   const [featureInput, setFeatureInput] = useState('');
   const [customTechInput, setCustomTechInput] = useState('');
-  const [screenshotUrlInput, setScreenshotUrlInput] = useState('');
-  const [screenshotCaptionInput, setScreenshotCaptionInput] = useState('');
   const [contributorNameInput, setContributorNameInput] = useState('');
   const [contributorRoleInput, setContributorRoleInput] = useState('');
   const [contributorGithubInput, setContributorGithubInput] = useState('');
@@ -128,6 +127,9 @@ export default function ProjectSubmissionPage() {
   const [previewTab, setPreviewTab] = useState('summary');
   const [isUploadingZip, setIsUploadingZip] = useState(false);
   const [zipUploadError, setZipUploadError] = useState(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingScreenshots, setIsUploadingScreenshots] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState(null);
 
   // Load existing project if in edit mode
   useEffect(() => {
@@ -165,6 +167,7 @@ export default function ProjectSubmissionPage() {
           zip_storage_key: data.zip_storage_key || '',
           zip_file_size_bytes: data.zip_file_size_bytes || 0,
           zip_filename: data.zip_storage_key ? 'source-code.zip' : '',
+          zip_ignored_files_count: 0,
         });
       } catch (err) {
         setSubmitError('Failed to load project details for editing.');
@@ -266,20 +269,69 @@ export default function ProjectSubmissionPage() {
     setCustomTechInput('');
   };
 
-  // Step 4: Screenshot list helpers
-  const handleAddScreenshot = () => {
-    if (!screenshotUrlInput.trim()) return;
-    const newScreenshot = {
-      image_url: screenshotUrlInput.trim(),
-      caption: screenshotCaptionInput.trim() || `Screenshot ${formData.screenshots.length + 1}`,
-      order_index: formData.screenshots.length,
-    };
-    setFormData((prev) => ({
-      ...prev,
-      screenshots: [...prev.screenshots, newScreenshot],
-    }));
-    setScreenshotUrlInput('');
-    setScreenshotCaptionInput('');
+  // Step 4: Durable image uploads
+  const validateImageFile = (file) => {
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) return 'Upload a PNG, JPEG, WebP, or GIF image.';
+    if (file.size > 5 * 1024 * 1024) return `${file.name} exceeds the 5 MB image limit.`;
+    return null;
+  };
+
+  const handleCoverImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setImageUploadError(validationError);
+      event.target.value = '';
+      return;
+    }
+    setImageUploadError(null);
+    setIsUploadingCover(true);
+    try {
+      const result = await projectService.uploadProjectImage(file);
+      updateField('cover_image_url', result.image_url);
+    } catch (err) {
+      setImageUploadError(err.response?.data?.detail || 'Cover image upload failed. Please try again.');
+    } finally {
+      setIsUploadingCover(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleScreenshotUpload = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    const remaining = 5 - formData.screenshots.length;
+    if (remaining <= 0 || files.length > remaining) {
+      setImageUploadError(`You can add up to 5 screenshots. ${remaining} slot${remaining === 1 ? '' : 's'} remaining.`);
+      event.target.value = '';
+      return;
+    }
+    const validationError = files.map(validateImageFile).find(Boolean);
+    if (validationError) {
+      setImageUploadError(validationError);
+      event.target.value = '';
+      return;
+    }
+    setImageUploadError(null);
+    setIsUploadingScreenshots(true);
+    try {
+      const uploaded = await Promise.all(files.map((file) => projectService.uploadProjectImage(file)));
+      setFormData((prev) => ({
+        ...prev,
+        screenshots: [...prev.screenshots, ...uploaded.map((result, index) => ({
+          image_url: result.image_url,
+          caption: files[index].name.replace(/\.[^.]+$/, ''),
+          order_index: prev.screenshots.length + index,
+        }))],
+      }));
+    } catch (err) {
+      setImageUploadError(err.response?.data?.detail || 'Screenshot upload failed. Please try again.');
+    } finally {
+      setIsUploadingScreenshots(false);
+      event.target.value = '';
+    }
   };
 
   const handleRemoveScreenshot = (idx) => {
@@ -346,6 +398,7 @@ export default function ProjectSubmissionPage() {
         zip_storage_key: result.zip_storage_key,
         zip_file_size_bytes: result.zip_file_size_bytes || file.size,
         zip_filename: result.filename || file.name,
+        zip_ignored_files_count: result.ignored_files_count || 0,
       }));
     } catch (err) {
       const detail =
@@ -1021,15 +1074,30 @@ export default function ProjectSubmissionPage() {
               </div>
 
               <div className="space-y-5">
+                {imageUploadError && (
+                  <Alert variant="error" title="Image Upload Failed" onClose={() => setImageUploadError(null)}>
+                    {imageUploadError}
+                  </Alert>
+                )}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Cover Banner Image URL
+                    Cover Banner Image
                   </label>
-                  <Input
-                    placeholder="https://images.unsplash.com/... or GitHub raw image URL"
-                    value={formData.cover_image_url}
-                    onChange={(e) => updateField('cover_image_url', e.target.value)}
+                  <input
+                    id="coverImageInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    disabled={isUploadingCover}
+                    onChange={handleCoverImageUpload}
                   />
+                  <label
+                    htmlFor="coverImageInput"
+                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-700 hover:border-brand-primary hover:text-brand-primary cursor-pointer transition-colors"
+                  >
+                    {isUploadingCover ? <Spinner size="sm" /> : <UploadCloud className="w-4 h-4" />}
+                    {isUploadingCover ? 'Uploading cover image...' : 'Choose cover image (PNG, JPEG, WebP, or GIF)'}
+                  </label>
                   {formData.cover_image_url && (
                     <div className="mt-2 relative rounded-2xl overflow-hidden border border-brand-border h-40 bg-slate-100 flex items-center justify-center">
                       <img
@@ -1041,6 +1109,14 @@ export default function ProjectSubmissionPage() {
                         }}
                       />
                       <span className="text-xs text-slate-400 absolute">Cover Preview</span>
+                      <button
+                        type="button"
+                        aria-label="Remove cover image"
+                        onClick={() => updateField('cover_image_url', '')}
+                        className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 text-slate-600 hover:text-red-600 shadow"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1050,32 +1126,28 @@ export default function ProjectSubmissionPage() {
                     Additional Screenshots (1-5 images)
                   </label>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-2">
-                    <div className="sm:col-span-2">
-                      <Input
-                        placeholder="Image URL (e.g. https://...)"
-                        value={screenshotUrlInput}
-                        onChange={(e) => setScreenshotUrlInput(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        placeholder="Short caption (optional)"
-                        value={screenshotCaptionInput}
-                        onChange={(e) => setScreenshotCaptionInput(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddScreenshot}
-                    leftIcon={Plus}
+                  <input
+                    id="screenshotImageInput"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    multiple
+                    className="hidden"
+                    disabled={isUploadingScreenshots || formData.screenshots.length >= 5}
+                    onChange={handleScreenshotUpload}
+                  />
+                  <label
+                    htmlFor="screenshotImageInput"
+                    className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 text-xs font-semibold transition-colors ${
+                      formData.screenshots.length >= 5
+                        ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-brand-primary hover:text-brand-primary cursor-pointer'
+                    }`}
                   >
-                    Add Screenshot
-                  </Button>
+                    {isUploadingScreenshots ? <Spinner size="sm" /> : <ImageIcon className="w-4 h-4" />}
+                    {isUploadingScreenshots
+                      ? 'Uploading screenshots...'
+                      : `Choose images (${5 - formData.screenshots.length} remaining, 5 MB each)`}
+                  </label>
 
                   {formData.screenshots.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
@@ -1095,12 +1167,19 @@ export default function ProjectSubmissionPage() {
                             />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <span className="text-[11px] font-bold text-slate-800 block truncate">
-                              {s.caption || `Screenshot ${idx + 1}`}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block truncate font-mono">
-                              {s.image_url}
-                            </span>
+                            <input
+                              type="text"
+                              aria-label={`Caption for screenshot ${idx + 1}`}
+                              value={s.caption || ''}
+                              placeholder={`Screenshot ${idx + 1}`}
+                              onChange={(event) => setFormData((prev) => ({
+                                ...prev,
+                                screenshots: prev.screenshots.map((item, itemIndex) =>
+                                  itemIndex === idx ? { ...item, caption: event.target.value } : item
+                                ),
+                              }))}
+                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                            />
                           </div>
                           <button
                             type="button"
@@ -1232,6 +1311,9 @@ export default function ProjectSubmissionPage() {
                           <p className="text-[11px] text-slate-500 max-w-md mx-auto">
                             Strict safety enforcement: files with binary executables (<code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.exe</code>, <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.dll</code>), path traversals, or leaked secrets (<code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.env</code>, keys) are automatically rejected.
                           </p>
+                          <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                            Generated folders such as <code className="font-mono">node_modules</code>, <code className="font-mono">.git</code>, <code className="font-mono">dist</code>, and <code className="font-mono">build</code> are removed automatically.
+                          </p>
                         </>
                       )}
                     </label>
@@ -1243,6 +1325,9 @@ export default function ProjectSubmissionPage() {
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span className="truncate">
                           Verified Package: <strong>{formData.zip_filename}</strong> ({Math.round(formData.zip_file_size_bytes / 1024)} KB)
+                          {formData.zip_ignored_files_count > 0 && (
+                            <span> — removed {formData.zip_ignored_files_count} generated files</span>
+                          )}
                         </span>
                       </div>
                       <button
@@ -1253,6 +1338,7 @@ export default function ProjectSubmissionPage() {
                             zip_storage_key: '',
                             zip_file_size_bytes: 0,
                             zip_filename: '',
+                            zip_ignored_files_count: 0,
                           }));
                         }}
                         className="text-emerald-700 hover:text-red-600 font-bold ml-2 shrink-0 transition-colors"

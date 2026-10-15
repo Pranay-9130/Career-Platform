@@ -15,6 +15,11 @@ MAX_ZIP_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
 MAX_UNCOMPRESSED_SIZE = 250 * 1024 * 1024  # 250 MB
 MAX_ARCHIVE_FILE_COUNT = 2000
 
+IGNORED_GENERATED_DIRECTORIES = {
+    "node_modules", ".git", "dist", "build", ".next", "coverage", "__pycache__",
+    ".venv", "venv", "target", "out", ".idea", ".vscode",
+}
+
 FORBIDDEN_EXTENSIONS = {
     ".exe", ".dll", ".so", ".dylib", ".bat", ".cmd", ".vbs", ".msi", ".com", ".scr"
 }
@@ -42,7 +47,7 @@ async def persist_zip_archive(
     return storage_key
 
 
-def validate_and_inspect_zip(file_bytes: bytes, filename: str = "project.zip") -> Dict[str, Any]:
+def prepare_zip_archive(file_bytes: bytes, filename: str = "project.zip") -> Tuple[bytes, Dict[str, Any]]:
     """
     Validates that file_bytes is a genuine, safe ZIP archive:
     1. Verifies binary magic bytes signature (PK\\x03\\x04).
@@ -76,26 +81,12 @@ def validate_and_inspect_zip(file_bytes: bytes, filename: str = "project.zip") -
             detail="Corrupt or malformed ZIP archive.",
         )
 
-    members = zf.infolist()
+    retained_members = []
+    ignored_file_count = 0
+    total_uncompressed = 0
 
-    # File count limit (zip bomb protection)
-    if len(members) > MAX_ARCHIVE_FILE_COUNT:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Archive contains {len(members)} files, which exceeds the limit of {MAX_ARCHIVE_FILE_COUNT}. Please exclude build artifacts such as node_modules/.",
-        )
-
-    # Total uncompressed size limit
-    total_uncompressed = sum(m.file_size for m in members)
-    if total_uncompressed > MAX_UNCOMPRESSED_SIZE:
-        uncomp_mb = total_uncompressed / (1024 * 1024)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Uncompressed archive size ({uncomp_mb:.1f} MB) exceeds the safety limit of 250 MB.",
-        )
-
-    # 4. Member-level inspection
-    for m in members:
+    # 4. Member-level inspection and generated-file filtering
+    for m in zf.infolist():
         raw_name = m.filename
 
         # Path traversal sequences
@@ -105,7 +96,16 @@ def validate_and_inspect_zip(file_bytes: bytes, filename: str = "project.zip") -
                 detail=f"Security violation: Illegal path traversal sequence detected in archive filename: '{raw_name}'.",
             )
 
+        path_parts = {part.lower() for part in raw_name.replace("\\", "/").split("/") if part}
+        if path_parts.intersection(IGNORED_GENERATED_DIRECTORIES):
+            if not m.is_dir():
+                ignored_file_count += 1
+            continue
+
+        retained_members.append(m)
+
         if not m.is_dir():
+            total_uncompressed += m.file_size
             basename = os.path.basename(raw_name).lower()
             ext = os.path.splitext(basename)[1].lower()
 
@@ -123,12 +123,42 @@ def validate_and_inspect_zip(file_bytes: bytes, filename: str = "project.zip") -
                     detail=f"Security violation: Sensitive credential or secret key file detected ('{raw_name}'). Strip private keys and .env files before submitting.",
                 )
 
-    return {
-        "file_count": len(members),
+    retained_files = [member for member in retained_members if not member.is_dir()]
+    if len(retained_files) > MAX_ARCHIVE_FILE_COUNT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Archive contains {len(retained_files)} source files after removing generated folders, which exceeds the limit of {MAX_ARCHIVE_FILE_COUNT}.",
+        )
+
+    if total_uncompressed > MAX_UNCOMPRESSED_SIZE:
+        uncomp_mb = total_uncompressed / (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Uncompressed source size ({uncomp_mb:.1f} MB) exceeds the safety limit of 250 MB.",
+        )
+
+    prepared_bytes = file_bytes
+    if ignored_file_count:
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as cleaned_zip:
+            for member in retained_files:
+                cleaned_zip.writestr(member, zf.read(member))
+        prepared_bytes = output.getvalue()
+    zf.close()
+
+    return prepared_bytes, {
+        "file_count": len(retained_files),
+        "ignored_file_count": ignored_file_count,
         "uncompressed_size_bytes": total_uncompressed,
-        "compressed_size_bytes": len(file_bytes),
+        "compressed_size_bytes": len(prepared_bytes),
         "filename": filename,
     }
+
+
+def validate_and_inspect_zip(file_bytes: bytes, filename: str = "project.zip") -> Dict[str, Any]:
+    """Compatibility wrapper returning inspection metadata for callers that do not persist bytes."""
+    _, inspection = prepare_zip_archive(file_bytes, filename)
+    return inspection
 
 
 def save_zip_archive(

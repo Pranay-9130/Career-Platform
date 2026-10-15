@@ -1,42 +1,78 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Shield, LayoutDashboard, CheckSquare, Briefcase, Users, FileText, X } from 'lucide-react';
+import {
+  Shield,
+  LayoutDashboard,
+  CheckSquare,
+  Briefcase,
+  Users,
+  FileText,
+  X,
+  ExternalLink,
+  GraduationCap,
+} from 'lucide-react';
 import { AdminNavbar } from '@/components/navbar';
 
 export default function AdminLayout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
 
-  const navItems = [
-    { name: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'Moderate Projects', path: '/admin/projects', icon: CheckSquare },
-    { name: 'Manage Jobs', path: '/admin/jobs', icon: Briefcase },
-    { name: 'Students', path: '/admin/students', icon: Users },
-    { name: 'Resume Templates', path: '/admin/templates', icon: FileText },
+  const navSections = [
+    {
+      title: 'Platform Administration',
+      items: [
+        { name: 'Admin Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+        { name: 'Moderate Projects', path: '/admin/projects', icon: CheckSquare },
+        { name: 'Manage Jobs', path: '/admin/jobs', icon: Briefcase },
+        { name: 'Students Directory', path: '/admin/students', icon: Users },
+        { name: 'Resume Templates', path: '/admin/templates', icon: FileText },
+      ],
+    },
+    {
+      title: 'Quick Navigation',
+      items: [
+        { name: 'Student Workspace', path: '/dashboard', icon: GraduationCap },
+        { name: 'Public Website', path: '/', icon: ExternalLink },
+      ],
+    },
   ];
 
   const renderNavLinks = () => (
-    <nav className="p-4 space-y-1">
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.path;
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={() => setMobileSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-              isActive
-                ? 'bg-brand-veryLight text-brand-primary font-semibold'
-                : 'text-brand-muted hover:bg-slate-50 hover:text-brand-text'
-            }`}
-          >
-            <Icon className={`w-4 h-4 ${isActive ? 'text-brand-primary' : 'text-slate-400'}`} />
-            {item.name}
-          </Link>
-        );
-      })}
-    </nav>
+    <div className="p-3 space-y-5">
+      {navSections.map((section) => (
+        <div key={section.title} className="space-y-1">
+          <div className="px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+            {section.title}
+          </div>
+          <nav className="space-y-0.5" aria-label={section.title}>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileSidebarOpen(false)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all relative ${
+                    isActive
+                      ? 'bg-brand-veryLight text-brand-primary font-bold shadow-xs border-l-4 border-brand-primary'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-l-4 border-transparent'
+                  }`}
+                >
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-colors ${
+                      isActive ? 'text-brand-primary' : 'text-slate-400'
+                    }`}
+                  />
+                  <span>{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      ))}
+    </div>
   );
 
   return (
@@ -52,12 +88,24 @@ export default function AdminLayout() {
       {/* Desktop Persistent Admin Sidebar */}
       <aside className="hidden lg:flex w-64 border-r border-brand-border bg-white flex-col shrink-0">
         <div className="h-16 flex items-center px-6 border-b border-brand-border">
-          <Link to="/admin/dashboard" className="flex items-center gap-2 font-display font-extrabold text-lg text-slate-800">
-            <Shield className="w-5 h-5 text-brand-primary" />
-            Admin Console
+          <Link
+            to="/admin/dashboard"
+            className="flex items-center gap-2.5 font-display font-extrabold text-base text-slate-900 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+              <Shield className="w-4 h-4 text-brand-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="tracking-tight leading-none font-bold text-slate-900">
+                Admin Console
+              </span>
+              <span className="text-[10px] font-bold text-brand-primary tracking-wider uppercase mt-1">
+                Platform Moderation
+              </span>
+            </div>
           </Link>
         </div>
-        <div className="flex-1 overflow-y-auto">{renderNavLinks()}</div>
+        <div className="flex-1 overflow-y-auto py-2">{renderNavLinks()}</div>
       </aside>
 
       {/* Mobile Drawer Backdrop & Sidebar */}
@@ -95,7 +143,11 @@ export default function AdminLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <AdminNavbar onToggleSidebar={() => setMobileSidebarOpen(true)} />
-        <main id="main-content" tabIndex="-1" className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto outline-none">
+        <main
+          id="main-content"
+          tabIndex="-1"
+          className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto outline-none"
+        >
           <Outlet />
         </main>
       </div>

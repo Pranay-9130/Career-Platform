@@ -13,6 +13,7 @@ from app.models.notification import Notification
 from app.models.resume import Resume
 from app.models.auth_session import AuthSession
 from app.models.stored_archive import StoredArchive
+from app.models.stored_image import StoredImage
 
 __all__ = [
     "Base",
@@ -33,6 +34,7 @@ __all__ = [
     "Resume",
     "AuthSession",
     "StoredArchive",
+    "StoredImage",
 ]
 
 

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
+import { getDashboardPath } from '@/utils/navigation';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -127,7 +128,7 @@ export default function RegisterPage() {
             : 'Software Developer'),
       });
 
-      const targetPath = response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      const targetPath = getDashboardPath(response.user);
       navigate(targetPath, { replace: true });
     } catch (err) {
       const message =
@@ -173,7 +174,7 @@ export default function RegisterPage() {
                 You are currently signed in as <strong>{user?.email}</strong>.
               </p>
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Button size="sm" variant="primary" onClick={() => navigate('/dashboard', { replace: true })}>
+                <Button size="sm" variant="primary" onClick={() => navigate(getDashboardPath(user), { replace: true })}>
                   Continue to Dashboard
                 </Button>
                 <Button size="sm" variant="outline" onClick={logout} leftIcon={LogOut}>

@@ -10,14 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import get_db
+from app.core.profile_links import clean_social_profile_url
 from app.models.project import Project
 from app.models.project_screenshot import ProjectScreenshot
 from app.models.project_bookmark import ProjectBookmark
 from app.models.profile import Profile
 from app.models.user import User, UserRole
 from app.models.stored_archive import StoredArchive
+from app.models.stored_image import StoredImage
+from app.services.image_service import MAX_PROJECT_IMAGE_SIZE, persist_project_image
 from app.services.zip_service import (
-    validate_and_inspect_zip,
+    prepare_zip_archive,
     persist_zip_archive,
     MAX_ZIP_UPLOAD_SIZE,
     get_zip_file_path,
@@ -170,8 +173,8 @@ def _map_project_to_detail_read(
         author_headline = p_prof.headline or author_headline
         author_bio = p_prof.bio
         author_university = p_prof.university
-        author_github = p_prof.github_url
-        author_linkedin = p_prof.linkedin_url
+        author_github = clean_social_profile_url(p_prof.github_url, "github")
+        author_linkedin = clean_social_profile_url(p_prof.linkedin_url, "linkedin")
         author_portfolio = p_prof.portfolio_url
 
     download_url = project.github_url
@@ -463,9 +466,9 @@ async def upload_standalone_zip(
     and security rules for a new project submission draft.
     """
     file_bytes = await file.read(MAX_ZIP_UPLOAD_SIZE + 1)
-    inspection = validate_and_inspect_zip(file_bytes, filename=file.filename or "project.zip")
+    prepared_bytes, inspection = prepare_zip_archive(file_bytes, filename=file.filename or "project.zip")
     storage_key = await persist_zip_archive(
-        file_bytes,
+        prepared_bytes,
         original_filename=file.filename or "project.zip",
         owner_id=current_user.id,
         db=db,
@@ -475,11 +478,50 @@ async def upload_standalone_zip(
     return {
         "message": "ZIP package verified and stored successfully.",
         "zip_storage_key": storage_key,
-        "zip_file_size_bytes": len(file_bytes),
+        "zip_file_size_bytes": len(prepared_bytes),
         "filename": file.filename or "project.zip",
         "files_count": inspection["file_count"],
+        "ignored_files_count": inspection["ignored_file_count"],
         "uncompressed_size_bytes": inspection["uncompressed_size_bytes"],
     }
+
+
+@router.post("/upload-image")
+async def upload_project_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate and persist a project cover image or screenshot."""
+    content = await file.read(MAX_PROJECT_IMAGE_SIZE + 1)
+    stored = await persist_project_image(
+        content=content,
+        original_filename=file.filename or "project-image",
+        owner_id=current_user.id,
+        db=db,
+    )
+    await db.commit()
+    return {
+        "image_url": f"/api/projects/images/{stored.storage_key}",
+        "filename": stored.filename,
+        "media_type": stored.media_type,
+        "size_bytes": len(content),
+    }
+
+
+@router.get("/images/{storage_key}")
+async def get_project_image(storage_key: str, db: AsyncSession = Depends(get_db)):
+    """Serve an uploaded project image from durable database storage."""
+    stored = (await db.execute(
+        select(StoredImage).where(StoredImage.storage_key == storage_key)
+    )).scalar_one_or_none()
+    if not stored:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project image was not found.")
+    return Response(
+        content=stored.content,
+        media_type=stored.media_type,
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 
 @router.post("/{identifier}/bookmark", response_model=BookmarkToggleResponse)
@@ -934,9 +976,9 @@ async def upload_project_zip(
         )
 
     file_bytes = await file.read(MAX_ZIP_UPLOAD_SIZE + 1)
-    inspection = validate_and_inspect_zip(file_bytes, filename=file.filename or "project.zip")
+    prepared_bytes, inspection = prepare_zip_archive(file_bytes, filename=file.filename or "project.zip")
     storage_key = await persist_zip_archive(
-        file_bytes,
+        prepared_bytes,
         original_filename=file.filename or "project.zip",
         owner_id=project.owner_id,
         db=db,
@@ -944,16 +986,17 @@ async def upload_project_zip(
     )
 
     project.zip_storage_key = storage_key
-    project.zip_file_size_bytes = len(file_bytes)
+    project.zip_file_size_bytes = len(prepared_bytes)
     await db.commit()
     await db.refresh(project)
 
     return {
         "message": "Project source archive uploaded successfully.",
         "zip_storage_key": storage_key,
-        "zip_file_size_bytes": len(file_bytes),
+        "zip_file_size_bytes": len(prepared_bytes),
         "download_url": f"/api/projects/{project.slug}/download",
         "files_count": inspection["file_count"],
+        "ignored_files_count": inspection["ignored_file_count"],
     }
 
 

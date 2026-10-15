@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test",
     "configure:deployment": "node scripts/configure-deployment.mjs",
     "preview": "vite preview"
   },

@@ -20,6 +20,7 @@ import {
 import jobService from '../../services/jobService';
 import applicationService from '../../services/applicationService';
 import { useAuth } from '../../context/AuthContext';
+import { Breadcrumbs } from '@/components/common';
 import SEO from '@/components/common/SEO';
 import { getJobPostingSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
 
@@ -134,19 +135,17 @@ export default function JobDetailPage() {
           ]),
         ]}
       />
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between">
-          <Link
-            to="/jobs"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-brand-primary transition"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to verified opportunities
-          </Link>
-
+      {/* Standard Accessible Breadcrumb Navigation */}
+      <Breadcrumbs
+        items={[
+          { label: 'Jobs', path: '/jobs' },
+          { label: `${job.title} at ${job.company_name}` },
+        ]}
+        backLink={{ label: 'Back to Jobs', path: '/jobs' }}
+        actions={
           <button
             onClick={handleShare}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-brand-border rounded-lg shadow-xs hover:bg-slate-50 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-brand-border rounded-xl shadow-xs hover:bg-slate-50 transition"
           >
             {copiedLink ? (
               <>
@@ -154,11 +153,14 @@ export default function JobDetailPage() {
               </>
             ) : (
               <>
-                <Share2 className="w-3.5 h-3.5" /> Share Position
+                <Share2 className="w-3.5 h-3.5 text-brand-primary" /> Share Position
               </>
             )}
           </button>
-        </div>
+        }
+      />
+
+      <div className="max-w-5xl mx-auto space-y-8 pt-6">
 
         {/* Hero Header Card */}
         <div className="bg-white rounded-3xl border border-brand-border shadow-card p-6 sm:p-8 space-y-6">

@@ -44,7 +44,8 @@ export default function TemplatesPage() {
 
   const handleUseTemplate = (templateId) => {
     if (!user) {
-      navigate(`/login?redirect=/resume-builder?template=${templateId}`);
+      const destination = `/resume-builder?template=${encodeURIComponent(templateId)}`;
+      navigate(`/login?redirect=${encodeURIComponent(destination)}`);
     } else {
       navigate(`/resume-builder?template=${templateId}`);
     }
@@ -150,17 +151,26 @@ export default function TemplatesPage() {
 
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header Section styled with website brand color */}
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-veryLight border border-brand-border text-xs font-semibold text-brand-primary mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
-            Curated Career Formats
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-veryLight border border-brand-border text-xs font-semibold text-brand-primary mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+              Curated Career Formats
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-primary tracking-tight font-display">
+              Resume Templates
+            </h1>
+            <p className="text-sm sm:text-base text-brand-muted mt-2">
+              Choose from our professionally designed templates to create your perfect resume
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-primary tracking-tight font-display">
-            Resume Templates
-          </h1>
-          <p className="text-sm sm:text-base text-brand-muted mt-2">
-            Choose from our professionally designed templates to create your perfect resume
-          </p>
+          <Link
+            to="/resume-builder"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-brand-primary to-brand-cyan hover:opacity-95 shadow-sm transition-all shrink-0 self-start sm:self-center"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Open Resume Builder</span>
+          </Link>
         </div>
 
         {/* Loading State */}
