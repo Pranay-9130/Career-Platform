@@ -71,18 +71,6 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const loginWithGoogle = useCallback(async (credential) => {
-    setIsLoading(true);
-    try {
-      const data = await authService.loginWithGoogle(credential);
-      setToken(data.access_token);
-      setUser(data.user);
-      return data;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const registerUser = useCallback(async (userData) => {
     setIsLoading(true);
     try {
@@ -130,7 +118,6 @@ export function AuthProvider({ children }) {
     isStudent,
     login,
     loginWithCredentials,
-    loginWithGoogle,
     registerUser,
     logout,
     updateUser,

@@ -144,7 +144,6 @@ Under the **Environment** tab of your Render service, configure the following:
 | `SMTP_PASSWORD` | If SMTP | `your_16_char_app_password` | SMTP App Password (not your personal password) |
 | `SMTP_USE_TLS` | If SMTP | `true` | STARTTLS toggle |
 | `EMAIL_API_KEY` | If Resend | `re_xxxxxxxxxxxxxxxx` | API key if using Resend or SendGrid |
-| `GOOGLE_CLIENT_ID` | Yes | `xxxx.apps.googleusercontent.com` | Client ID from Google Cloud Console |
 | `GEMINI_API_KEY` | Optional | `AIzaSyxxxxxxxxxxxx` | Google Gemini API key for ATS resume scoring |
 
 > [!NOTE]
@@ -223,31 +222,11 @@ The email service supports 4 selectable providers via `EMAIL_PROVIDER`:
 
 ---
 
-## 7. Google Cloud Sign-In Setup Guide
+## 7. Authentication Setup
 
-To enable "Sign in with Google" on your deployed application:
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create or select a project (e.g., `CareerPlatform-Production`).
-3. Navigate to **APIs & Services** ➔ **OAuth consent screen**:
-   - User Type: **External**
-   - App Name: `Student Career Platform`
-   - User support email: Your email
-   - Developer contact email: Your email
-   - Scopes: Select `.../auth/userinfo.email` and `.../auth/userinfo.profile`
-   - Publish status: Set to **In Production** (or add your test emails under Test Users while in Testing mode).
-4. Navigate to **APIs & Services** ➔ **Credentials**:
-   - Click **Create Credentials** ➔ **OAuth client ID**.
-   - Application type: **Web application**.
-   - Name: `CareerPlatform Web Client`.
-   - **Authorized JavaScript origins:**
-     - `http://localhost:5173` (for local development)
-     - `https://<your-project>.vercel.app` (your actual temporary Vercel URL)
-    - **Authorized redirect URIs:** leave empty; this app uses a GIS JavaScript callback.
-   - Click **Create** and copy your **Client ID** (`xxxx.apps.googleusercontent.com`).
-5. Save this Client ID on Render as `GOOGLE_CLIENT_ID`. The frontend reads it
-   at runtime from `/api/auth/config`; no frontend client-secret or client-ID
-   build variable is required.
+The public application uses email and password registration and login. Configure
+the transactional email provider for password recovery, provision the administrator
+privately, and keep `JWT_SECRET` unique and high entropy in production.
 
 ---
 
@@ -262,7 +241,6 @@ After completing the steps above, run through this verification checklist agains
 | **Frontend Load** | Open `https://<vercel-url>` in browser | Landing page loads with responsive styles and no console errors |
 | **CORS Handshake** | Inspect Network tab on homepage API calls | HTTP 200 with `access-control-allow-origin: https://<vercel-url>` |
 | **Registration** | Register new account on `https://<vercel-url>/register` | Authenticated dashboard opens immediately and no verification email is required |
-| **Google Sign-In** | Click "Continue with Google" on `/login` | Google OAuth modal appears, user completes auth, and is redirected to `/dashboard` |
 | **Student Login** | Register a student and sign in on `/login` | Opens the dashboard regardless of optional verification status |
 | **Admin Clearance** | Sign in with the privately provisioned administrator username/password | Opens the admin dashboard; students cannot access it |
 | **Database Persistence** | Submit a project or bookmark an item | Reload page; persisted data is retrieved from PostgreSQL database |
@@ -283,5 +261,4 @@ When you purchase a custom domain (e.g., `careerplatform.com`):
 3. **Update Environment Variables:**
    - On Render: Set `ALLOWED_ORIGINS=https://www.careerplatform.com,https://careerplatform.com` and `FRONTEND_URL=https://www.careerplatform.com`.
    - On Vercel: Set `VITE_API_BASE_URL=https://api.careerplatform.com/api`.
-   - In Google Cloud Console: Add `https://www.careerplatform.com` to **Authorized JavaScript origins**.
 4. Redeploy services — **Zero code changes required!**

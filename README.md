@@ -177,11 +177,8 @@ internal email identity. Keep administrator passwords out of source control.
 3. The client validates restored sessions on startup and automatically refreshes an expired access token once.
 4. Signing out clears both browser storage and the refresh cookie.
 
-Google sign-in uses Google Identity Services. Set the Web application client ID
-once in backend `GOOGLE_CLIENT_ID`; the frontend reads that public identifier at
-runtime from `/api/auth/config`. Register every exact frontend origin in Google
-Cloud and in backend `ALLOWED_ORIGINS`. This callback-based ID-token flow uses no
-OAuth redirect URI or client secret.
+The public login and registration screens use email and password authentication.
+Password recovery continues to use the configured transactional email provider.
 
 ---
 

@@ -28,13 +28,6 @@ export const authService = {
     return response.data;
   },
 
-  loginWithGoogle: async (credential, persistent = true) => {
-    const response = await api.post('/auth/google', { credential });
-    const { access_token, user } = response.data;
-    if (access_token && user) authStorage.setSession(access_token, user, persistent);
-    return response.data;
-  },
-
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
     const { access_token, user } = response.data;

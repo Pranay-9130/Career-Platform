@@ -12,12 +12,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
-import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { loginWithCredentials, loginWithGoogle, isAuthenticated, user, logout } = useAuth();
+  const { loginWithCredentials, isAuthenticated, user, logout } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -107,29 +106,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSuccess = async (credential) => {
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await loginWithGoogle(credential);
-      const targetPath = getDestination(response.user);
-
-      navigate(targetPath, { replace: true });
-    } catch (err) {
-      const message =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Unable to complete Google sign-in. Please try again.';
-      setErrorMessage(message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleError = (err) => {
-    setErrorMessage(err?.message || 'Google sign-in was interrupted.');
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Decorative background glows */}
@@ -190,26 +166,6 @@ export default function LoginPage() {
               {errorMessage}
             </Alert>
           )}
-
-          {/* Google Sign-In Option */}
-          <div className="mb-6">
-            <GoogleSignInButton
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              isLoading={isSubmitting}
-            />
-
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-brand-border/80" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white/95 px-3 text-brand-muted font-medium uppercase tracking-wider">
-                  Or continue with email
-                </span>
-              </div>
-            </div>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {/* Email Input */}

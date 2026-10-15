@@ -16,11 +16,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
-import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { registerUser, loginWithGoogle, isAuthenticated, user, logout } = useAuth();
+  const { registerUser, isAuthenticated, user, logout } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -141,28 +140,6 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleSuccess = async (credential) => {
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    try {
-      const response = await loginWithGoogle(credential);
-      const targetPath = response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
-      navigate(targetPath, { replace: true });
-    } catch (err) {
-      const message =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Unable to complete Google registration. Please try again.';
-      setErrorMessage(message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleGoogleError = (err) => {
-    setErrorMessage(err?.message || 'Google registration was interrupted.');
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Decorative ambient background accents */}
@@ -229,27 +206,6 @@ export default function RegisterPage() {
               </div>
             </Alert>
           )}
-
-          {/* Google Quick Sign-Up */}
-          <div className="mb-6">
-            <GoogleSignInButton
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              isLoading={isSubmitting}
-              text="Sign up with Google"
-            />
-
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-brand-border/80" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white/95 px-3 text-brand-muted font-medium uppercase tracking-wider">
-                  Or register with email
-                </span>
-              </div>
-            </div>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {/* Account Role Toggle */}

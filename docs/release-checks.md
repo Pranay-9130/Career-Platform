@@ -16,10 +16,9 @@ users who specifically want a separately hosted frontend.
 5. Configure SMTP or Resend/SendGrid with a verified sender. Console delivery and
    credential-less fallback are disabled in production. Test a real inbox.
 6. Set `FRONTEND_URL` and `ALLOWED_ORIGINS` to the actual HTTPS frontend origin.
-7. Set `GOOGLE_CLIENT_ID` to your Google web application's client ID.
-8. On a new database provision the administrator with `py scripts/provision_admin.py`.
+7. On a new database provision the administrator with `py scripts/provision_admin.py`.
    Credentials provisioned into one database do not automatically transfer to another.
-9. Existing refresh JWTs issued before database sessions were added cannot renew.
+8. Existing refresh JWTs issued before database sessions were added cannot renew.
    Rotate `JWT_SECRET` once during this upgrade if immediate revocation of all
    pre-upgrade access JWTs is required; otherwise they expire normally.
 
@@ -36,9 +35,7 @@ the backend. Configure `VITE_API_BASE_URL=/api` on Vercel. The browser now calls
 the frontend origin for API requests, so refresh cookies do not depend on third-party
 cookie support. Do not point that variable directly to a separate Render domain.
 
-The frontend loads the public Google client ID from `/api/auth/config`; configure
-`GOOGLE_CLIENT_ID` on the backend only. Add the exact frontend origin to Google
-Cloud's Authorized JavaScript origins. This GIS callback flow has no redirect URI.
+The frontend login and registration screens use email and password authentication.
 
 ## Live verification
 
@@ -51,7 +48,7 @@ py scripts/check_deployment.py --frontend https://YOUR-SITE.vercel.app --backend
 Then in a browser on the real frontend:
 
 1. Register a student; confirm the dashboard opens immediately and no verification email is sent.
-2. Sign in through the actual Google popup; confirm the user appears once in PostgreSQL and repeat sign-in does not duplicate it.
+2. Sign in with email and password; confirm the existing user record is reused.
 3. Verify the refresh cookie is HttpOnly/Secure, and API traffic stays under the frontend's `/api`.
 4. Reload a protected page and wait for access-token expiry; the session should renew.
 5. Sign out; both the saved access credential and refresh credential should be rejected.

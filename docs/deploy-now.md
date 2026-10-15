@@ -12,17 +12,13 @@ Vercel site, custom domain, or cross-site cookie workaround is required.
    unless you intend to start over. Secrets belong in Render environment settings.
 3. Set `EMAIL_API_KEY` to your Resend key and `EMAIL_FROM` to your verified sender.
    The blueprint uses HTTPS email delivery; another HTTPS provider can be configured.
-4. Set `GOOGLE_CLIENT_ID` to your Google web client ID. It is read at runtime by both
-   the API and the website, avoiding mismatched frontend/backend client IDs.
-5. Set `GEMINI_API_KEY` if using the AI integration. It stays on the server.
-6. Deploy. The image builds the frontend, installs the backend, and applies migrations
+4. Set `GEMINI_API_KEY` if using the AI integration. It stays on the server.
+5. Deploy. The image builds the frontend, installs the backend, and applies migrations
    at startup before accepting traffic. `/api/health/ready` checks database access
    and the new session/upload tables.
-7. Add the service's assigned HTTPS URL to Google Cloud's Authorized JavaScript
-   Origins. Render's `RENDER_EXTERNAL_URL` automatically supplies the frontend URL
-   and cookie origin allowlist. For a custom domain, explicitly set `FRONTEND_URL`
-   and `ALLOWED_ORIGINS` to that domain.
-8. Sign in at `/login` using your privately provisioned administrator credentials.
+6. For a custom frontend domain, explicitly set `FRONTEND_URL` and
+   `ALLOWED_ORIGINS` to that domain.
+7. Sign in at `/login` using your privately provisioned administrator credentials.
    The existing PostgreSQL administrator is retained; no demo accounts are created.
 
 The current blueprint retains the free service plan for initial deployment.
@@ -45,21 +41,8 @@ and API on port 8000 (or the supplied `PORT`). No Node process runs in productio
 
 ## Final verification
 
-### Google origin mismatch and transactional email
+### Transactional email
 
-- Open Google Cloud Console → Google Auth Platform → Clients (or APIs & Services
-  → Credentials), then edit the **Web application** OAuth client matching Render's
-  `GOOGLE_CLIENT_ID`. Under **Authorized JavaScript origins**, add the exact
-  address used in the browser: `https://careerplatform.onrender.com`.
-  Include the scheme and port when applicable, but no path, `/login`, or trailing
-  slash. Add each actual frontend/custom domain separately. Changing backend CORS
-  does not change Google's origin allowlist.
-- This app uses the Google Identity Services JavaScript callback and posts the ID
-  token to `/api/auth/google`; Google does not redirect to that endpoint. Leave
-  **Authorized redirect URIs** empty for this client unless another application
-  flow explicitly needs one. No Google client secret is used or exposed.
-- The website now always loads `/api/auth/config` before rendering Google's
-  button. Old `VITE_GOOGLE_CLIENT_ID` build values cannot override the server ID.
 - Render free services block SMTP ports 25, 465, and 587. Password reset and other
   transactional messages still need email. In Render's environment
   settings use `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` from Resend, and
@@ -81,7 +64,7 @@ For the currently deployed separate services, use the frontend and API URLs:
 py scripts/check_deployment.py --frontend https://careerplatform.onrender.com --backend https://careerplatform-api.onrender.com
 ```
 
-Verify Google sign-in, immediate registration, password recovery, logout, and a ZIP
+Verify email/password sign-in, immediate registration, password recovery, logout, and a ZIP
 download after restart in the actual browser. Those external checks require a
 running deployment and your Google/email provider settings.
 
