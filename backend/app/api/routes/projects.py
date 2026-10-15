@@ -14,6 +14,8 @@ from app.core.profile_links import clean_social_profile_url
 from app.models.project import Project
 from app.models.project_screenshot import ProjectScreenshot
 from app.models.project_bookmark import ProjectBookmark
+from app.models.project_star import ProjectStar
+from app.models.project_comment import ProjectComment
 from app.models.profile import Profile
 from app.models.user import User, UserRole
 from app.models.stored_archive import StoredArchive
@@ -36,6 +38,10 @@ from app.schemas.project import (
     ProjectFacets,
     FacetItem,
     BookmarkToggleResponse,
+    StarToggleResponse,
+    ProjectCommentCreate,
+    ProjectCommentRead,
+    ProjectCommentListResponse,
 )
 from app.api.dependencies import get_optional_current_user, get_current_active_user
 
@@ -48,7 +54,11 @@ def _generate_slug(title: str) -> str:
     return slug or "project"
 
 
-def _map_project_to_read(project: Project, is_bookmarked: bool = False) -> ProjectRead:
+def _map_project_to_read(
+    project: Project,
+    is_bookmarked: bool = False,
+    is_starred: bool = False,
+) -> ProjectRead:
     author_name = project.owner.full_name if project.owner else "Platform Contributor"
     author_avatar = (
         project.owner.avatar_url
@@ -84,6 +94,7 @@ def _map_project_to_read(project: Project, is_bookmarked: bool = False) -> Proje
         stars_count=project.stars_count,
         bookmarks_count=project.bookmarks_count,
         is_bookmarked=is_bookmarked,
+        is_starred=is_starred,
         published_at=project.published_at,
         created_at=project.created_at,
     )
@@ -92,6 +103,7 @@ def _map_project_to_read(project: Project, is_bookmarked: bool = False) -> Proje
 def _map_project_to_detail_read(
     project: Project,
     is_bookmarked: bool = False,
+    is_starred: bool = False,
     profile_map: Optional[dict] = None,
     owner_profile: Optional[Profile] = None,
 ) -> ProjectDetailRead:
@@ -219,6 +231,7 @@ def _map_project_to_detail_read(
         stars_count=project.stars_count,
         bookmarks_count=project.bookmarks_count,
         is_bookmarked=is_bookmarked,
+        is_starred=is_starred,
         published_at=project.published_at,
         created_at=project.created_at,
     )
@@ -583,6 +596,153 @@ async def toggle_project_bookmark(
     )
 
 
+async def _find_project(identifier: str, db: AsyncSession) -> Optional[Project]:
+    """Resolve a project slug or UUID without leaking implementation details."""
+    try:
+        project_uuid = uuid.UUID(identifier)
+        project = (await db.execute(
+            select(Project).where(Project.id == project_uuid)
+        )).scalar_one_or_none()
+        if project:
+            return project
+    except ValueError:
+        pass
+    return (await db.execute(
+        select(Project).where(Project.slug == identifier)
+    )).scalar_one_or_none()
+
+
+def _can_view_project(project: Project, current_user: Optional[User]) -> bool:
+    return project.status == "Published" or bool(
+        current_user
+        and (current_user.id == project.owner_id or current_user.role == UserRole.ADMIN)
+    )
+
+
+@router.post("/{identifier}/star", response_model=StarToggleResponse)
+async def toggle_project_star(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Add or remove the authenticated user's single star for a project."""
+    project = await _find_project(identifier, db)
+    if not project or not _can_view_project(project, current_user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+
+    existing = (await db.execute(select(ProjectStar).where(
+        ProjectStar.user_id == current_user.id,
+        ProjectStar.project_id == project.id,
+    ))).scalar_one_or_none()
+
+    if existing:
+        await db.delete(existing)
+        project.stars_count = max(0, project.stars_count - 1)
+        starred = False
+        message = "Star removed from project."
+    else:
+        db.add(ProjectStar(user_id=current_user.id, project_id=project.id))
+        project.stars_count += 1
+        starred = True
+        message = "Thanks for supporting the contributors!"
+
+    await db.commit()
+    return StarToggleResponse(
+        project_id=project.id,
+        starred=starred,
+        stars_count=project.stars_count,
+        message=message,
+    )
+
+
+def _comment_response(comment: ProjectComment, viewer: Optional[User]) -> ProjectCommentRead:
+    author = comment.user
+    return ProjectCommentRead(
+        id=comment.id,
+        project_id=comment.project_id,
+        user_id=comment.user_id,
+        author_name=author.full_name,
+        author_avatar=author.avatar_url,
+        body=comment.body,
+        created_at=comment.created_at,
+        can_delete=bool(viewer and (viewer.id == comment.user_id or viewer.role == UserRole.ADMIN)),
+    )
+
+
+@router.get("/{identifier}/comments", response_model=ProjectCommentListResponse)
+async def list_project_comments(
+    identifier: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),
+):
+    """List public appreciation comments, oldest first for conversational reading."""
+    project = await _find_project(identifier, db)
+    if not project or not _can_view_project(project, current_user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+
+    comments = (await db.execute(
+        select(ProjectComment)
+        .options(selectinload(ProjectComment.user))
+        .where(ProjectComment.project_id == project.id)
+        .order_by(ProjectComment.created_at.asc())
+    )).scalars().all()
+    return ProjectCommentListResponse(
+        items=[_comment_response(comment, current_user) for comment in comments],
+        total=len(comments),
+    )
+
+
+@router.post(
+    "/{identifier}/comments",
+    response_model=ProjectCommentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_project_comment(
+    identifier: str,
+    payload: ProjectCommentCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Post a signed-in user's comment to a visible project."""
+    project = await _find_project(identifier, db)
+    if not project or not _can_view_project(project, current_user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+
+    body = payload.body.strip()
+    if len(body) < 2:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Comment is too short.")
+    comment = ProjectComment(project_id=project.id, user_id=current_user.id, body=body)
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+    comment.user = current_user
+    return _comment_response(comment, current_user)
+
+
+@router.delete("/{identifier}/comments/{comment_id}")
+async def delete_project_comment(
+    identifier: str,
+    comment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Allow comment authors and administrators to remove a comment."""
+    project = await _find_project(identifier, db)
+    if not project or not _can_view_project(project, current_user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+    comment = (await db.execute(select(ProjectComment).where(
+        ProjectComment.id == comment_id,
+        ProjectComment.project_id == project.id,
+    ))).scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found.")
+    if comment.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You cannot delete this comment.")
+    await db.delete(comment)
+    await db.commit()
+    return {"message": "Comment deleted."}
+
+
 @router.get("/{slug}/download")
 async def download_project_zip(
     slug: str,
@@ -690,6 +850,7 @@ async def get_project_by_slug(
 
     # Check bookmark status
     is_bookmarked = False
+    is_starred = False
     if current_user:
         bm_stmt = select(ProjectBookmark).where(
             ProjectBookmark.user_id == current_user.id,
@@ -697,6 +858,11 @@ async def get_project_by_slug(
         )
         existing_bm = (await db.execute(bm_stmt)).scalar_one_or_none()
         is_bookmarked = existing_bm is not None
+        star_stmt = select(ProjectStar).where(
+            ProjectStar.user_id == current_user.id,
+            ProjectStar.project_id == project.id,
+        )
+        is_starred = (await db.execute(star_stmt)).scalar_one_or_none() is not None
 
     profile_map = {}
     if project.contributors and isinstance(project.contributors, list):
@@ -720,6 +886,7 @@ async def get_project_by_slug(
     return _map_project_to_detail_read(
         project,
         is_bookmarked=is_bookmarked,
+        is_starred=is_starred,
         profile_map=profile_map,
         owner_profile=owner_profile,
     )

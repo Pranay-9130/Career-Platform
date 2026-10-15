@@ -265,6 +265,115 @@ async def test_bookmark_lifecycle_and_my_bookmarks(client, db_session):
 
 
 @pytest.mark.asyncio
+async def test_project_star_lifecycle_and_detail_state(client, db_session):
+    """A user can star once, see the state on detail, and remove the star."""
+    student, p1, _, _ = await seed_test_data(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "DevPassword123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+    initial_stars = p1.stars_count
+
+    anonymous = await client.post(f"/api/projects/{p1.slug}/star")
+    assert anonymous.status_code == 401
+
+    starred = await client.post(f"/api/projects/{p1.slug}/star", headers=headers)
+    assert starred.status_code == 200
+    assert starred.json()["starred"] is True
+    assert starred.json()["stars_count"] == initial_stars + 1
+
+    detail = await client.get(f"/api/projects/{p1.slug}", headers=headers)
+    assert detail.status_code == 200
+    assert detail.json()["is_starred"] is True
+
+    unstarred = await client.post(f"/api/projects/{p1.slug}/star", headers=headers)
+    assert unstarred.status_code == 200
+    assert unstarred.json()["starred"] is False
+    assert unstarred.json()["stars_count"] == initial_stars
+
+
+@pytest.mark.asyncio
+async def test_project_comment_create_list_and_delete(client, db_session):
+    """Comments are public to read, require login to create, and are removable by their author."""
+    student, p1, _, _ = await seed_test_data(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "DevPassword123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+
+    anonymous_create = await client.post(
+        f"/api/projects/{p1.slug}/comments",
+        json={"body": "Excellent work!"},
+    )
+    assert anonymous_create.status_code == 401
+
+    created = await client.post(
+        f"/api/projects/{p1.slug}/comments",
+        headers=headers,
+        json={"body": "  Excellent architecture and documentation!  "},
+    )
+    assert created.status_code == 201
+    comment = created.json()
+    assert comment["body"] == "Excellent architecture and documentation!"
+    assert comment["author_name"] == student.full_name
+    assert comment["can_delete"] is True
+
+    public_list = await client.get(f"/api/projects/{p1.slug}/comments")
+    assert public_list.status_code == 200
+    assert public_list.json()["total"] == 1
+    assert public_list.json()["items"][0]["can_delete"] is False
+
+    deleted = await client.delete(
+        f"/api/projects/{p1.slug}/comments/{comment['id']}",
+        headers=headers,
+    )
+    assert deleted.status_code == 200
+    assert (await client.get(f"/api/projects/{p1.slug}/comments")).json()["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_comment_authorization_and_validation(client, db_session):
+    """Comment length is validated and another student cannot delete it."""
+    student, p1, _, _ = await seed_test_data(db_session)
+    other = User(
+        email="other@school.edu",
+        hashed_password=get_password_hash("OtherPassword123!"),
+        full_name="Other Student",
+        role=UserRole.STUDENT,
+        is_active=True,
+        is_verified=False,
+    )
+    db_session.add(other)
+    await db_session.commit()
+
+    owner_login = await client.post(
+        "/api/auth/login", json={"email": student.email, "password": "DevPassword123!"}
+    )
+    other_login = await client.post(
+        "/api/auth/login", json={"email": other.email, "password": "OtherPassword123!"}
+    )
+    owner_headers = {"Authorization": f"Bearer {owner_login.json()['access_token']}"}
+    other_headers = {"Authorization": f"Bearer {other_login.json()['access_token']}"}
+
+    invalid = await client.post(
+        f"/api/projects/{p1.slug}/comments", headers=owner_headers, json={"body": "x"}
+    )
+    assert invalid.status_code == 422
+
+    created = await client.post(
+        f"/api/projects/{p1.slug}/comments",
+        headers=owner_headers,
+        json={"body": "Really thoughtful implementation."},
+    )
+    forbidden = await client.delete(
+        f"/api/projects/{p1.slug}/comments/{created.json()['id']}",
+        headers=other_headers,
+    )
+    assert forbidden.status_code == 403
+
+@pytest.mark.asyncio
 async def test_project_detail_rich_specs_and_screenshots(client, db_session):
     """GET /api/projects/{slug} returns rich specs, screenshots array, and author info."""
     student, p1, _, _ = await seed_test_data(db_session)

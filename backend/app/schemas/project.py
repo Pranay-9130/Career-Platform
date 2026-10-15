@@ -28,6 +28,7 @@ class ProjectRead(ProjectBase):
     stars_count: int = 0
     bookmarks_count: int = 0
     is_bookmarked: bool = False
+    is_starred: bool = False
     published_at: Optional[datetime] = None
     created_at: datetime
 
@@ -38,6 +39,29 @@ class BookmarkToggleResponse(BaseModel):
     bookmarked: bool
     bookmarks_count: int
     message: str
+
+class StarToggleResponse(BaseModel):
+    project_id: UUID
+    starred: bool
+    stars_count: int
+    message: str
+
+class ProjectCommentCreate(BaseModel):
+    body: str = Field(..., min_length=2, max_length=1000)
+
+class ProjectCommentRead(BaseModel):
+    id: UUID
+    project_id: UUID
+    user_id: UUID
+    author_name: str
+    author_avatar: Optional[str] = None
+    body: str
+    created_at: datetime
+    can_delete: bool = False
+
+class ProjectCommentListResponse(BaseModel):
+    items: List[ProjectCommentRead]
+    total: int
 
 class ScreenshotItem(BaseModel):
     id: Optional[UUID] = None

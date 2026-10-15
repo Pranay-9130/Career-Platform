@@ -26,6 +26,9 @@ import {
   Users,
   Linkedin,
   Globe,
+  MessageCircle,
+  Send,
+  Trash2,
 } from 'lucide-react';
 import { Button, Badge, Card, Skeleton, Breadcrumbs } from '@/components/common';
 import ProjectCard from '@/components/cards/ProjectCard';
@@ -43,6 +46,10 @@ export default function ProjectDetailPage() {
   const [relatedProjects, setRelatedProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
+  const [isStarUpdating, setIsStarUpdating] = useState(false);
 
   // Screenshot carousel & lightbox state
   const [activeScreenshotIdx, setActiveScreenshotIdx] = useState(0);
@@ -68,6 +75,13 @@ export default function ProjectDetailPage() {
 
         setProject(data);
         setActiveScreenshotIdx(0);
+
+        try {
+          const commentData = await projectService.getComments(slug);
+          setComments(commentData.items || []);
+        } catch {
+          setComments([]);
+        }
 
         // Fetch related projects
         try {
@@ -137,6 +151,68 @@ export default function ProjectDetailPage() {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       showToast('Project URL copied to clipboard!');
+    }
+  };
+
+  const goToLogin = () => {
+    navigate('/login', {
+      state: {
+        from: `/projects/${slug}`,
+        message: 'Sign in to support project contributors.',
+      },
+    });
+  };
+
+  const handleStarToggle = async () => {
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
+    if (!project || isStarUpdating) return;
+    setIsStarUpdating(true);
+    try {
+      const result = await projectService.toggleStar(project.slug);
+      setProject((previous) => ({
+        ...previous,
+        is_starred: result.starred,
+        stars_count: result.stars_count,
+      }));
+      showToast(result.message);
+    } catch (err) {
+      showToast(err.response?.data?.detail || 'Could not update your star.');
+    } finally {
+      setIsStarUpdating(false);
+    }
+  };
+
+  const handleCommentSubmit = async (event) => {
+    event.preventDefault();
+    if (!isAuthenticated) {
+      goToLogin();
+      return;
+    }
+    const body = commentText.trim();
+    if (body.length < 2 || isCommentSubmitting) return;
+    setIsCommentSubmitting(true);
+    try {
+      const created = await projectService.addComment(project.slug, body);
+      setComments((previous) => [...previous, created]);
+      setCommentText('');
+      showToast('Your comment was shared with the contributors.');
+    } catch (err) {
+      showToast(err.response?.data?.detail || 'Could not post your comment.');
+    } finally {
+      setIsCommentSubmitting(false);
+    }
+  };
+
+  const handleCommentDelete = async (commentId) => {
+    try {
+      await projectService.deleteComment(project.slug, commentId);
+      setComments((previous) => previous.filter((comment) => comment.id !== commentId));
+      showToast('Comment deleted.');
+    } catch (err) {
+      showToast(err.response?.data?.detail || 'Could not delete that comment.');
     }
   };
 
@@ -284,6 +360,15 @@ export default function ProjectDetailPage() {
 
             {/* Top Action CTAs */}
             <div className="flex flex-row lg:flex-col gap-3 shrink-0">
+              <Button
+                variant={project.is_starred ? 'primary' : 'outline'}
+                onClick={handleStarToggle}
+                leftIcon={Star}
+                disabled={isStarUpdating}
+                className="flex-1 lg:flex-initial justify-center"
+              >
+                {isStarUpdating ? 'Updating...' : project.is_starred ? 'Starred' : 'Star this Project'}
+              </Button>
               <Button
                 variant={project.is_bookmarked ? 'primary' : 'outline'}
                 onClick={handleBookmarkToggle}
@@ -605,6 +690,106 @@ export default function ProjectDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Community appreciation and project discussion */}
+            <div className="bg-white border border-brand-border rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-display font-bold text-lg text-brand-text flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-brand-primary" />
+                    Community Appreciation
+                  </h2>
+                  <p className="text-xs text-brand-muted mt-1">
+                    Share constructive feedback or a compliment with the contributors.
+                  </p>
+                </div>
+                <Badge variant="neutral" size="sm">
+                  {comments.length} {comments.length === 1 ? 'Comment' : 'Comments'}
+                </Badge>
+              </div>
+
+              {isAuthenticated ? (
+                <form onSubmit={handleCommentSubmit} className="space-y-3">
+                  <label htmlFor="project-comment" className="sr-only">Add a project comment</label>
+                  <textarea
+                    id="project-comment"
+                    value={commentText}
+                    onChange={(event) => setCommentText(event.target.value.slice(0, 1000))}
+                    placeholder="What did the contributors do well?"
+                    rows={3}
+                    maxLength={1000}
+                    className="w-full resize-y rounded-2xl border border-brand-border bg-slate-50/60 px-4 py-3 text-sm text-brand-text placeholder:text-slate-400 outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] text-slate-400">{commentText.length}/1000</span>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      leftIcon={Send}
+                      disabled={commentText.trim().length < 2 || isCommentSubmitting}
+                    >
+                      {isCommentSubmitting ? 'Posting...' : 'Post Comment'}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="rounded-2xl border border-brand-border bg-slate-50 px-4 py-4 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-brand-muted">Sign in to star this work and leave a comment.</p>
+                  <Button variant="outline" size="sm" onClick={goToLogin}>Sign In to Comment</Button>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {comments.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-brand-border py-8 text-center">
+                    <MessageCircle className="w-7 h-7 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-slate-600">No comments yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Be the first to recognize the contributors' work.</p>
+                  </div>
+                ) : comments.map((comment) => {
+                  const initials = comment.author_name
+                    .split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+                  return (
+                    <article key={comment.id} className="rounded-2xl border border-brand-border bg-slate-50/50 p-4">
+                      <div className="flex items-start gap-3">
+                        {comment.author_avatar ? (
+                          <img src={comment.author_avatar} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-xl bg-brand-primary text-white text-xs font-bold flex items-center justify-center shrink-0">
+                            {initials}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="text-sm font-semibold text-brand-text">{comment.author_name}</span>
+                              <span className="text-[11px] text-slate-400 ml-2">
+                                {new Date(comment.created_at).toLocaleDateString(undefined, {
+                                  year: 'numeric', month: 'short', day: 'numeric',
+                                })}
+                              </span>
+                            </div>
+                            {comment.can_delete && (
+                              <button
+                                type="button"
+                                onClick={() => handleCommentDelete(comment.id)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Delete comment"
+                                aria-label={`Delete comment by ${comment.author_name}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          <p className="mt-1.5 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words">{comment.body}</p>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Right Column (Sidebar): Author, Resources, CTAs */}

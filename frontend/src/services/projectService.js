@@ -43,6 +43,30 @@ export const projectService = {
     return response.data;
   },
 
+  /** Toggle the signed-in user's star for a project. */
+  async toggleStar(identifier) {
+    const response = await api.post(`/projects/${identifier}/star`);
+    return response.data;
+  },
+
+  /** Retrieve the public appreciation comments for a project. */
+  async getComments(identifier) {
+    const response = await api.get(`/projects/${identifier}/comments`);
+    return response.data;
+  },
+
+  /** Add an appreciation comment to a project. */
+  async addComment(identifier, body) {
+    const response = await api.post(`/projects/${identifier}/comments`, { body });
+    return response.data;
+  },
+
+  /** Delete a comment owned by the current user (or as an administrator). */
+  async deleteComment(identifier, commentId) {
+    const response = await api.delete(`/projects/${identifier}/comments/${commentId}`);
+    return response.data;
+  },
+
   /**
    * Retrieve related projects for a given project slug.
    * @param {string} slug

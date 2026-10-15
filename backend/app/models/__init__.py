@@ -3,6 +3,8 @@ from app.models.user import User, UserRole
 from app.models.profile import Profile
 from app.models.project import Project
 from app.models.project_bookmark import ProjectBookmark
+from app.models.project_star import ProjectStar
+from app.models.project_comment import ProjectComment
 from app.models.project_screenshot import ProjectScreenshot
 from app.models.otp import OTPVerification
 from app.models.password_reset import PasswordResetToken
@@ -24,6 +26,8 @@ __all__ = [
     "Profile",
     "Project",
     "ProjectBookmark",
+    "ProjectStar",
+    "ProjectComment",
     "ProjectScreenshot",
     "OTPVerification",
     "PasswordResetToken",
