@@ -60,9 +60,8 @@ def create_valid_zip_bytes():
 async def test_e2e_journey_student_onboarding_and_auth(client):
     """
     E2E Journey 1: Complete Student Onboarding & Authentication Lifecycle
-    - Registration -> Email OTP Dispatch -> OTP Verification -> JWT Issuance -> Dashboard Summary
+    - Registration -> Immediate JWT Issuance -> Login -> Dashboard Summary
     """
-    EmailService.clear_dev_otps()
     email = "jordan.grad@stanford.edu"
     password = "DevPassword123!"
 
@@ -81,19 +80,7 @@ async def test_e2e_journey_student_onboarding_and_auth(client):
     reg_data = reg_resp.json()
     assert reg_data["user"]["email"] == email
 
-    # 2. Extract dispatched verification OTP
-    otp_code = EmailService.get_last_dev_otp(email)
-    assert otp_code is not None and len(otp_code) == 6
-
-    # 3. Verify OTP code
-    verify_resp = await client.post(
-        "/api/auth/verify-otp",
-        json={"email": email, "otp": otp_code, "purpose": "registration"},
-    )
-    assert verify_resp.status_code == 200
-    assert verify_resp.json()["user"]["is_verified"] is True
-
-    # 4. Login with verified account
+    # 2. Login works without mandatory email verification
     login_resp = await client.post(
         "/api/auth/login",
         json={"email": email, "password": password},
@@ -103,7 +90,7 @@ async def test_e2e_journey_student_onboarding_and_auth(client):
     token = auth_data["access_token"]
     student_headers = {"Authorization": f"Bearer {token}"}
 
-    # 5. Access authenticated profile & dashboard
+    # 3. Access authenticated profile & dashboard
     me_resp = await client.get("/api/auth/me", headers=student_headers)
     assert me_resp.status_code == 200
     assert me_resp.json()["email"] == email

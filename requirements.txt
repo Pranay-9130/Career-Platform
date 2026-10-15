@@ -16,6 +16,7 @@ bcrypt>=4.2.0,<5
 aiosqlite>=0.20.0
 python-multipart>=0.0.19
 httpx>=0.28.0
+google-auth[requests]>=2.35.0,<3
 pytest>=8.3.0
 pytest-asyncio>=0.24.0
 reportlab>=4.2.0

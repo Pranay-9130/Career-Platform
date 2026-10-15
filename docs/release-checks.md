@@ -36,9 +36,9 @@ the backend. Configure `VITE_API_BASE_URL=/api` on Vercel. The browser now calls
 the frontend origin for API requests, so refresh cookies do not depend on third-party
 cookie support. Do not point that variable directly to a separate Render domain.
 
-Set `VITE_GOOGLE_CLIENT_ID` to the same web client ID as the backend. Add the exact
-frontend origin to Google Cloud's Authorized JavaScript Origins. Rebuild after
-changing Vite variables; they are embedded at build time.
+The frontend loads the public Google client ID from `/api/auth/config`; configure
+`GOOGLE_CLIENT_ID` on the backend only. Add the exact frontend origin to Google
+Cloud's Authorized JavaScript origins. This GIS callback flow has no redirect URI.
 
 ## Live verification
 
@@ -50,8 +50,8 @@ py scripts/check_deployment.py --frontend https://YOUR-SITE.vercel.app --backend
 
 Then in a browser on the real frontend:
 
-1. Register a student; verify that the OTP arrives, verifies once, and resend works.
-2. Sign in through the actual Google popup; confirm the user appears once in PostgreSQL.
+1. Register a student; confirm the dashboard opens immediately and no verification email is sent.
+2. Sign in through the actual Google popup; confirm the user appears once in PostgreSQL and repeat sign-in does not duplicate it.
 3. Verify the refresh cookie is HttpOnly/Secure, and API traffic stays under the frontend's `/api`.
 4. Reload a protected page and wait for access-token expiry; the session should renew.
 5. Sign out; both the saved access credential and refresh credential should be rejected.
@@ -59,4 +59,4 @@ Then in a browser on the real frontend:
 7. Upload/download a project ZIP, restart the backend, then download the same bytes again.
 8. Verify a student cannot register as admin or access `/admin`.
 
-Automated tests cannot replace the real Google consent flow or prove inbox delivery.
+Automated tests cannot replace the real Google consent flow or prove password-reset inbox delivery.

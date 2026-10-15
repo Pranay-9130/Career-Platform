@@ -24,6 +24,9 @@ class User(BaseUUIDModel):
     )
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    # Stable provider identifier. Email is mutable and must not be the sole key
+    # used to recognize a returning Google account.
+    google_sub = Column(String(255), unique=True, index=True, nullable=True)
     headline = Column(String(255), nullable=True)
     avatar_url = Column(String(500), nullable=True)
 

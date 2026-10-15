@@ -47,7 +47,7 @@ Follow the **Problem → Solution → Architecture → Challenges Overcome** for
 | Step | Screen | What to Show & Say |
 | :--- | :--- | :--- |
 | **1. Hook** | `Homepage (/)` | *"Notice the modern light-blue UI design system and clear value proposition. The platform speaks directly to students looking for their first internship."* |
-| **2. Auth Flow** | `Register (/register)` & `OTP (/verify-otp)` | *"Show the clean form validation. Demonstrate the 6-digit auto-advancing OTP input with live countdown cooldown and attempt counter defense."* |
+| **2. Auth Flow** | `Register (/register)` & `Login (/login)` | *"Show immediate secure onboarding, password login, and Google Identity Services sign-in without a mandatory verification wait."* |
 | **3. Student Workspace** | `Dashboard (/dashboard)` | *"Upon login, students see their personalized command center: dynamic greeting, top 4 KPI cards (Projects, Resume completion %, ATS score, Active applications), and the Career Readiness Stage meter."* |
 | **4. Activity & Recommendations** | `Dashboard Feed` | *"Highlight the live activity timeline and curated project/job recommendations filterable by domain, stipend, or difficulty."* |
 | **5. Code Quality** | `VS Code / Terminal` | *"Conclude by showing the clean monorepo architecture, separation of concerns, and running `pytest` to demonstrate 40 passing tests with zero warnings."* |

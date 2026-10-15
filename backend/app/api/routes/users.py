@@ -444,9 +444,8 @@ async def get_dashboard_summary(
                 recommended_opportunities.append(fg)
 
     # I. Dynamic Career Readiness Calculation
-    score = 0
-    if current_user.is_verified:
-        score += 25
+    # Email verification is optional and must not reduce career readiness.
+    score = 25
     score += int((profile_completion / 100) * 25)
     score += int((resume_completion / 100) * 20)
     if projects_count > 0:

@@ -78,7 +78,7 @@ frontend/src/
 
 ### 2.3. Routing & Route Guarding Architecture
 - **Public Routes:** Accessible by unauthenticated visitors (`/`, `/about`, `/projects`, `/projects/:slug`, `/jobs`, `/jobs/:slug`, `/templates`, `/contact`).
-- **Auth Routes:** Accessible only when logged out (`/login`, `/register`, `/verify-otp`, `/forgot-password`, `/reset-password`).
+- **Auth Routes:** Public authentication pages (`/login`, `/register`, `/forgot-password`, `/reset-password`).
 - **Student Protected Routes:** Require valid authenticated session with role `STUDENT` or `ADMIN` (`/dashboard`, `/my-projects`, `/add-project`, `/resume-builder`, `/ats-analyzer`, `/applications`, `/profile`, `/settings`).
 - **Admin Protected Routes:** Strict role requirement `ADMIN` (`/admin/dashboard`, `/admin/projects`, `/admin/jobs`, `/admin/students`, `/admin/reports`).
 
@@ -128,32 +128,13 @@ backend/app/
 ## 5. Authentication & Authorization Flow
 
 ### 5.1. Authentication Pipeline
-```
-[Client Submit Credentials] ──► [FastAPI /api/auth/login]
-                                           │
-                                ┌──────────┴──────────┐
-                             [Valid]               [Invalid]
-                                │                      │
-                                ▼                      ▼
-                    [Generate 6-digit OTP]     [401 Unauthorized]
-                    [Hash & Store in DB]
-                    [Send via Email Provider]
-                    [Return {temp_token, status: "otp_required"}]
-                                │
-[Client Enters 6-digit OTP] ────┘
-                                │
-                                ▼
-                    [FastAPI /api/auth/verify-otp]
-                                │
-                    ┌───────────┴───────────┐
-                [Verified]              [Invalid/Expired/Max Exceeded]
-                    │                       │
-                    ▼                       ▼
-      [Invalidate OTP Entry]          [400 Bad Request]
-      [Generate Access & Refresh JWT]
-      [Set Secure HTTP-only Cookie / Body]
-      [Return Authenticated Session DTO]
-```
+
+Email/password registration hashes the password, creates the student account,
+and immediately issues an access token plus rotating HttpOnly refresh cookie.
+Login validates the password and active-account state, but does not gate access
+on optional email verification. Google Identity Services returns an ID token to
+the React callback; FastAPI verifies its signature, issuer, expiry, and audience
+with Google's official library before linking or creating an account.
 
 ### 5.2. Role-Based Access Control (RBAC)
 - Fast API dependency `require_role(["ADMIN"])` intercepts protected endpoints and raises `403 Forbidden` if the subject user's role does not match.

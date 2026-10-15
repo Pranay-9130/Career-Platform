@@ -116,7 +116,7 @@ export default function RegisterPage() {
     setErrorMessage(null);
 
     try {
-      await registerUser({
+      const response = await registerUser({
         full_name: formData.fullName.trim(),
         email: formData.email.trim(),
         password: formData.password,
@@ -128,11 +128,8 @@ export default function RegisterPage() {
             : 'Software Developer'),
       });
 
-      // Navigate to OTP verification page to complete activation
-      navigate('/verify-otp', {
-        replace: true,
-        state: { email: formData.email.trim(), fullName: formData.fullName.trim() },
-      });
+      const targetPath = response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      navigate(targetPath, { replace: true });
     } catch (err) {
       const message =
         err.response?.data?.detail ||

@@ -136,7 +136,7 @@ Under the **Environment** tab of your Render service, configure the following:
 | `JWT_SECRET` | Yes | *(Random 64-character hex string)* | Generate with `openssl rand -hex 32` |
 | `ALLOWED_ORIGINS` | Yes | `https://<your-project>.vercel.app,http://localhost:5173` | Comma-separated list of allowed frontend origins |
 | `FRONTEND_URL` | Yes | `https://<your-project>.vercel.app` | Base frontend URL for reset links and SEO tags |
-| `EMAIL_PROVIDER` | Yes | `smtp` *(or resend, sendgrid, console)* | Active email provider |
+| `EMAIL_PROVIDER` | Yes | `smtp` *(or resend, sendgrid, console)* | Password-reset, notification, and optional-verification provider |
 | `EMAIL_FROM` | Yes | `noreply@yourdomain.com` *(or verified sender)* | Outbound email from address |
 | `SMTP_HOST` | If SMTP | `smtp.gmail.com` *(or Brevo/SES/Mailgun)* | SMTP host server |
 | `SMTP_PORT` | If SMTP | `587` | SMTP port (587 for TLS, 465 for SSL) |
@@ -171,7 +171,6 @@ Under the **Environment Variables** section, add:
 | Environment Variable | Example Value | Description |
 | :--- | :--- | :--- |
 | `VITE_API_BASE_URL` | `https://careerplatform-api-xxxx.onrender.com/api` | The actual temporary Render URL from Step 4 |
-| `VITE_GOOGLE_CLIENT_ID` | `xxxx.apps.googleusercontent.com` | Google Cloud Web Client ID |
 | `VITE_APP_ENV` | `production` | Sets client environment to production |
 
 ### 5.3. SPA Routing & Asset Caching (`vercel.json`)
@@ -244,10 +243,11 @@ To enable "Sign in with Google" on your deployed application:
    - **Authorized JavaScript origins:**
      - `http://localhost:5173` (for local development)
      - `https://<your-project>.vercel.app` (your actual temporary Vercel URL)
+    - **Authorized redirect URIs:** leave empty; this app uses a GIS JavaScript callback.
    - Click **Create** and copy your **Client ID** (`xxxx.apps.googleusercontent.com`).
-5. Save this Client ID in:
-   - Backend on Render: `GOOGLE_CLIENT_ID`
-   - Frontend on Vercel: `VITE_GOOGLE_CLIENT_ID`
+5. Save this Client ID on Render as `GOOGLE_CLIENT_ID`. The frontend reads it
+   at runtime from `/api/auth/config`; no frontend client-secret or client-ID
+   build variable is required.
 
 ---
 
@@ -261,9 +261,9 @@ After completing the steps above, run through this verification checklist agains
 | **Root Status** | `GET https://<render-url>/health` | Returns HTTP 200 `{"status": "healthy", ...}` |
 | **Frontend Load** | Open `https://<vercel-url>` in browser | Landing page loads with responsive styles and no console errors |
 | **CORS Handshake** | Inspect Network tab on homepage API calls | HTTP 200 with `access-control-allow-origin: https://<vercel-url>` |
-| **Registration & OTP** | Register new account on `https://<vercel-url>/register` | 6-digit OTP email arrives in inbox within 15 seconds; verification succeeds |
+| **Registration** | Register new account on `https://<vercel-url>/register` | Authenticated dashboard opens immediately and no verification email is required |
 | **Google Sign-In** | Click "Continue with Google" on `/login` | Google OAuth modal appears, user completes auth, and is redirected to `/dashboard` |
-| **Student Login** | Register a student, verify their email, and sign in on `/login` | Opens the student dashboard |
+| **Student Login** | Register a student and sign in on `/login` | Opens the dashboard regardless of optional verification status |
 | **Admin Clearance** | Sign in with the privately provisioned administrator username/password | Opens the admin dashboard; students cannot access it |
 | **Database Persistence** | Submit a project or bookmark an item | Reload page; persisted data is retrieved from PostgreSQL database |
 | **Deep Link Routing** | Directly load `https://<vercel-url>/projects/ai-resume-matcher` | Page renders cleanly without 404 |

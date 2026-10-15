@@ -46,8 +46,8 @@ async def client(db_session):
 
 
 @pytest.mark.asyncio
-async def test_registration_generates_and_dispatches_otp(client):
-    """Registering creates an OTPVerification record and dispatches OTP email."""
+async def test_registration_skips_otp_but_optional_request_dispatches_one(client):
+    """Registration is immediate; users may still request optional verification."""
     EmailService.clear_dev_otps()
     email = "new_student@university.edu"
     payload = {
@@ -57,7 +57,13 @@ async def test_registration_generates_and_dispatches_otp(client):
     }
     reg_response = await client.post("/api/auth/register", json=payload)
     assert reg_response.status_code == 201
-    assert "verification code" in reg_response.json()["message"]
+    assert "registered successfully" in reg_response.json()["message"]
+    assert EmailService.get_last_dev_otp(email) is None
+
+    send_response = await client.post(
+        "/api/auth/send-otp", json={"email": email, "purpose": "registration"}
+    )
+    assert send_response.status_code == 200
 
     # Verify an OTP was captured by EmailService
     dispatched_otp = EmailService.get_last_dev_otp(email)
@@ -79,6 +85,7 @@ async def test_verify_otp_success_activates_account(client, db_session):
             "full_name": "Verify Me",
         },
     )
+    await client.post("/api/auth/send-otp", json={"email": email, "purpose": "registration"})
 
     otp_code = EmailService.get_last_dev_otp(email)
     assert otp_code is not None
@@ -112,6 +119,7 @@ async def test_verify_otp_invalid_code_decrements_attempts(client):
             "full_name": "Attempt Tester",
         },
     )
+    await client.post("/api/auth/send-otp", json={"email": email, "purpose": "registration"})
 
     verify_resp = await client.post(
         "/api/auth/verify-otp",
@@ -133,6 +141,7 @@ async def test_verify_otp_fifth_failed_attempt_locks(client):
             "full_name": "Lockout Tester",
         },
     )
+    await client.post("/api/auth/send-otp", json={"email": email, "purpose": "registration"})
 
     for i in range(4):
         resp = await client.post(
@@ -162,6 +171,7 @@ async def test_verify_otp_expired_code_rejected(client, db_session):
             "full_name": "Expired Tester",
         },
     )
+    await client.post("/api/auth/send-otp", json={"email": email, "purpose": "registration"})
     otp_code = EmailService.get_last_dev_otp(email)
 
     # Manually expire the OTP in database
@@ -193,6 +203,7 @@ async def test_resend_otp_cooldown_enforced(client):
             "full_name": "Cooldown Tester",
         },
     )
+    await client.post("/api/auth/send-otp", json={"email": email, "purpose": "registration"})
 
     # Immediate resend attempt
     resend_resp = await client.post(
@@ -215,6 +226,7 @@ async def test_resend_otp_after_cooldown_succeeds(client, db_session):
             "full_name": "Resend Tester",
         },
     )
+    await client.post("/api/auth/send-otp", json={"email": email, "purpose": "registration"})
     first_otp = EmailService.get_last_dev_otp(email)
 
     # Fast forward the created_at timestamp past 60s

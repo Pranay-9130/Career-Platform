@@ -50,18 +50,6 @@ export const authService = {
     return response.data;
   },
 
-  verifyOtp: async ({ email, otp, purpose = 'registration' }) => {
-    const response = await api.post('/auth/verify-otp', { email, otp, purpose });
-    const { access_token, user } = response.data;
-    if (access_token && user) authStorage.setSession(access_token, user, true);
-    return response.data;
-  },
-
-  resendOtp: async ({ email, purpose = 'registration' }) => {
-    const response = await api.post('/auth/resend-otp', { email, purpose });
-    return response.data;
-  },
-
   forgotPassword: async (email) => {
     const response = await api.post('/auth/forgot-password', { email });
     return response.data;

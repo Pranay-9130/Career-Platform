@@ -45,23 +45,28 @@ and API on port 8000 (or the supplied `PORT`). No Node process runs in productio
 
 ## Final verification
 
-### Google origin mismatch and OTP delivery failures
+### Google origin mismatch and transactional email
 
 - Open Google Cloud Console → Google Auth Platform → Clients (or APIs & Services
   → Credentials), then edit the **Web application** OAuth client matching Render's
   `GOOGLE_CLIENT_ID`. Under **Authorized JavaScript origins**, add the exact
-  address used in the browser, for example `https://YOUR-SERVICE.onrender.com`.
+  address used in the browser: `https://careerplatform.onrender.com`.
   Include the scheme and port when applicable, but no path, `/login`, or trailing
   slash. Add each actual frontend/custom domain separately. Changing backend CORS
   does not change Google's origin allowlist.
+- This app uses the Google Identity Services JavaScript callback and posts the ID
+  token to `/api/auth/google`; Google does not redirect to that endpoint. Leave
+  **Authorized redirect URIs** empty for this client unless another application
+  flow explicitly needs one. No Google client secret is used or exposed.
 - The website now always loads `/api/auth/config` before rendering Google's
   button. Old `VITE_GOOGLE_CLIENT_ID` build values cannot override the server ID.
-- Render free services block SMTP ports 25, 465, and 587. In Render's environment
+- Render free services block SMTP ports 25, 465, and 587. Password reset and other
+  transactional messages still need email. In Render's environment
   settings use `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` from Resend, and
   `EMAIL_FROM` with a sender on a domain verified in that same Resend account.
   A Gmail address is not a verified Resend sender domain; `resend.dev` testing
-  addresses cannot deliver registration emails to arbitrary students. Do not
-  use console delivery or disable verification in production.
+  addresses cannot deliver messages to arbitrary students. Registration itself
+  does not send email or depend on email-provider availability.
 - After redeploying, retry registration and inspect Render logs. HTTP 401 points
   to the key, 403 to permissions/sender verification/testing restrictions, and
   429 to quota/rate limits. Provider dashboard logs give the specific reason.
@@ -70,13 +75,13 @@ and API on port 8000 (or the supplied `PORT`). No Node process runs in productio
   if it is explicitly configured. With the single-service deployment, remove
   a stale explicit value to use Render's `RENDER_EXTERNAL_URL` automatically.
 
-Use `backend/scripts/check_deployment.py` with the same URL for frontend and backend:
+For the currently deployed separate services, use the frontend and API URLs:
 
 ```sh
-py scripts/check_deployment.py --frontend https://YOUR-SERVICE.onrender.com --backend https://YOUR-SERVICE.onrender.com
+py scripts/check_deployment.py --frontend https://careerplatform.onrender.com --backend https://careerplatform-api.onrender.com
 ```
 
-Verify Google sign-in, OTP inbox delivery, password recovery, logout, and a ZIP
+Verify Google sign-in, immediate registration, password recovery, logout, and a ZIP
 download after restart in the actual browser. Those external checks require a
 running deployment and your Google/email provider settings.
 

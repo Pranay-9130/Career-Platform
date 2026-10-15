@@ -28,7 +28,7 @@ To become a trusted career development platform for students worldwide, making c
 - **Jobs & Internships Catalog:** Curated entry-level jobs and internships with rich filtering by domain, stipend, and remote/hybrid work modes.
 - **Application Tracker:** Kanban-style pipeline tracking application stages (`Saved` $\rightarrow$ `Applied` $\rightarrow$ `Interview` $\rightarrow$ `Selected`).
 - **Student Profile & Public Portfolio:** Public portfolio showcase at `/u/:username` displaying verified, approved projects.
-- **Email OTP Authentication:** Secure 6-digit OTP verification with 5-minute expiry, hashing, attempt limits, and rate-limiting.
+- **Immediate Account Access:** Email/password registration starts a secure session immediately; optional email verification remains available without blocking sign-in.
 - **Admin Moderation Console:** Review queue for inspecting submissions, approving, requesting changes, or rejecting with feedback notes.
 
 ---
@@ -153,9 +153,8 @@ uvicorn app.main:app --reload --port 8000
 ```
 Backend API interactive documentation will be available at `http://localhost:8000/docs`.
 
-For local email verification without an external provider, set
-`EMAIL_PROVIDER=console` in `backend/.env`. OTPs and password-reset links will be
-printed by the backend process.
+For local password-reset or optional verification email testing without an
+external provider, set `EMAIL_PROVIDER=console` in `backend/.env`.
 
 ### 4. Frontend Setup
 ```bash
@@ -173,15 +172,16 @@ The script prompts for a password and stores its hash in the configured database
 `ADMIN_USERNAME` and `ADMIN_EMAIL` configure the administrator login alias and
 internal email identity. Keep administrator passwords out of source control.
 
-1. Register with email and password; the app sends a six-digit registration OTP.
-2. Verify the OTP to mark the account verified and continue to the dashboard.
-3. Later sign-ins issue a short-lived bearer token and a rotating HttpOnly refresh cookie.
-4. The client validates restored sessions on startup and automatically refreshes an expired access token once.
-5. Signing out clears both browser storage and the refresh cookie.
+1. Register with email and password and continue directly to the dashboard.
+2. Sign-ins issue a short-lived bearer token and a rotating HttpOnly refresh cookie regardless of optional email-verification status.
+3. The client validates restored sessions on startup and automatically refreshes an expired access token once.
+4. Signing out clears both browser storage and the refresh cookie.
 
-Google sign-in requires the same client ID in `backend/.env` (`GOOGLE_CLIENT_ID`)
-and `frontend/.env` (`VITE_GOOGLE_CLIENT_ID`). The frontend and backend public
-origins must also be listed in Google Cloud and `ALLOWED_ORIGINS` respectively.
+Google sign-in uses Google Identity Services. Set the Web application client ID
+once in backend `GOOGLE_CLIENT_ID`; the frontend reads that public identifier at
+runtime from `/api/auth/config`. Register every exact frontend origin in Google
+Cloud and in backend `ALLOWED_ORIGINS`. This callback-based ID-token flow uses no
+OAuth redirect URI or client secret.
 
 ---
 
@@ -200,7 +200,7 @@ Reference `.env.example` for the complete list of configuration parameters:
 
 - **Zero Client Credential Exposure:** AI keys and cloud storage secrets reside strictly on backend.
 - **Untrusted ZIP Sandbox:** Uploaded student code archives are treated as hostile, inspected for magic headers (`PK\x03\x04`), size-checked, and never executed on application hosts.
-- **OTP Protection:** 6-digit verification codes expire in 5 minutes, hash-stored, limited to 5 attempts, with rate-limiting and 60-second cooldowns.
+- **Optional Verification Protection:** Optional 6-digit verification codes expire in 5 minutes, are hash-stored, attempt-limited, and rate-limited.
 - **OWASP Compliance:** SQL injection prevention via SQLAlchemy ORM, XSS sanitization, and strict CORS whitelisting.
 
 ---

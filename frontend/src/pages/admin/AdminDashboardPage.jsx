@@ -1164,7 +1164,7 @@ export default function AdminDashboardPage() {
                                 : 'bg-amber-50 text-amber-700 border border-amber-200'
                             }`}
                           >
-                            {s.is_verified ? 'Verified' : 'Pending OTP'}
+                            {s.is_verified ? 'Email verified' : 'Email not verified'}
                           </span>
                         </td>
                         <td className="px-5 py-4 text-right">

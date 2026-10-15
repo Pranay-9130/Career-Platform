@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
-  ShieldAlert,
   Compass,
   RefreshCw,
   TrendingUp,
@@ -86,8 +85,6 @@ export default function DashboardPage() {
   };
 
   const displayName = data?.user?.full_name || user?.full_name || 'Student';
-  const isVerified = data?.user?.is_verified ?? user?.is_verified ?? false;
-
   const filteredRecommendations = (data?.recommended_opportunities || []).filter(
     (item) => recFilter === 'all' || item.category === recFilter
   );
@@ -124,35 +121,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 2. Unverified Email Warning Callout */}
-      {!isVerified && (
-        <div className="p-4 sm:p-5 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shrink-0">
-              <ShieldAlert className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-amber-900">
-                Action Required: Verify Your Student Email
-              </h3>
-              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                Your email is unverified. Complete 6-digit OTP verification to unlock project review publishing, ATS recommendations, and recruiter outreach.
-              </p>
-            </div>
-          </div>
-          <Link to="/verify-otp" className="shrink-0">
-            <Button
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white border-none shadow-sm w-full sm:w-auto"
-              rightIcon={ArrowRight}
-            >
-              Verify Now
-            </Button>
-          </Link>
-        </div>
-      )}
-
-      {/* 3. Error Fallback state */}
+      {/* 2. Error Fallback state */}
       {error && !loading && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between text-xs text-red-700">
           <div className="flex items-center gap-2">

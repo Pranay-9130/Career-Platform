@@ -41,7 +41,6 @@ export default function LoginPage() {
   };
 
   const getDestination = (account) => {
-    if (!account?.is_verified) return '/verify-otp';
     const requested = getRequestedPath();
     if (requested.startsWith('/admin') && account.role !== 'ADMIN') return '/dashboard';
     return requested || (account.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
@@ -96,10 +95,7 @@ export default function LoginPage() {
 
       const targetPath = getDestination(response.user);
 
-      navigate(targetPath, {
-        replace: true,
-        state: targetPath === '/verify-otp' ? { email: response.user.email } : undefined,
-      });
+      navigate(targetPath, { replace: true });
     } catch (err) {
       const message =
         err.response?.data?.detail ||

@@ -51,10 +51,12 @@
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Public | Register new student account and trigger email OTP |
+| `POST` | `/api/auth/register` | Public | Register a student and immediately issue an authenticated session |
 | `POST` | `/api/auth/login` | Public | Verify credentials and issue an access token plus HttpOnly refresh cookie |
-| `POST` | `/api/auth/verify-otp` | Public | Validate the registration OTP and mark the account verified |
-| `POST` | `/api/auth/resend-otp` | Public | Re-dispatch 6-digit OTP (subject to 60s cooldown) |
+| `POST` | `/api/auth/send-otp` | Public | Optionally request a 6-digit verification code |
+| `POST` | `/api/auth/verify-otp` | Public | Validate an optional verification code and mark the email verified |
+| `POST` | `/api/auth/resend-otp` | Public | Re-dispatch an optional code (subject to cooldown) |
+| `POST` | `/api/auth/google` | Public | Verify a Google ID token and sign in or register safely |
 | `POST` | `/api/auth/forgot-password` | Public | Send password reset token to user email |
 | `POST` | `/api/auth/reset-password` | Public | Reset account password with verified reset token |
 | `POST` | `/api/auth/refresh` | Refresh cookie | Rotate the HttpOnly refresh cookie and issue a new access token |

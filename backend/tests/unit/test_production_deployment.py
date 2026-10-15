@@ -276,16 +276,11 @@ async def test_google_sign_in_new_user(client, db_session):
         "name": "Jordan Google",
         "picture": "https://lh3.googleusercontent.com/photo.jpg",
         "aud": "mock-google-client-id.apps.googleusercontent.com",
+        "sub": "google-sub-new-user",
     }
 
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = google_payload
-
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+    with patch("app.api.routes.auth.google_id_token.verify_oauth2_token", return_value=google_payload), \
          patch.object(settings, "GOOGLE_CLIENT_ID", "mock-google-client-id.apps.googleusercontent.com"):
-        mock_get.return_value = mock_resp
-
         res = await client.post(
             "/api/auth/google",
             json={"credential": "mock_google_id_token_jwt_12345"},
@@ -303,6 +298,7 @@ async def test_google_sign_in_new_user(client, db_session):
         user_in_db = (await db_session.execute(stmt)).scalar_one_or_none()
         assert user_in_db is not None
         assert user_in_db.is_verified is True
+        assert user_in_db.google_sub == "google-sub-new-user"
 
 
 @pytest.mark.asyncio
@@ -324,16 +320,12 @@ async def test_google_sign_in_existing_user(client, db_session):
         "email_verified": True,
         "name": "Alex Student",
         "aud": "mock-google-client-id.apps.googleusercontent.com",
+        "sub": "google-sub-existing-user",
+        "hd": "university.edu",
     }
 
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = google_payload
-
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+    with patch("app.api.routes.auth.google_id_token.verify_oauth2_token", return_value=google_payload), \
          patch.object(settings, "GOOGLE_CLIENT_ID", "mock-google-client-id.apps.googleusercontent.com"):
-        mock_get.return_value = mock_resp
-
         res = await client.post(
             "/api/auth/google",
             json={"credential": "mock_valid_token_for_student"},
@@ -341,19 +333,15 @@ async def test_google_sign_in_existing_user(client, db_session):
         assert res.status_code == 200
         data = res.json()
         assert data["user"]["email"] == "alexstudent@university.edu"
+        await db_session.refresh(user)
+        assert user.google_sub == "google-sub-existing-user"
 
 
 @pytest.mark.asyncio
 async def test_google_sign_in_invalid_token(client):
     """Verify Google Sign-In rejects invalid token with 401."""
-    mock_resp = MagicMock()
-    mock_resp.status_code = 400
-    mock_resp.json.return_value = {"error_description": "Invalid Value"}
-
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+    with patch("app.api.routes.auth.google_id_token.verify_oauth2_token", side_effect=ValueError("invalid")), \
          patch.object(settings, "GOOGLE_CLIENT_ID", "expected-client-id.apps.googleusercontent.com"):
-        mock_get.return_value = mock_resp
-
         res = await client.post(
             "/api/auth/google",
             json={"credential": "invalid_fake_token_12345"},
@@ -364,24 +352,40 @@ async def test_google_sign_in_invalid_token(client):
 @pytest.mark.asyncio
 async def test_google_sign_in_audience_mismatch(client):
     """Verify Google Sign-In rejects token with mismatched client ID."""
-    google_payload = {
-        "email": "mismatch@university.edu",
-        "email_verified": True,
-        "name": "Mismatch User",
-        "aud": "wrong-client-id.apps.googleusercontent.com",
-    }
-
-    mock_resp = MagicMock()
-    mock_resp.status_code = 200
-    mock_resp.json.return_value = google_payload
-
-    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+    with patch("app.api.routes.auth.google_id_token.verify_oauth2_token", side_effect=ValueError("Wrong audience")), \
          patch.object(settings, "GOOGLE_CLIENT_ID", "expected-client-id.apps.googleusercontent.com"):
-        mock_get.return_value = mock_resp
-
         res = await client.post(
             "/api/auth/google",
             json={"credential": "mismatched_aud_token_12345"},
         )
         assert res.status_code == 401
-        assert "audience" in res.json()["detail"].lower()
+        assert "invalid or expired" in res.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_google_sign_in_refuses_unsafe_email_only_link(client, db_session):
+    user = User(
+        email="person@example.net",
+        hashed_password="hashed_pwd",
+        full_name="Existing Person",
+        role=UserRole.STUDENT,
+        is_active=True,
+        is_verified=False,
+    )
+    db_session.add(user)
+    await db_session.commit()
+    payload = {
+        "sub": "google-sub-third-party-email",
+        "email": "person@example.net",
+        "email_verified": True,
+        "aud": "expected-client-id.apps.googleusercontent.com",
+    }
+
+    with patch("app.api.routes.auth.google_id_token.verify_oauth2_token", return_value=payload), \
+         patch.object(settings, "GOOGLE_CLIENT_ID", "expected-client-id.apps.googleusercontent.com"):
+        response = await client.post("/api/auth/google", json={"credential": "valid_google_id_token"})
+
+    assert response.status_code == 409
+    await db_session.refresh(user)
+    assert user.google_sub is None
+    assert user.is_verified is False

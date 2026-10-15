@@ -1,10 +1,16 @@
 import hashlib
+import logging
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select, desc, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
+from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -42,6 +48,7 @@ from app.core.rate_limiter import auth_rate_limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Accounts"])
 REFRESH_COOKIE_NAME = "career_platform_refresh"
+logger = logging.getLogger(__name__)
 
 
 @router.get('/config')
@@ -97,7 +104,8 @@ async def register_user(
 ):
     """
     Registers a new user account with secure password hashing and unique email enforcement.
-    Issues an initial session access token and dispatches an email OTP verification code.
+    Issues a session immediately. Email verification remains optional and can be
+    completed later through the legacy OTP endpoints.
     """
     normalized_email = user_in.email.strip().lower()
     if normalized_email == settings.ADMIN_EMAIL.strip().lower():
@@ -134,47 +142,15 @@ async def register_user(
     await db.flush()
     await db.refresh(new_user)
 
-    # Generate initial 6-digit verification OTP
-    otp_code = generate_secure_otp(6)
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
-    otp_record = OTPVerification(
-        user_id=new_user.id,
-        email=normalized_email,
-        otp_hash=hash_otp(otp_code),
-        purpose="registration",
-        attempt_count=0,
-        max_attempts=settings.OTP_MAX_ATTEMPTS,
-        expires_at=expires_at,
-    )
-    db.add(otp_record)
-    await db.flush()
-
-    # Dispatch email OTP asynchronously
-    delivered = await EmailService.send_otp_email(
-        to_email=normalized_email,
-        otp_code=otp_code,
-        recipient_name=new_user.full_name,
-        purpose="registration",
-    )
-    if not delivered:
-        await db.rollback()
-        raise HTTPException(status_code=503, detail="Verification email could not be delivered. Please try again later.")
-
-    # Issue initial session access token
-    access_token = create_access_token(
-        data={
-            "sub": str(new_user.id),
-            "email": new_user.email,
-            "role": new_user.role.value,
-        }
-    )
+    # Registration is intentionally independent of transactional email delivery.
+    # Password-reset and other email workflows continue to use EmailService.
     access_token = await set_refresh_cookie(response, new_user, db)
 
     return AuthResponse(
         access_token=access_token,
         token_type="bearer",
         user=new_user,
-        message="Account registered successfully! A 6-digit verification code has been sent to your email.",
+        message="Account registered successfully. Welcome!",
     )
 
 
@@ -475,7 +451,7 @@ async def login_user(
     response_model=AuthResponse,
     status_code=status.HTTP_200_OK,
     summary="Authenticate or register user using Google Cloud ID token",
-    dependencies=[Depends(auth_rate_limiter)],
+    dependencies=[Depends(auth_rate_limiter), Depends(validate_session_origin)],
 )
 async def google_auth(
     req: GoogleLoginRequest,
@@ -486,49 +462,40 @@ async def google_auth(
     Validates a Google ID token from Google Identity Services.
     If the user exists, logs them in; if not, registers a verified student account.
     """
-    import httpx
-
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google authentication is not configured on this server.",
         )
 
-    # Verify ID token against Google OAuth2 tokeninfo endpoint
+    # The official verifier validates Google's signature, expiry, issuer, and
+    # the configured OAuth web-client audience. Never log the credential.
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(
-                "https://oauth2.googleapis.com/tokeninfo",
-                params={"id_token": req.credential},
-            )
-            if resp.status_code != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or expired Google authentication credential.",
-                )
-            payload = resp.json()
-    except HTTPException:
-        raise
-    except Exception as e:
+        payload = await run_in_threadpool(
+            google_id_token.verify_oauth2_token,
+            req.credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except (ValueError, GoogleAuthError):
+        logger.warning("Google sign-in rejected: invalid token or claim validation failure")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Google authentication credential.",
+        )
+    except Exception:
+        logger.exception("Google sign-in verification service failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Unable to reach Google authentication service: {str(e)}",
+            detail="Google authentication is temporarily unavailable.",
         )
 
-    # Verify audience if GOOGLE_CLIENT_ID is configured in settings
-    if settings.GOOGLE_CLIENT_ID:
-        token_aud = payload.get("aud")
-        if token_aud != settings.GOOGLE_CLIENT_ID:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Google token audience does not match configured Google Client ID.",
-            )
-
+    google_sub = payload.get("sub")
     google_email = payload.get("email")
-    if not google_email:
+    if not google_sub or not google_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Google account did not provide an email address.",
+            detail="Google account did not provide the required identity claims.",
         )
 
     # Ensure email is verified by Google
@@ -541,11 +508,16 @@ async def google_auth(
 
     normalized_email = google_email.strip().lower()
 
-    # Check for existing user account
-    result = await db.execute(
-        select(User).where(User.email == normalized_email)
-    )
-    user = result.scalar_one_or_none()
+    # Prefer Google's immutable subject identifier for returning users. Only
+    # fall back to email for first-time linking.
+    user = (await db.execute(
+        select(User).where(User.google_sub == google_sub)
+    )).scalar_one_or_none()
+    linking_by_email = user is None
+    if linking_by_email:
+        user = (await db.execute(
+            select(User).where(User.email == normalized_email)
+        )).scalar_one_or_none()
 
     if user:
         if not user.is_active:
@@ -553,14 +525,40 @@ async def google_auth(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="This account has been deactivated. Please contact platform support.",
             )
-        # Google sign-in guarantees email ownership, mark as verified
-        if not user.is_verified:
-            user.is_verified = True
+        if linking_by_email:
+            # Avoid silently taking over a password account through a Google
+            # account that uses a third-party email address. Google is
+            # authoritative for Gmail and Workspace identities only.
+            google_is_authoritative = normalized_email.endswith("@gmail.com") or bool(payload.get("hd"))
+            if user.role == UserRole.ADMIN or not google_is_authoritative:
+                logger.warning("Google automatic account linking refused for an existing account")
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An account already exists for this email. Sign in with your password to continue.",
+                )
+            if user.google_sub and user.google_sub != google_sub:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="This email is already linked to another Google account.",
+                )
+            user.google_sub = google_sub
+
+        # This flag records provider-backed email verification; it is not an
+        # authorization gate for email/password accounts.
+        user.is_verified = True
         # If user has no avatar and Google provides a picture, sync it
         picture = payload.get("picture")
         if picture and not user.avatar_url:
             user.avatar_url = picture
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            logger.warning("Google account linking conflict")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This Google identity is already linked to another account.",
+            )
         await db.refresh(user)
     else:
         # Create a new user with verified student status
@@ -574,9 +572,18 @@ async def google_auth(
             avatar_url=payload.get("picture"),
             is_active=True,
             is_verified=True,
+            google_sub=google_sub,
         )
         db.add(user)
-        await db.commit()
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            logger.warning("Google sign-in registration conflict")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account for this Google identity already exists. Please retry sign-in.",
+            )
         await db.refresh(user)
 
     # Issue access token

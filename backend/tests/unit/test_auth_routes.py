@@ -374,13 +374,15 @@ async def test_password_reset_revokes_sessions_on_all_devices(client):
 
 
 @pytest.mark.asyncio
-async def test_failed_registration_delivery_does_not_leave_an_account(client, db_session, monkeypatch):
-    monkeypatch.setattr(EmailService, 'send_otp_email', AsyncMock(return_value=False))
+async def test_registration_does_not_depend_on_email_delivery(client, db_session, monkeypatch):
+    send_otp = AsyncMock(return_value=False)
+    monkeypatch.setattr(EmailService, 'send_otp_email', send_otp)
     response = await client.post('/api/auth/register', json={
         'email': 'delivery@university.edu', 'password': 'SecurePassword123!', 'full_name': 'Delivery Tester',
     })
-    assert response.status_code == 503
-    assert (await db_session.execute(select(User).where(User.email == 'delivery@university.edu'))).scalar_one_or_none() is None
+    assert response.status_code == 201
+    assert (await db_session.execute(select(User).where(User.email == 'delivery@university.edu'))).scalar_one_or_none() is not None
+    send_otp.assert_not_awaited()
 
 
 @pytest.mark.asyncio
