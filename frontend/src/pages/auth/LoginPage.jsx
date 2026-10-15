@@ -41,8 +41,9 @@ export default function LoginPage() {
 
   const getDestination = (account) => {
     const requested = getRequestedPath();
-    if (requested.startsWith('/admin') && account.role !== 'ADMIN') return '/dashboard';
-    return requested || (account.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+    const isAdmin = account?.role === 'ADMIN';
+    if (requested.startsWith('/admin') && !isAdmin) return '/dashboard';
+    return requested || (isAdmin ? '/admin/dashboard' : '/dashboard');
   };
 
   const redirectPath = getDestination(user);
