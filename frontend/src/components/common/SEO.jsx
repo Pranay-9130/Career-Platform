@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const BASE_URL = "https://studentcareer.dev";
-const DEFAULT_TITLE = "Student Career Platform — From your first project to your first job";
+const DEFAULT_TITLE = "AspirePath — Your Journey. Your Skills. Your Future.";
 const DEFAULT_DESCRIPTION =
   "Discover student projects, showcase your work, build an ATS-compliant resume, analyze match scores with Gemini AI, and find verified tech opportunities.";
 const DEFAULT_IMAGE = `${BASE_URL}/og-preview.png`;
@@ -16,7 +16,7 @@ export default function SEO({
 }) {
   useEffect(() => {
     // 1. Title
-    const formattedTitle = title ? `${title} | Student Career Platform` : DEFAULT_TITLE;
+    const formattedTitle = title ? `${title} | AspirePath` : DEFAULT_TITLE;
     document.title = formattedTitle;
 
     // Helper to set/update meta tag
@@ -60,7 +60,7 @@ export default function SEO({
     setMetaTag("property", "og:type", ogType);
     setMetaTag("property", "og:url", canonicalUrl);
     setMetaTag("property", "og:image", ogImage);
-    setMetaTag("property", "og:site_name", "Student Career Platform");
+    setMetaTag("property", "og:site_name", "AspirePath");
 
     // 5. Twitter Card Tags
     setMetaTag("name", "twitter:card", "summary_large_image");

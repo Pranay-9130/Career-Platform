@@ -8,8 +8,8 @@ export function getWebsiteSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Student Career Platform",
-    "alternateName": "StudentCareer",
+    "name": "AspirePath",
+    "alternateName": "AspirePath",
     "url": BASE_URL,
     "description": "From your first project to your first job. Discover open-source student projects, craft ATS-optimized resumes, analyze scores with Gemini AI, and land entry-level tech roles.",
     "potentialAction": {
@@ -27,7 +27,7 @@ export function getOrganizationSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Student Career Platform",
+    "name": "AspirePath",
     "url": BASE_URL,
     "logo": `${BASE_URL}/logo.png`,
     "description": "Connecting university students and self-taught developers with impactful project showcases and hiring tech companies.",
