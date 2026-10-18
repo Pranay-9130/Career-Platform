@@ -2,8 +2,11 @@ import axios from 'axios';
 import { authStorage } from './authStorage';
 
 const getBaseURL = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
+  let envUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
   if (!envUrl) return '/api';
+  if (!envUrl.startsWith('http://') && !envUrl.startsWith('https://') && !envUrl.startsWith('/')) {
+    envUrl = `https://${envUrl}`;
+  }
   return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
 };
 

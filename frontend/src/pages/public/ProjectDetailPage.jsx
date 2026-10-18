@@ -256,6 +256,17 @@ export default function ProjectDetailPage() {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }, [project?.author_name]);
 
+  // Aggregate screenshots list (declared at top level to satisfy React Rules of Hooks)
+  const screenshots = useMemo(() => {
+    if (Array.isArray(project?.screenshots) && project.screenshots.length > 0) {
+      return project.screenshots;
+    }
+    if (project?.cover_image_url) {
+      return [{ image_url: project.cover_image_url, caption: project.title }];
+    }
+    return [];
+  }, [project?.screenshots, project?.cover_image_url, project?.title]);
+
   useEffect(() => {
     async function loadProject() {
       setFailedImages(new Set());
@@ -469,24 +480,13 @@ export default function ProjectDetailPage() {
     );
   }
 
-  // Aggregate screenshots list
-  const screenshots = useMemo(() => {
-    if (project?.screenshots && project.screenshots.length > 0) {
-      return project.screenshots;
-    }
-    if (project?.cover_image_url) {
-      return [{ image_url: project.cover_image_url, caption: project.title }];
-    }
-    return [];
-  }, [project?.screenshots, project?.cover_image_url, project?.title]);
-
   const activeScreenshot = screenshots[activeScreenshotIdx] || null;
   const hasValidActiveScreenshot = Boolean(
     activeScreenshot?.image_url && !failedImages.has(activeScreenshot.image_url)
   );
 
   const difficultyVariant =
-    project.difficulty === 'Beginner' ? 'approved' : project.difficulty === 'Intermediate' ? 'published' : 'changesRequested';
+    project?.difficulty === 'Beginner' ? 'approved' : project?.difficulty === 'Intermediate' ? 'published' : 'changesRequested';
 
   return (
     <div className="min-h-screen bg-slate-50/60 pb-20">

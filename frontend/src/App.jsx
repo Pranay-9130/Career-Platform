@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, RoleGuard } from './components/auth';
 import PageLoadingFallback from './components/common/PageLoadingFallback';
 import ScrollToTop from './components/common/ScrollToTop';
+import { ErrorBoundary } from './components/common';
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout';
@@ -51,7 +52,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
-        <Suspense fallback={<PageLoadingFallback />}>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
           <Routes>
             {/* Public Marketing, Discovery & Portfolio Routes */}
             <Route element={<PublicLayout />}>
@@ -137,7 +139,8 @@ export default function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
-      </BrowserRouter>
+      </ErrorBoundary>
+    </BrowserRouter>
     </AuthProvider>
   );
 }

@@ -117,19 +117,31 @@ export function getJobPostingSchema(job) {
 export function getProjectCreativeWorkSchema(project) {
   if (!project) return null;
 
+  let createdDate = new Date().toISOString();
+  if (project.created_at) {
+    const parsed = new Date(project.created_at);
+    if (!isNaN(parsed.getTime())) {
+      createdDate = parsed.toISOString();
+    }
+  }
+
+  const techLanguage = Array.isArray(project.tech_stack)
+    ? project.tech_stack.join(", ")
+    : (typeof project.tech_stack === "string" ? project.tech_stack : "Full Stack");
+
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareSourceCode",
-    "name": project.title,
-    "description": project.short_description || project.problem_statement || project.title,
-    "url": `${BASE_URL}/projects/${project.slug}`,
-    "programmingLanguage": Array.isArray(project.tech_stack) ? project.tech_stack.join(", ") : project.tech_stack,
+    "name": project.title || "Project Blueprint",
+    "description": project.short_description || project.problem_statement || project.title || "Student Engineering Project",
+    "url": `${BASE_URL}/projects/${project.slug || ""}`,
+    "programmingLanguage": techLanguage,
     "codeRepository": project.github_url || undefined,
     "author": {
       "@type": "Person",
-      "name": project.owner?.full_name || "Student Developer"
+      "name": project.author_name || project.owner?.full_name || "Student Developer"
     },
-    "dateCreated": project.created_at ? new Date(project.created_at).toISOString() : new Date().toISOString(),
+    "dateCreated": createdDate,
     "applicationCategory": project.domain || "DeveloperApplication"
   };
 }
