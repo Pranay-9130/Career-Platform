@@ -59,6 +59,9 @@ from app.services.skill_intelligence import (
     update_resource_progress,
 )
 from app.services.ats_analyzer import extract_resume_text_from_dict
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/skill-intelligence", tags=["Skill Intelligence"])
 
@@ -373,14 +376,25 @@ async def extract_skills_from_pdf_upload(
     and returns parsed, categorized skills for student review and confirmation.
     Handles malformed files, empty bytes, and non-PDF uploads gracefully.
     """
-    if not file.filename.lower().endswith(".pdf") and file.content_type != "application/pdf":
+    fname = (file.filename or "").lower()
+    ctype = (file.content_type or "").lower()
+    if not fname.endswith(".pdf") and ctype not in ("application/pdf", "application/x-pdf"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file format. Please upload a valid .pdf file.",
         )
 
     content = await file.read()
-    if len(content) > 10 * 1024 * 1024:  # 10 MB limit
+    file_size = len(content)
+    logger.info(
+        "PDF upload received for skill extraction: filename=%s, content_type=%s, bytes=%d, user_id=%s",
+        file.filename,
+        file.content_type,
+        file_size,
+        current_user.id,
+    )
+
+    if file_size > 10 * 1024 * 1024:  # 10 MB limit
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File size exceeds maximum allowed limit of 10 MB.",
@@ -389,14 +403,28 @@ async def extract_skills_from_pdf_upload(
     try:
         pdf_text = extract_text_from_pdf(content)
     except ValueError as ve:
+        logger.warning("PDF extraction user error: filename=%s, error=%s", file.filename, ve)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        logger.error("PDF extraction service error: filename=%s, error=%s", file.filename, re)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(re),
+        )
     except Exception as exc:
+        logger.exception("PDF extraction unexpected error: filename=%s, error=%s", file.filename, exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process PDF resume: {str(exc)}",
         )
 
     extracted_raw = extract_skills_from_text(pdf_text)
+    logger.info(
+        "PDF skill extraction complete: filename=%s, text_length=%d, extracted_skills_count=%d",
+        file.filename,
+        len(pdf_text),
+        len(extracted_raw),
+    )
 
     # Check against user's already confirmed skills
     stmt_skills = select(StudentSkill).where(StudentSkill.user_id == current_user.id)

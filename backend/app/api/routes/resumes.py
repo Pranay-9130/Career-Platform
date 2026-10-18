@@ -477,9 +477,10 @@ async def analyze_resume_ats(
     # 3. Perform AI / NLP Analysis
     try:
         result = await analyze_ats(resume_text, job_description)
-        if payload.resume_id and resume:
+        score = result.get("overall_score") if isinstance(result, dict) else getattr(result, "overall_score", 0)
+        if payload.resume_id and resume and score is not None:
             pi = dict(resume.personal_info or {})
-            pi["latest_ats_score"] = int(result.overall_score)
+            pi["latest_ats_score"] = int(score)
             pi["latest_ats_date"] = datetime.now(timezone.utc).isoformat()
             resume.personal_info = pi
             flag_modified(resume, "personal_info")

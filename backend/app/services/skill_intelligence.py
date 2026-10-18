@@ -181,21 +181,38 @@ def normalize_skill_name(raw_name: str) -> Tuple[str, str]:
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     """
-    Extracts text from PDF bytes safely using PyMuPDF (fitz) with pdfplumber fallback.
-    Gracefully handles empty files, corrupted payloads, and unsupported structures.
+    Extracts text from PDF bytes safely using PyMuPDF (fitz), pdfplumber,
+    and pypdf fallbacks.
+    Handles malformed files, empty files, password-protected PDFs, and provides
+    clear distinction between uninstalled parsers, corrupted files, and PDFs
+    that truly lack selectable text.
     """
     if not pdf_bytes or len(pdf_bytes) < 10:
         raise ValueError("The uploaded file is empty or too small to be a valid PDF.")
 
+    # Validate PDF magic header
+    if b"%PDF-" not in pdf_bytes[:1024]:
+        raise ValueError("The uploaded file does not appear to be a valid PDF document.")
+
     extracted_pages = []
+    installed_engines = []
+    successful_engines = []
+    engine_errors = {}
+    is_encrypted = False
 
     # Strategy A: PyMuPDF (fitz)
     try:
         import fitz
+        installed_engines.append("PyMuPDF")
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         if doc.is_encrypted:
+            is_encrypted = True
             try:
-                doc.authenticate("")
+                if not doc.authenticate(""):
+                    raise ValueError("Password-protected PDF files cannot be processed.")
+                is_encrypted = False
+            except ValueError:
+                raise
             except Exception:
                 raise ValueError("Password-protected PDF files cannot be processed.")
 
@@ -204,22 +221,70 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
             if page_text.strip():
                 extracted_pages.append(page_text.strip())
         doc.close()
+        successful_engines.append("PyMuPDF")
+    except (ImportError, ModuleNotFoundError):
+        logger.warning("PyMuPDF (fitz) is not installed in this environment.")
     except ValueError:
         raise
     except Exception as exc:
+        engine_errors["PyMuPDF"] = str(exc)
         logger.warning("PyMuPDF failed to parse PDF; trying fallback extractor: %s", exc)
 
     # Strategy B: pdfplumber fallback if PyMuPDF yielded nothing
-    if not extracted_pages:
+    if not extracted_pages and not is_encrypted:
         try:
             import pdfplumber
+            installed_engines.append("pdfplumber")
             with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
                 for page in pdf.pages:
                     text = page.extract_text() or ""
                     if text.strip():
                         extracted_pages.append(text.strip())
+            successful_engines.append("pdfplumber")
+        except (ImportError, ModuleNotFoundError):
+            logger.warning("pdfplumber is not installed in this environment.")
         except Exception as exc:
+            engine_errors["pdfplumber"] = str(exc)
             logger.warning("pdfplumber fallback encountered error: %s", exc)
+
+    # Strategy C: pypdf fallback if PyMuPDF and pdfplumber yielded nothing
+    if not extracted_pages and not is_encrypted:
+        try:
+            import pypdf
+            installed_engines.append("pypdf")
+            reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
+            if reader.is_encrypted:
+                is_encrypted = True
+                try:
+                    if not reader.decrypt(""):
+                        raise ValueError("Password-protected PDF files cannot be processed.")
+                    is_encrypted = False
+                except ValueError:
+                    raise
+                except Exception:
+                    raise ValueError("Password-protected PDF files cannot be processed.")
+
+            for page in reader.pages:
+                text = page.extract_text() or ""
+                if text.strip():
+                    extracted_pages.append(text.strip())
+            successful_engines.append("pypdf")
+        except (ImportError, ModuleNotFoundError):
+            logger.warning("pypdf is not installed in this environment.")
+        except ValueError:
+            raise
+        except Exception as exc:
+            engine_errors["pypdf"] = str(exc)
+            logger.warning("pypdf fallback encountered error: %s", exc)
+
+    if not installed_engines:
+        logger.error("No PDF parsing engine is available on the server (PyMuPDF, pdfplumber, pypdf).")
+        raise RuntimeError("PDF text extraction service is not configured on the server. Please contact support.")
+
+    if not successful_engines and engine_errors:
+        err_details = "; ".join(f"{k}: {v}" for k, v in engine_errors.items())
+        logger.error("All available PDF engines failed to parse the file: %s", err_details)
+        raise ValueError(f"Corrupted or invalid PDF document: unable to parse pages ({err_details}).")
 
     full_text = "\n".join(extracted_pages).strip()
     if not full_text:

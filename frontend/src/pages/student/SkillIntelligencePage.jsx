@@ -2411,7 +2411,7 @@ export default function SkillIntelligencePage() {
               <div className="p-6 border-2 border-dashed border-slate-300 hover:border-brand-primary rounded-2xl text-center space-y-2 cursor-pointer bg-slate-50/50">
                 <input
                   type="file"
-                  accept="application/pdf"
+                  accept=".pdf,application/pdf"
                   onChange={(e) => setSelectedPdfFile(e.target.files?.[0] || null)}
                   className="hidden"
                   id="pdf-upload-input"

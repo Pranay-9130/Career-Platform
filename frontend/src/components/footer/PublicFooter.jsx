@@ -12,13 +12,12 @@ export default function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand Column (Span 2) */}
           <div className="lg:col-span-2 space-y-4">
-            <Link to="/" className="flex items-center gap-2.5 font-display font-extrabold text-xl text-brand-text">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-sm font-bold shadow-sm">
-                CP
-              </div>
-              <span className="tracking-tight">
-                Career<span className="text-brand-primary">Platform</span>
-              </span>
+            <Link to="/" className="inline-flex items-center gap-2 group">
+              <img
+                src="/logo.png"
+                alt="AspirePath"
+                className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+              />
             </Link>
 
             <p className="text-sm font-medium text-brand-primary italic">

@@ -95,14 +95,13 @@ export default function PublicNavbar() {
         {/* Brand Logo */}
         <Link
           to="/"
-          className="flex items-center gap-2.5 font-display font-extrabold text-xl text-brand-text group shrink-0"
+          className="flex items-center gap-2 group shrink-0"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-sm font-bold shadow-sm group-hover:shadow-card-hover transition-all">
-            CP
-          </div>
-          <span className="tracking-tight">
-            Career<span className="text-brand-primary">Platform</span>
-          </span>
+          <img
+            src="/logo.png"
+            alt="AspirePath"
+            className="h-9 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+          />
         </Link>
 
         {/* Desktop Navigation Links */}

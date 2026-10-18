@@ -1,3 +1,6 @@
+import io
+from unittest.mock import patch
+from reportlab.pdfgen import canvas
 import pytest
 import pytest_asyncio
 import uuid
@@ -194,6 +197,120 @@ async def test_resume_skill_extraction_valid_and_invalid_inputs(db_session):
         txt_files = {"file": ("resume.txt", b"Hello text", "text/plain")}
         non_pdf = await client.post("/api/skill-intelligence/extract-skills-from-pdf", files=txt_files)
         assert non_pdf.status_code == 400
+
+    app.dependency_overrides.clear()
+
+
+def _create_test_pdf(text: str) -> bytes:
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer)
+    c.drawString(72, 750, text)
+    c.save()
+    return buffer.getvalue()
+
+
+def _create_blank_pdf() -> bytes:
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer)
+    c.showPage()
+    c.save()
+    return buffer.getvalue()
+
+
+@pytest.mark.asyncio
+async def test_pdf_extraction_regression_and_error_handling(db_session):
+    """Regression tests for PDF skill extraction, multipart uploads, blank PDFs, and server errors."""
+    # Seed a confirmed skill for student 1: Python
+    s_confirmed = StudentSkill(
+        user_id=student_1.id,
+        skill_name="Python",
+        normalized_name="python",
+        category="Programming Languages",
+        is_confirmed=True,
+        status="Completed",
+    )
+    db_session.add(s_confirmed)
+    await db_session.commit()
+
+    valid_pdf_bytes = _create_test_pdf("Skills: Python, FastAPI, React, Docker, PostgreSQL")
+
+    # 1. Unauthenticated upload rejected with 401
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        unauth_res = await client.post(
+            "/api/skill-intelligence/extract-skills-from-pdf",
+            files={"file": ("resume.pdf", valid_pdf_bytes, "application/pdf")},
+        )
+        assert unauth_res.status_code == 401
+
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    app.dependency_overrides[get_db] = lambda: db_session
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 2. Valid PDF upload extracts selectable skills and marks confirmed skills
+        pdf_res = await client.post(
+            "/api/skill-intelligence/extract-skills-from-pdf",
+            files={"file": ("my_resume.pdf", valid_pdf_bytes, "application/pdf")},
+        )
+        assert pdf_res.status_code == 200
+        data = pdf_res.json()
+        assert data["source_type"] == "pdf_upload"
+        assert data["total_extracted"] >= 4
+        skill_names = [s["skill_name"] for s in data["skills"]]
+        assert "FastAPI" in skill_names
+        assert "React" in skill_names
+        assert "Docker" in skill_names
+
+        # Verify already_confirmed flag
+        python_skill = next(s for s in data["skills"] if s["skill_name"] == "Python")
+        assert python_skill["already_confirmed"] is True
+        assert python_skill["current_status"] == "Completed"
+
+        # Verify suggested roles
+        assert len(data["suggested_roles"]) > 0
+
+        # 3. Blank PDF (has valid %PDF- header but no selectable text)
+        blank_pdf_bytes = _create_blank_pdf()
+        blank_res = await client.post(
+            "/api/skill-intelligence/extract-skills-from-pdf",
+            files={"file": ("blank.pdf", blank_pdf_bytes, "application/pdf")},
+        )
+        assert blank_res.status_code == 400
+        assert "Could not extract readable text from the provided PDF. Please ensure it contains selectable text." in blank_res.json()["detail"]
+
+        # 4. Corrupted PDF with %PDF- header but invalid stream
+        corrupt_bytes = b"%PDF-1.4\ncorrupt body data that breaks all engines"
+        corrupt_res = await client.post(
+            "/api/skill-intelligence/extract-skills-from-pdf",
+            files={"file": ("corrupt.pdf", corrupt_bytes, "application/pdf")},
+        )
+        assert corrupt_res.status_code == 400
+        assert "Corrupted or invalid PDF document: unable to parse pages" in corrupt_res.json()["detail"]
+
+        # 5. Empty PDF file (< 10 bytes)
+        empty_res = await client.post(
+            "/api/skill-intelligence/extract-skills-from-pdf",
+            files={"file": ("empty.pdf", b"", "application/pdf")},
+        )
+        assert empty_res.status_code == 400
+        assert "The uploaded file is empty or too small" in empty_res.json()["detail"]
+
+        # 6. Non-PDF upload
+        txt_res = await client.post(
+            "/api/skill-intelligence/extract-skills-from-pdf",
+            files={"file": ("doc.txt", b"plain text", "text/plain")},
+        )
+        assert txt_res.status_code == 400
+        assert "Invalid file format" in txt_res.json()["detail"]
+
+        # 7. Server-side missing engines raises 503 instead of misleading 400
+        with patch("app.api.routes.skill_intelligence.extract_text_from_pdf", side_effect=RuntimeError("PDF text extraction service is not configured on the server. Please contact support.")):
+            missing_engine_res = await client.post(
+                "/api/skill-intelligence/extract-skills-from-pdf",
+                files={"file": ("test.pdf", valid_pdf_bytes, "application/pdf")},
+            )
+            assert missing_engine_res.status_code == 503
+            assert "PDF text extraction service is not configured on the server" in missing_engine_res.json()["detail"]
 
     app.dependency_overrides.clear()
 

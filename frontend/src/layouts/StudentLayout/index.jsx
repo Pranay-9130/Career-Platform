@@ -238,22 +238,19 @@ export default function StudentLayout() {
       {/* Desktop Persistent Sidebar */}
       <aside className="hidden lg:flex w-64 border-r border-brand-border bg-white flex-col shrink-0">
         {/* Brand Header */}
-        <div className="h-16 flex items-center px-6 border-b border-brand-border justify-between">
+        <div className="h-16 flex items-center px-4 border-b border-brand-border justify-between">
           <Link
             to="/dashboard"
-            className="flex items-center gap-2.5 font-display font-extrabold text-base text-brand-text group"
+            className="flex items-center gap-2 group min-w-0"
           >
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-xs font-bold shadow-sm group-hover:shadow transition-all">
-              CP
-            </div>
-            <div className="flex flex-col">
-              <span className="tracking-tight leading-none">
-                Career<span className="text-brand-primary">Platform</span>
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-1">
-                {workspaceLabel}
-              </span>
-            </div>
+            <img
+              src="/logo.png"
+              alt="AspirePath"
+              className="h-8 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+            />
+            <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase px-1.5 py-0.5 rounded bg-slate-100 shrink-0">
+              {workspaceLabel}
+            </span>
           </Link>
         </div>
 
@@ -309,16 +306,20 @@ export default function StudentLayout() {
           />
 
           <div className="relative w-72 max-w-[85vw] h-full bg-white border-r border-brand-border shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
-            <div className="h-16 flex items-center justify-between px-6 border-b border-brand-border">
+            <div className="h-16 flex items-center justify-between px-4 border-b border-brand-border">
               <Link
                 to="/dashboard"
                 onClick={() => setMobileSidebarOpen(false)}
-                className="flex items-center gap-2 font-display font-extrabold text-base text-brand-text"
+                className="flex items-center gap-2 group min-w-0"
               >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-xs font-bold">
-                  CP
-                </div>
-                <span>{workspaceLabel}</span>
+                <img
+                  src="/logo.png"
+                  alt="AspirePath"
+                  className="h-7 w-auto object-contain"
+                />
+                <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase px-1.5 py-0.5 rounded bg-slate-100">
+                  {workspaceLabel}
+                </span>
               </Link>
               <button
                 type="button"
