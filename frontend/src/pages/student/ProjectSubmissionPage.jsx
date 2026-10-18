@@ -73,6 +73,45 @@ const POPULAR_TECH = [
   'GraphQL',
 ];
 
+const PRESET_COVERS = [
+  {
+    name: 'Web Engineering',
+    category: 'Web Development',
+    url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
+    description: 'Clean modern code workspace & IDE syntax',
+  },
+  {
+    name: 'Full Stack & Git',
+    category: 'Full Stack',
+    url: 'https://images.unsplash.com/photo-1618401471353-b98aedd04e11?auto=format&fit=crop&w=1200&q=80',
+    description: 'GitHub engineering workflow & branch commits',
+  },
+  {
+    name: 'AI & Data Science',
+    category: 'AI & Machine Learning',
+    url: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80',
+    description: 'Neural network and AI deep learning models',
+  },
+  {
+    name: 'Cloud & Infrastructure',
+    category: 'Cloud Computing',
+    url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
+    description: 'Distributed cloud network & DevOps pipelines',
+  },
+  {
+    name: 'Mobile App Experience',
+    category: 'Mobile App',
+    url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1200&q=80',
+    description: 'Smartphone screens & responsive mobile design',
+  },
+  {
+    name: 'Cybersecurity & Systems',
+    category: 'Cybersecurity',
+    url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+    description: 'Cyber matrix terminal, security & protocols',
+  },
+];
+
 const INITIAL_FORM_STATE = {
   title: '',
   domain: 'Web Development',
@@ -457,11 +496,16 @@ export default function ProjectSubmissionPage() {
     return formData.tech_stack.length >= 1;
   }, [formData.tech_stack]);
 
+  const isStep4Valid = useMemo(() => {
+    return Boolean(formData.cover_image_url && formData.cover_image_url.trim().length > 0);
+  }, [formData.cover_image_url]);
+
   const canAdvance = () => {
     if (currentStep === 1) return isStep1Valid;
     if (currentStep === 2) return isStep2Valid;
     if (currentStep === 3) return isStep3Valid;
-    return true; // Steps 4 and 5 have sensible defaults/optional fields
+    if (currentStep === 4) return isStep4Valid;
+    return true; // Step 5 has sensible defaults
   };
 
   // Final submission handlers
@@ -498,8 +542,8 @@ export default function ProjectSubmissionPage() {
   };
 
   const handleSubmitFinal = async () => {
-    if (!isStep1Valid || !isStep2Valid || !isStep3Valid) {
-      alert('Please complete all required fields across the steps before submitting.');
+    if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid) {
+      alert('Please provide a mandatory project cover image and complete all required fields across the steps before submitting.');
       return;
     }
 
@@ -1080,9 +1124,21 @@ export default function ProjectSubmissionPage() {
                   </Alert>
                 )}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Cover Banner Image
-                  </label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Cover Banner Image <span className="text-red-500 font-bold">* Mandatory</span>
+                    </label>
+                    {formData.cover_image_url ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Cover Image Selected
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                        Required to advance
+                      </span>
+                    )}
+                  </div>
+
                   <input
                     id="coverImageInput"
                     type="file"
@@ -1096,10 +1152,11 @@ export default function ProjectSubmissionPage() {
                     className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-700 hover:border-brand-primary hover:text-brand-primary cursor-pointer transition-colors"
                   >
                     {isUploadingCover ? <Spinner size="sm" /> : <UploadCloud className="w-4 h-4" />}
-                    {isUploadingCover ? 'Uploading cover image...' : 'Choose cover image (PNG, JPEG, WebP, or GIF)'}
+                    {isUploadingCover ? 'Uploading cover image...' : 'Choose custom cover image (PNG, JPEG, WebP, or GIF)'}
                   </label>
+
                   {formData.cover_image_url && (
-                    <div className="mt-2 relative rounded-2xl overflow-hidden border border-brand-border h-40 bg-slate-100 flex items-center justify-center">
+                    <div className="mt-3 relative rounded-2xl overflow-hidden border border-brand-border h-48 bg-slate-100 flex items-center justify-center shadow-xs">
                       <img
                         src={formData.cover_image_url}
                         alt="Cover Preview"
@@ -1108,17 +1165,87 @@ export default function ProjectSubmissionPage() {
                           e.target.style.display = 'none';
                         }}
                       />
-                      <span className="text-xs text-slate-400 absolute">Cover Preview</span>
+                      <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-slate-900/70 to-transparent flex items-center justify-between text-white text-xs">
+                        <span className="font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          Active Project Cover
+                        </span>
+                        <span className="text-[11px] opacity-80 truncate max-w-[200px]">
+                          {formData.cover_image_url.slice(0, 30)}...
+                        </span>
+                      </div>
                       <button
                         type="button"
                         aria-label="Remove cover image"
                         onClick={() => updateField('cover_image_url', '')}
-                        className="absolute top-2 right-2 rounded-full bg-white/90 p-1.5 text-slate-600 hover:text-red-600 shadow"
+                        className="absolute top-2.5 right-2.5 rounded-full bg-white/90 p-1.5 text-slate-600 hover:text-red-600 shadow transition-colors"
+                        title="Remove cover"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   )}
+
+                  {!formData.cover_image_url && (
+                    <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        A cover banner is mandatory for student submissions. Upload an image above or choose from our curated presets below.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Preset Cover Selector */}
+                  <div className="mt-5 pt-4 border-t border-slate-200/80">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                        Or Select a Curated Domain Cover Preset
+                      </span>
+                      <span className="text-[11px] text-slate-400">1-click high-resolution banner</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      {PRESET_COVERS.map((preset) => {
+                        const isSelected = formData.cover_image_url === preset.url;
+                        return (
+                          <button
+                            key={preset.name}
+                            type="button"
+                            onClick={() => updateField('cover_image_url', preset.url)}
+                            className={`group relative rounded-xl overflow-hidden border-2 text-left transition-all p-1.5 flex flex-col justify-between ${
+                              isSelected
+                                ? 'border-brand-primary ring-2 ring-brand-primary/20 bg-blue-50/50 shadow-xs'
+                                : 'border-slate-200 hover:border-brand-primary/50 bg-white hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden bg-slate-100 mb-1.5">
+                              <img
+                                src={preset.url}
+                                alt={preset.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              {isSelected && (
+                                <div className="absolute inset-0 bg-brand-primary/30 backdrop-blur-[1px] flex items-center justify-center">
+                                  <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-md">
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="px-1">
+                              <span className="text-[11px] font-bold text-slate-800 block truncate">
+                                {preset.name}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block truncate">
+                                {preset.category}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="pt-2 border-t border-slate-100">
@@ -1603,7 +1730,7 @@ export default function ProjectSubmissionPage() {
                   type="button"
                   variant="primary"
                   size="md"
-                  disabled={!isStep1Valid || !isStep2Valid || !isStep3Valid || isSubmitting}
+                  disabled={!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid || isSubmitting}
                   onClick={handleSubmitFinal}
                   rightIcon={Send}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"

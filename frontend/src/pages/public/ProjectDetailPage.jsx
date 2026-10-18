@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -29,6 +29,12 @@ import {
   MessageCircle,
   Send,
   Trash2,
+  Terminal,
+  Cpu,
+  Server,
+  Shield,
+  Smartphone,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Button, Badge, Card, Skeleton, Breadcrumbs } from '@/components/common';
 import ProjectCard from '@/components/cards/ProjectCard';
@@ -36,6 +42,181 @@ import { projectService } from '@/services/projectService';
 import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getProjectCreativeWorkSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
+
+/**
+ * Premium generative canvas rendered when screenshots fail to load or are not provided.
+ * Adapts typography, glowing meshes, and badges dynamically based on project domain.
+ */
+function ProjectHeroCanvas({ project }) {
+  const getDomainTheme = (domain) => {
+    const d = (domain || '').toLowerCase();
+    if (d.includes('ai') || d.includes('machine') || d.includes('data')) {
+      return {
+        gradient: 'from-slate-950 via-purple-950/80 to-slate-900',
+        glow: 'bg-purple-500/25',
+        border: 'border-purple-500/30',
+        badge: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+        accent: 'text-purple-400',
+        icon: Cpu,
+        label: 'AI & Data Architecture',
+      };
+    }
+    if (d.includes('cyber') || d.includes('security')) {
+      return {
+        gradient: 'from-slate-950 via-emerald-950/80 to-slate-900',
+        glow: 'bg-emerald-500/25',
+        border: 'border-emerald-500/30',
+        badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        accent: 'text-emerald-400',
+        icon: Shield,
+        label: 'Cybersecurity Architecture',
+      };
+    }
+    if (d.includes('mobile') || d.includes('ios') || d.includes('android')) {
+      return {
+        gradient: 'from-slate-950 via-rose-950/80 to-slate-900',
+        glow: 'bg-rose-500/25',
+        border: 'border-rose-500/30',
+        badge: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+        accent: 'text-rose-400',
+        icon: Smartphone,
+        label: 'Mobile Application Framework',
+      };
+    }
+    if (d.includes('cloud') || d.includes('devops')) {
+      return {
+        gradient: 'from-slate-950 via-sky-950/80 to-slate-900',
+        glow: 'bg-sky-500/25',
+        border: 'border-sky-500/30',
+        badge: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+        accent: 'text-sky-400',
+        icon: Server,
+        label: 'Cloud Infrastructure & DevOps',
+      };
+    }
+    // Default to Full Stack / Web Development
+    return {
+      gradient: 'from-slate-950 via-indigo-950/80 to-slate-900',
+      glow: 'bg-blue-500/25',
+      border: 'border-blue-500/30',
+      badge: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+      accent: 'text-cyan-400',
+      icon: Terminal,
+      label: 'Full Stack Engineering Blueprint',
+    };
+  };
+
+  const theme = getDomainTheme(project?.domain);
+  const DomainIcon = theme.icon;
+
+  return (
+    <div
+      className={`relative rounded-2xl overflow-hidden bg-gradient-to-br ${theme.gradient} border ${theme.border} p-6 sm:p-8 aspect-video flex flex-col justify-between shadow-2xl group select-none`}
+    >
+      {/* Ambient gradient backdrops */}
+      <div
+        className={`absolute top-0 right-1/4 w-80 h-80 rounded-full ${theme.glow} blur-3xl pointer-events-none transition-all duration-700 group-hover:scale-110`}
+      />
+      <div className="absolute bottom-0 left-10 w-72 h-72 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#ffffff0d_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
+
+      {/* Terminal / Browser Mockup Top Bar */}
+      <div className="relative z-10 flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+          </div>
+          <div className="ml-3 flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[11px] font-mono text-slate-300">
+            <Code2 className={`w-3 h-3 ${theme.accent}`} />
+            <span>{project?.slug || 'project'}.blueprint</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Verified Showcase
+          </span>
+        </div>
+      </div>
+
+      {/* Center Showcase Content */}
+      <div className="relative z-10 my-auto py-3">
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${theme.badge}`}>
+            <DomainIcon className="w-3.5 h-3.5" />
+            {theme.label}
+          </span>
+          <span className="text-xs text-slate-400 font-medium">
+            • {project?.difficulty || 'Intermediate'} Level
+          </span>
+        </div>
+
+        <h3 className="font-display font-black text-xl sm:text-2xl lg:text-3xl text-white tracking-tight leading-snug max-w-2xl drop-shadow-sm">
+          {project?.title}
+        </h3>
+
+        <p className="mt-2 text-xs sm:text-sm text-slate-300 line-clamp-2 max-w-xl font-normal leading-relaxed">
+          {project?.short_description}
+        </p>
+
+        {/* Tech Stack Badges */}
+        {project?.tech_stack && project.tech_stack.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            {project.tech_stack.slice(0, 5).map((tech, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-white/10 text-slate-200 border border-white/15 backdrop-blur-sm shadow-xs"
+              >
+                {tech}
+              </span>
+            ))}
+            {project.tech_stack.length > 5 && (
+              <span className="text-[10px] font-mono text-slate-400">
+                +{project.tech_stack.length - 5} more
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Canvas Footer CTAs */}
+      <div className="relative z-10 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="text-slate-400 text-[11px] flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>Interactive Student Blueprint & Source</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {project?.live_demo_url && (
+            <a
+              href={project.live_demo_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs shadow-md transition-all hover:scale-105"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open Live Demo</span>
+            </a>
+          )}
+          {project?.github_url && (
+            <a
+              href={project.github_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium text-xs border border-white/20 backdrop-blur-sm transition-all"
+            >
+              <Github className="w-3.5 h-3.5" />
+              <span>Inspect Code</span>
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProjectDetailPage() {
   const { slug } = useParams();
@@ -51,13 +232,34 @@ export default function ProjectDetailPage() {
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [isStarUpdating, setIsStarUpdating] = useState(false);
 
-  // Screenshot carousel & lightbox state
+  // Screenshot carousel, lightbox & error tracking
   const [activeScreenshotIdx, setActiveScreenshotIdx] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [failedImages, setFailedImages] = useState(new Set());
+  const [authorAvatarFailed, setAuthorAvatarFailed] = useState(false);
+
+  const handleImageError = (url) => {
+    if (!url) return;
+    setFailedImages((prev) => {
+      const next = new Set(prev);
+      next.add(url);
+      return next;
+    });
+  };
+
+  const authorInitials = useMemo(() => {
+    if (!project?.author_name) return 'AU';
+    const parts = project.author_name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'AU';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }, [project?.author_name]);
 
   useEffect(() => {
     async function loadProject() {
+      setFailedImages(new Set());
+      setAuthorAvatarFailed(false);
       setIsLoading(true);
       setError(null);
       try {
@@ -268,13 +470,20 @@ export default function ProjectDetailPage() {
   }
 
   // Aggregate screenshots list
-  const screenshots = (project.screenshots && project.screenshots.length > 0)
-    ? project.screenshots
-    : project.cover_image_url
-    ? [{ image_url: project.cover_image_url, caption: project.title }]
-    : [];
+  const screenshots = useMemo(() => {
+    if (project?.screenshots && project.screenshots.length > 0) {
+      return project.screenshots;
+    }
+    if (project?.cover_image_url) {
+      return [{ image_url: project.cover_image_url, caption: project.title }];
+    }
+    return [];
+  }, [project?.screenshots, project?.cover_image_url, project?.title]);
 
   const activeScreenshot = screenshots[activeScreenshotIdx] || null;
+  const hasValidActiveScreenshot = Boolean(
+    activeScreenshot?.image_url && !failedImages.has(activeScreenshot.image_url)
+  );
 
   const difficultyVariant =
     project.difficulty === 'Beginner' ? 'approved' : project.difficulty === 'Intermediate' ? 'published' : 'changesRequested';
@@ -286,7 +495,7 @@ export default function ProjectDetailPage() {
         description={project.short_description || `Explore ${project.title} on Student Career Platform.`}
         canonical={`/projects/${project.slug}`}
         ogType="article"
-        ogImage={project.screenshots?.[0]?.image_url || undefined}
+        ogImage={project.screenshots?.[0]?.image_url || project.cover_image_url || undefined}
         schema={[
           getProjectCreativeWorkSchema(project),
           getBreadcrumbListSchema([
@@ -313,71 +522,99 @@ export default function ProjectDetailPage() {
         backLink={{ label: 'Back to Discovery', path: '/projects' }}
       />
 
-
       {/* Main Content Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* Project Header Banner Card */}
-        <div className="bg-white border border-brand-border rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="relative overflow-hidden bg-gradient-to-br from-white via-white to-blue-50/40 border border-slate-200/80 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-sm mb-8">
+          {/* Subtle decorative radial light */}
+          <div className="absolute top-0 right-0 -mt-12 -mr-12 w-96 h-96 rounded-full bg-gradient-to-br from-blue-100/40 via-indigo-50/20 to-transparent blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-3 flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-brand-primary bg-brand-veryLight px-2.5 py-1 rounded-md border border-brand-border">
+                <span className="text-xs font-bold uppercase tracking-wider text-brand-primary bg-blue-50/90 px-3 py-1 rounded-full border border-blue-200/70 shadow-xs">
                   {project.domain}
                 </span>
                 <Badge variant={difficultyVariant} size="sm">
                   {project.difficulty}
                 </Badge>
+                {project.status === 'Published' && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Verified Project
+                  </span>
+                )}
               </div>
 
-              <h1 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-brand-text tracking-tight leading-tight">
+              <h1 className="font-display font-black text-2xl sm:text-3xl lg:text-4xl text-slate-900 tracking-tight leading-tight">
                 {project.title}
               </h1>
 
-              <p className="text-sm sm:text-base text-brand-muted leading-relaxed max-w-3xl">
+              <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-3xl font-normal">
                 {project.short_description}
               </p>
 
               {/* Key Metrics Chips */}
-              <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-slate-500 font-medium">
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-slate-400" />
+              <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-slate-600 font-medium">
+                <div className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200/60">
+                  <Clock className="w-3.5 h-3.5 text-slate-500" />
                   <span>Duration: {project.estimated_duration || '2-3 weeks'}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-slate-400" />
+                <div className="flex items-center gap-1.5 bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200/60">
+                  <Eye className="w-3.5 h-3.5 text-slate-500" />
                   <span>{project.views_count} views</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  <span>{project.stars_count} stars</span>
+                <div className="flex items-center gap-1.5 bg-amber-50/80 text-amber-900 px-2.5 py-1 rounded-lg border border-amber-200/60">
+                  <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                  <span className="font-semibold">{project.stars_count} stars</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Bookmark className="w-4 h-4 text-brand-primary" />
-                  <span>{project.bookmarks_count} saved</span>
+                <div className="flex items-center gap-1.5 bg-blue-50/80 text-blue-900 px-2.5 py-1 rounded-lg border border-blue-200/60">
+                  <Bookmark className="w-3.5 h-3.5 text-brand-primary fill-brand-primary/20" />
+                  <span className="font-semibold">{project.bookmarks_count} saved</span>
                 </div>
               </div>
             </div>
 
             {/* Top Action CTAs */}
-            <div className="flex flex-row lg:flex-col gap-3 shrink-0">
+            <div className="flex flex-row lg:flex-col gap-2.5 shrink-0">
+              {/* Star Button with Gold Accent */}
               <Button
-                variant={project.is_starred ? 'primary' : 'outline'}
+                variant="outline"
                 onClick={handleStarToggle}
-                leftIcon={Star}
                 disabled={isStarUpdating}
-                className="flex-1 lg:flex-initial justify-center"
+                className={`flex-1 lg:flex-initial justify-center transition-all ${
+                  project.is_starred
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500 shadow-sm shadow-amber-500/25'
+                    : 'border-slate-200 text-slate-700 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50/50'
+                }`}
               >
+                <Star
+                  className={`w-4 h-4 mr-2 ${
+                    project.is_starred ? 'fill-white text-white' : 'text-amber-500'
+                  }`}
+                />
                 {isStarUpdating ? 'Updating...' : project.is_starred ? 'Starred' : 'Star this Project'}
               </Button>
+
+              {/* Bookmark Button with Blue Accent */}
               <Button
-                variant={project.is_bookmarked ? 'primary' : 'outline'}
+                variant="outline"
                 onClick={handleBookmarkToggle}
-                leftIcon={Bookmark}
-                className="flex-1 lg:flex-initial justify-center"
+                className={`flex-1 lg:flex-initial justify-center transition-all ${
+                  project.is_bookmarked
+                    ? 'bg-brand-primary hover:bg-brand-primary/90 text-white border-brand-primary shadow-sm shadow-brand-primary/25'
+                    : 'border-slate-200 text-slate-700 hover:border-brand-primary/40 hover:text-brand-primary hover:bg-blue-50/40'
+                }`}
               >
+                <Bookmark
+                  className={`w-4 h-4 mr-2 ${
+                    project.is_bookmarked ? 'fill-white text-white' : 'text-brand-primary'
+                  }`}
+                />
                 {project.is_bookmarked ? 'Saved to Bookmarks' : 'Bookmark Project'}
               </Button>
 
+              {/* Resource & Link Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 {project.zip_download_url && (
                   <a
@@ -385,7 +622,7 @@ export default function ProjectDetailPage() {
                     download
                     className="flex-1 min-w-[130px]"
                   >
-                    <Button variant="primary" size="md" leftIcon={Download} className="w-full justify-center">
+                    <Button variant="primary" size="md" leftIcon={Download} className="w-full justify-center shadow-xs">
                       Download ZIP
                     </Button>
                   </a>
@@ -398,7 +635,7 @@ export default function ProjectDetailPage() {
                     rel="noopener noreferrer"
                     className="flex-1 min-w-[110px]"
                   >
-                    <Button variant="secondary" size="md" rightIcon={ExternalLink} className="w-full justify-center">
+                    <Button variant="secondary" size="md" rightIcon={ExternalLink} className="w-full justify-center shadow-xs">
                       Live Demo
                     </Button>
                   </a>
@@ -420,7 +657,7 @@ export default function ProjectDetailPage() {
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="w-10 h-10 rounded-xl border border-brand-border bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center transition-colors shrink-0"
+                  className="w-10 h-10 rounded-xl border border-brand-border bg-white hover:bg-slate-50 text-slate-600 hover:text-brand-primary flex items-center justify-center transition-colors shrink-0 shadow-xs"
                   title="Share project link"
                   aria-label="Share project"
                 >
@@ -435,30 +672,33 @@ export default function ProjectDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Main 2-Span Column: Specs, Gallery, Blueprints */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Screenshots Gallery & Lightbox Carousel */}
-            {screenshots.length > 0 && (
-              <div className="bg-white border border-brand-border rounded-3xl p-6 sm:p-8 shadow-xs">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display font-bold text-base text-brand-text flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-brand-primary" />
-                    Project Visuals & Demos
-                  </h3>
+            {/* Visuals & Interactive Showcase */}
+            <div className="bg-white border border-brand-border rounded-3xl p-6 sm:p-8 shadow-xs">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-bold text-base text-brand-text flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-brand-primary" />
+                  Project Visuals & Showcase
+                </h3>
+                {screenshots.length > 0 && hasValidActiveScreenshot && (
                   <span className="text-xs text-brand-muted">
                     {activeScreenshotIdx + 1} of {screenshots.length}
                   </span>
-                </div>
+                )}
+              </div>
 
-                {/* Main Preview */}
+              {/* Main Visual Display: Generative Canvas OR Valid Screenshot */}
+              {hasValidActiveScreenshot ? (
                 <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 aspect-video group">
                   <img
                     src={activeScreenshot?.image_url}
                     alt={activeScreenshot?.caption || project.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    onError={() => handleImageError(activeScreenshot?.image_url)}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
                   />
 
                   {/* Caption Overlay */}
                   {activeScreenshot?.caption && (
-                    <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-slate-950/80 to-transparent text-white text-xs sm:text-sm font-medium">
+                    <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-slate-950/80 via-slate-950/40 to-transparent text-white text-xs sm:text-sm font-medium">
                       {activeScreenshot.caption}
                     </div>
                   )}
@@ -499,11 +739,18 @@ export default function ProjectDetailPage() {
                     </>
                   )}
                 </div>
+              ) : (
+                /* High-tech dynamic canvas fallback */
+                <ProjectHeroCanvas project={project} />
+              )}
 
-                {/* Thumbnail Strip */}
-                {screenshots.length > 1 && (
-                  <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-                    {screenshots.map((s, idx) => (
+              {/* Thumbnail Strip (only for valid image collections) */}
+              {screenshots.length > 1 && (
+                <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+                  {screenshots.map((s, idx) => {
+                    const isBroken = failedImages.has(s.image_url);
+                    if (isBroken) return null;
+                    return (
                       <button
                         key={idx}
                         type="button"
@@ -514,13 +761,18 @@ export default function ProjectDetailPage() {
                             : 'border-brand-border opacity-70 hover:opacity-100'
                         }`}
                       >
-                        <img src={s.image_url} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={s.image_url}
+                          alt=""
+                          onError={() => handleImageError(s.image_url)}
+                          className="w-full h-full object-cover"
+                        />
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Problem Statement Card */}
             <div className="bg-white border border-brand-border rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
@@ -630,17 +882,19 @@ export default function ProjectDetailPage() {
                         className="flex items-center justify-between p-3.5 rounded-2xl border border-brand-border bg-slate-50/60 hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          {contributor.avatar_url ? (
-                            <img
-                              src={contributor.avatar_url}
-                              alt={contributor.name}
-                              className="w-10 h-10 rounded-xl object-cover border border-brand-border shrink-0"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan text-white font-display font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                              {initials}
-                            </div>
-                          )}
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-cyan text-white font-display font-bold text-xs flex items-center justify-center shrink-0 shadow-xs overflow-hidden relative">
+                            {contributor.avatar_url && (
+                              <img
+                                src={contributor.avatar_url}
+                                alt=""
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
+                                className="w-full h-full object-cover absolute inset-0"
+                              />
+                            )}
+                            <span>{initials}</span>
+                          </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <span className="font-display font-bold text-xs sm:text-sm text-brand-text truncate">
@@ -811,15 +1065,16 @@ export default function ProjectDetailPage() {
               </div>
 
               <div className="flex items-center gap-3.5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-display font-bold text-lg flex items-center justify-center shadow-xs shrink-0">
-                  {project.author_avatar ? (
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-brand-primary text-white font-display font-bold text-base flex items-center justify-center shadow-md shrink-0 overflow-hidden relative">
+                  {project.author_avatar && !authorAvatarFailed ? (
                     <img
                       src={project.author_avatar}
-                      alt={project.author_name}
-                      className="w-full h-full object-cover rounded-2xl"
+                      alt=""
+                      onError={() => setAuthorAvatarFailed(true)}
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    project.author_name?.slice(0, 2).toUpperCase() || 'AU'
+                    <span className="tracking-wider">{authorInitials}</span>
                   )}
                 </div>
                 <div className="min-w-0">

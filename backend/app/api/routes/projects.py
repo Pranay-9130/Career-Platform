@@ -911,6 +911,16 @@ async def create_project(
             break
         candidate_slug = f"{base_slug}-{secrets.token_hex(2)}"
 
+    effective_cover = (
+        payload.cover_image_url
+        or (payload.screenshots[0].image_url if payload.screenshots else None)
+    )
+    if payload.status == "Submitted" and (not effective_cover or not str(effective_cover).strip()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A cover image is mandatory when submitting a project for review.",
+        )
+
     screenshots_json = [s.model_dump() for s in payload.screenshots]
     contributors_json = [c.model_dump() for c in payload.contributors]
 
@@ -928,7 +938,7 @@ async def create_project(
         difficulty=payload.difficulty,
         estimated_duration=payload.estimated_duration,
         expected_outcome=payload.expected_outcome,
-        cover_image_url=payload.cover_image_url,
+        cover_image_url=effective_cover,
         screenshots=screenshots_json,
         contributors=contributors_json,
         zip_storage_key=payload.zip_storage_key,
@@ -1013,6 +1023,19 @@ async def update_project(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to modify this project.",
         )
+
+    if payload.status == "Submitted":
+        target_cover = (
+            payload.cover_image_url
+            or (payload.screenshots[0].image_url if payload.screenshots else None)
+            or project.cover_image_url
+            or (project.screenshots[0].get("image_url") if (project.screenshots and isinstance(project.screenshots[0], dict)) else None)
+        )
+        if not target_cover or not str(target_cover).strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A cover image is mandatory when submitting a project for review.",
+            )
 
     update_dict = payload.model_dump(exclude_unset=True)
 
