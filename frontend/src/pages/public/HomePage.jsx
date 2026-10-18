@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -8,15 +8,18 @@ import {
   CheckCircle2,
   Briefcase,
   Layers,
-  Star,
   TrendingUp,
-  Cpu,
-  Smartphone,
-  Cloud,
-  Check,
-  ChevronRight,
-  Send,
+  BrainCircuit,
   Award,
+  BookOpen,
+  FolderGit2,
+  Sliders,
+  ShieldCheck,
+  Check,
+  ExternalLink,
+  RefreshCw,
+  Search,
+  Lock,
 } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/common';
 import { ProjectCard, JobCard } from '@/components/cards';
@@ -24,113 +27,77 @@ import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getWebsiteSchema, getOrganizationSchema } from '@/utils/seoSchemas';
 import { getDashboardPath } from '@/utils/navigation';
+import { projectService } from '@/services/projectService';
+import { jobService } from '@/services/jobService';
 
 export default function HomePage() {
   const { isAuthenticated, user } = useAuth();
-  const [selectedDomain, setSelectedDomain] = useState('all');
 
-  const domainFilters = [
-    { id: 'all', label: 'All Domains' },
-    { id: 'web', label: 'Fullstack Web' },
-    { id: 'ai', label: 'AI & Machine Learning' },
-    { id: 'cloud', label: 'Cloud & DevOps' },
-    { id: 'mobile', label: 'Mobile Apps' },
-  ];
+  // Dynamic public projects from backend
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsError, setProjectsError] = useState(null);
 
-  const featuredProjects = [
-    {
-      id: '1',
-      slug: 'ai-resume-matcher',
-      domainKey: 'ai',
-      title: 'AI Resume Matcher & ATS Scorer',
-      domain: 'AI & Machine Learning',
-      description: 'Extracts skills and keywords from student resumes, computes semantic cosine match against job descriptions using Google Gemini.',
-      technologies: ['FastAPI', 'React', 'Gemini AI', 'PostgreSQL'],
-      authorName: 'Alex Chen',
-      authorAvatar: 'AC',
-      difficulty: 'Intermediate',
-      duration: '25 hrs',
-    },
-    {
-      id: '2',
-      slug: 'cloud-native-microservices',
-      domainKey: 'cloud',
-      title: 'Cloud-Native Observability Mesh',
-      domain: 'Cloud & DevOps',
-      description: 'Distributed microservice pipeline with Prometheus metrics, OpenTelemetry tracing, and Docker Compose orchestration.',
-      technologies: ['Go', 'Docker', 'Kubernetes', 'Prometheus'],
-      authorName: 'Sarah Lin',
-      authorAvatar: 'SL',
-      difficulty: 'Advanced',
-      duration: '35 hrs',
-    },
-    {
-      id: '3',
-      slug: 'campus-marketplace-app',
-      domainKey: 'mobile',
-      title: 'Campus Peer Marketplace',
-      domain: 'Mobile Apps',
-      description: 'Cross-platform student marketplace for textbooks and electronics with authenticated university email verification.',
-      technologies: ['React Native', 'TypeScript', 'Tailwind', 'Node.js'],
-      authorName: 'Rahul Sharma',
-      authorAvatar: 'RS',
-      difficulty: 'Beginner',
-      duration: '18 hrs',
-    },
-  ];
+  // Dynamic public jobs / internships from backend
+  const [jobs, setJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState(null);
 
-  const filteredProjects =
-    selectedDomain === 'all'
-      ? featuredProjects
-      : featuredProjects.filter((p) => p.domainKey === selectedDomain);
+  useEffect(() => {
+    let isMounted = true;
 
-  const featuredJobs = [
-    {
-      id: '1',
-      slug: 'junior-fullstack-dev',
-      companyName: 'DevScale Labs',
-      role: 'Junior Fullstack Engineer',
-      jobType: 'Job',
-      workMode: 'Remote',
-      location: 'San Francisco, CA (or Remote)',
-      salary: '$68,000 – $82,000 / yr',
-      skills: ['React', 'Python', 'FastAPI', 'PostgreSQL'],
-      deadline: 'In 12 days',
-    },
-    {
-      id: '2',
-      slug: 'frontend-eng-intern',
-      companyName: 'Nexa AI Systems',
-      role: 'Frontend Engineering Intern',
-      jobType: 'Internship',
-      workMode: 'Hybrid',
-      location: 'New York, NY',
-      salary: '$42 / hour',
-      skills: ['TypeScript', 'React', 'Tailwind CSS', 'Vite'],
-      deadline: 'In 7 days',
-    },
-    {
-      id: '3',
-      slug: 'cloud-infrastructure-intern',
-      companyName: 'Apex Cloud Tech',
-      role: 'Cloud Operations Intern',
-      jobType: 'Internship',
-      workMode: 'Remote',
-      location: 'Austin, TX (Remote)',
-      salary: '$38 / hour',
-      skills: ['Linux', 'Docker', 'AWS', 'Python'],
-      deadline: 'In 18 days',
-    },
-  ];
+    async function fetchPublicData() {
+      // 1. Fetch real public projects
+      try {
+        setProjectsLoading(true);
+        const pRes = await projectService.getProjects({ limit: 3, sort: 'stars' });
+        if (isMounted) {
+          setProjects(pRes?.items || []);
+          setProjectsError(null);
+        }
+      } catch (err) {
+        console.error('Error fetching public projects:', err);
+        if (isMounted) {
+          setProjectsError('Unable to load live project showcases. Please check back shortly.');
+        }
+      } finally {
+        if (isMounted) setProjectsLoading(false);
+      }
+
+      // 2. Fetch real public jobs / internships
+      try {
+        setJobsLoading(true);
+        const jRes = await jobService.getJobs({ limit: 3, sort: 'recent' });
+        if (isMounted) {
+          setJobs(jRes?.items || []);
+          setJobsError(null);
+        }
+      } catch (err) {
+        console.error('Error fetching public jobs:', err);
+        if (isMounted) {
+          setJobsError('Unable to load current job opportunities. Please visit the jobs board directly.');
+        }
+      } finally {
+        if (isMounted) setJobsLoading(false);
+      }
+    }
+
+    fetchPublicData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-24 sm:space-y-32 pb-24 overflow-hidden">
       <SEO
-        title="From Your First Project to Your First Job"
-        description="Discover student project showcases, craft ATS-compliant resumes, analyze match scores with Gemini AI, and connect with hiring companies."
+        title="CareerPlatform | Build Your Skills. Build Your Future."
+        description="Discover your skill gaps, build ATS-ready resumes, learn through practical projects, and prepare for internships and jobs—all in one student career development platform."
         canonical="/"
         schema={[getWebsiteSchema(), getOrganizationSchema()]}
       />
+
       {/* ========================================================================= */}
       {/* 1. HERO SECTION */}
       {/* ========================================================================= */}
@@ -140,9 +107,9 @@ export default function HomePage() {
 
         <div className="text-center max-w-4xl mx-auto">
           {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold uppercase tracking-wider mb-8 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold uppercase tracking-wider mb-8 shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-brand-primary animate-pulse" />
-            <span>The End-to-End Student Career Platform</span>
+            <span>AI-Powered Student Career Platform</span>
           </div>
 
           {/* Main Title */}
@@ -153,355 +120,337 @@ export default function HomePage() {
             </span>
           </h1>
 
-          {/* Subheading */}
-          <p className="mt-6 sm:mt-8 text-base sm:text-xl text-brand-muted max-w-2xl mx-auto leading-relaxed">
-            Discover guided projects, showcase verified software, generate ATS-ready resumes,
-            and connect with entry-level opportunities — all in one unified pathway.
+          {/* Supporting Text */}
+          <p className="mt-6 sm:mt-8 text-base sm:text-xl text-brand-muted max-w-3xl mx-auto leading-relaxed">
+            Discover your skill gaps, build ATS-ready resumes, learn through practical projects, and prepare for internships and jobs—all in one career development platform.
           </p>
 
-          {/* CTA Buttons */}
+          {/* Primary & Secondary Call to Actions */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             {isAuthenticated ? (
               <Link to={getDashboardPath(user)} className="w-full sm:w-auto">
-                <Button size="lg" variant="gradient" rightIcon={ArrowRight} className="w-full sm:w-auto text-base px-8 py-3.5 shadow-card hover:shadow-card-hover">
+                <Button size="lg" variant="gradient" rightIcon={ArrowRight} className="w-full sm:w-auto text-base px-8 py-3.5 shadow-card hover:shadow-card-hover font-bold">
                   Go to Dashboard
                 </Button>
               </Link>
             ) : (
               <Link to="/register" className="w-full sm:w-auto">
-                <Button size="lg" variant="gradient" rightIcon={ArrowRight} className="w-full sm:w-auto text-base px-8 py-3.5 shadow-card hover:shadow-card-hover">
+                <Button size="lg" variant="gradient" rightIcon={ArrowRight} className="w-full sm:w-auto text-base px-8 py-3.5 shadow-card hover:shadow-card-hover font-bold">
                   Get Started Free
                 </Button>
               </Link>
             )}
             <Link to="/projects" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 py-3.5 bg-white">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto text-base px-8 py-3.5 bg-white font-semibold">
                 Explore Projects
               </Button>
             </Link>
           </div>
 
-          {/* Social Proof Metric Pill */}
-          <div className="mt-12 inline-flex flex-wrap items-center justify-center gap-3 px-5 py-2.5 rounded-full bg-white border border-brand-border shadow-sm text-xs text-brand-muted">
-            <div className="flex -space-x-2">
-              <div className="w-6 h-6 rounded-full bg-blue-500 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">SL</div>
-              <div className="w-6 h-6 rounded-full bg-cyan-500 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">AC</div>
-              <div className="w-6 h-6 rounded-full bg-indigo-500 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">RS</div>
-              <div className="w-6 h-6 rounded-full bg-emerald-500 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white">DM</div>
-            </div>
-            <div className="flex items-center gap-1 text-amber-500">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3.5 h-3.5 fill-current" />
-              ))}
-            </div>
-            <span className="font-semibold text-brand-text">10,000+ Students</span>
-            <span className="text-slate-300">|</span>
-            <span>From 150+ Universities worldwide</span>
+          {/* Honest Value Proposition Pill */}
+          <div className="mt-12 inline-flex flex-wrap items-center justify-center gap-2.5 px-4 py-2 rounded-full bg-white border border-brand-border shadow-xs text-xs text-brand-muted">
+            <ShieldCheck className="w-4 h-4 text-brand-primary" />
+            <span className="font-semibold text-brand-text">Deterministic Skill Intelligence</span>
+            <span className="text-slate-300">•</span>
+            <span>ATS Resume Parsing</span>
+            <span className="text-slate-300">•</span>
+            <span>Verified Project Blueprints</span>
           </div>
         </div>
-
-
       </section>
 
       {/* ========================================================================= */}
-      {/* 2. THE 6-STEP CAREER PATHWAY */}
+      {/* 2. PLATFORM FEATURES SECTION */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <Badge variant="primary" size="sm" className="mb-3">
-            The Student Career Pathway
+            Platform Capabilities
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-brand-text">
-            From Your First Project to Your First Job
+            Everything You Need for Career Readiness
           </h2>
           <p className="mt-3 text-sm sm:text-base text-brand-muted">
-            A continuous, connected pathway replacing fragmented learning with real results.
+            CareerPlatform unifies the key stages of technical preparation into one cohesive experience.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Step 1: Discover */}
-          <Card hoverable className="relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center font-bold text-sm mb-4">
-              01
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Feature 1 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center">
+                <FileText className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">Resume Builder</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Build professional, clean resumes with accessible split-screen editing and direct template selection.
+              </p>
             </div>
-            <h3 className="font-display font-bold text-lg text-brand-text group-hover:text-brand-primary transition-colors">
-              Discover Project Ideas
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-brand-muted leading-relaxed">
-              Explore curated, production-grade project specifications. No generic to-do apps — real architectures solving actual problems.
-            </p>
-            <div className="mt-4 text-xs font-semibold text-brand-primary flex items-center gap-1">
-              <span>What should I build?</span>
+            <Link to="/templates" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>View Templates</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </div>
+            </Link>
           </Card>
 
-          {/* Step 2: Build */}
-          <Card hoverable className="relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center font-bold text-sm mb-4">
-              02
+          {/* Feature 2 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-cyan-50 text-brand-cyan flex items-center justify-center">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">ATS Resume Analyzer</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Compare your resume against any target job description. Identify matched keywords and missing criteria.
+              </p>
             </div>
-            <h3 className="font-display font-bold text-lg text-brand-text group-hover:text-brand-primary transition-colors">
-              Build Practical Skills
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-brand-muted leading-relaxed">
-              Step-by-step objectives, prerequisites, and resource links. Learn industry tech stacks (FastAPI, React, Docker, PostgreSQL) hands-on.
-            </p>
-            <div className="mt-4 text-xs font-semibold text-brand-primary flex items-center gap-1">
-              <span>Guided objectives</span>
+            <Link to="/login" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>Scan Resume</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </div>
+            </Link>
           </Card>
 
-          {/* Step 3: Showcase */}
-          <Card hoverable className="relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center font-bold text-sm mb-4">
-              03
+          {/* Feature 3 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <BrainCircuit className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">Skill Intelligence</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Extract skills from your resume, choose from 13 standard roles, and assess role fit with transparent math.
+              </p>
             </div>
-            <h3 className="font-display font-bold text-lg text-brand-text group-hover:text-brand-primary transition-colors">
-              Showcase Your Portfolio
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-brand-muted leading-relaxed">
-              Upload screenshots and project ZIP archives to your public verified student URL (`/u/:username`). No mandatory git knowledge required.
-            </p>
-            <div className="mt-4 text-xs font-semibold text-brand-primary flex items-center gap-1">
-              <span>Shareable profile</span>
+            <Link to="/login" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>Explore Roles</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </div>
+            </Link>
           </Card>
 
-          {/* Step 4: Prepare */}
-          <Card hoverable className="relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center font-bold text-sm mb-4">
-              04
+          {/* Feature 4 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">AI Career Mentor</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Conversational mentor grounded in your confirmed skills, learning roadmap, and project showcases.
+              </p>
             </div>
-            <h3 className="font-display font-bold text-lg text-brand-text group-hover:text-brand-primary transition-colors">
-              Prepare ATS Resumes
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-brand-muted leading-relaxed">
-              Build resumes using ATS-optimized templates in our split-screen editor. Directly import verified portfolio projects into your resume.
-            </p>
-            <div className="mt-4 text-xs font-semibold text-brand-primary flex items-center gap-1">
-              <span>ATS-tested formats</span>
+            <Link to="/login" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>Chat with Mentor</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </div>
+            </Link>
           </Card>
 
-          {/* Step 5: Analyze */}
-          <Card hoverable className="relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center font-bold text-sm mb-4">
-              05
+          {/* Feature 5 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <Layers className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">Personalized Roadmap</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Follow an ordered sequence of technical milestones with verified official documentation and practice tasks.
+              </p>
             </div>
-            <h3 className="font-display font-bold text-lg text-brand-text group-hover:text-brand-primary transition-colors">
-              AI ATS Scoring
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-brand-muted leading-relaxed">
-              Compare your resume against any target Job Description using backend Gemini AI. Discover matched keywords and missing skills before applying.
-            </p>
-            <div className="mt-4 text-xs font-semibold text-brand-primary flex items-center gap-1">
-              <span>Actionable insights</span>
+            <Link to="/login" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>Track Roadmap</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </div>
+            </Link>
           </Card>
 
-          {/* Step 6: Apply & Get Hired */}
-          <Card hoverable className="relative overflow-hidden group">
-            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center font-bold text-sm mb-4">
-              06
+          {/* Feature 6 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <FolderGit2 className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">Project Hub</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Discover peer-submitted blueprints and publish your own verified full-stack, AI, or cloud applications.
+              </p>
             </div>
-            <h3 className="font-display font-bold text-lg text-brand-text group-hover:text-brand-primary transition-colors">
-              Apply & Track Offers
-            </h3>
-            <p className="mt-2 text-xs sm:text-sm text-brand-muted leading-relaxed">
-              Find curated internships and entry-level positions. Track every application from Applied to Interview to Offer in your student workspace.
-            </p>
-            <div className="mt-4 text-xs font-semibold text-brand-primary flex items-center gap-1">
-              <span>Kanban tracking</span>
+            <Link to="/projects" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>Browse Blueprints</span>
               <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Card>
+
+          {/* Feature 7 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">Jobs & Internships</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Explore real, curated student opportunities. Track application progress from Applied to Interview and Offer.
+              </p>
             </div>
+            <Link to="/jobs" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>Explore Listings</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Card>
+
+          {/* Feature 8 */}
+          <Card hoverable className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <Award className="w-5 h-5" />
+              </div>
+              <h3 className="font-display font-bold text-base text-brand-text">Career Readiness Track</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Evaluate your holistic preparation across Profile, Resume, Confirmed Skills, Projects, and Applications.
+              </p>
+            </div>
+            <Link to="/login" className="text-xs font-semibold text-brand-primary flex items-center gap-1 hover:underline">
+              <span>View Criteria</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </Card>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. FEATURED PROJECT DISCOVERY SECTION */}
+      {/* 3. HOW IT WORKS SECTION */}
+      {/* ========================================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-slate-50 border border-slate-200/80 rounded-3xl p-8 sm:p-12 space-y-12">
+          <div className="text-center max-w-2xl mx-auto">
+            <Badge variant="cyan" size="sm" className="mb-2">
+              Structured Pathway
+            </Badge>
+            <h2 className="text-3xl font-display font-bold text-brand-text">
+              How CareerPlatform Works
+            </h2>
+            <p className="mt-2 text-sm text-brand-muted">
+              Four deliberate steps designed to build tangible engineering evidence without guessing what recruiters expect.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <div className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center">
+                01
+              </div>
+              <h3 className="font-bold text-base text-brand-text">Create Profile</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Set up your student profile and establish your initial career development baseline.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <div className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center">
+                02
+              </div>
+              <h3 className="font-bold text-base text-brand-text">Upload Resume & Pick Role</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Scan your existing PDF resume and select your target career track across 13 engineering disciplines.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <div className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center">
+                03
+              </div>
+              <h3 className="font-bold text-base text-brand-text">Identify Gaps & Learn</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Review your role fit percentage, identify missing competencies, and follow structured roadmaps.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <div className="w-8 h-8 rounded-lg bg-brand-primary text-white font-bold text-xs flex items-center justify-center">
+                04
+              </div>
+              <h3 className="font-bold text-base text-brand-text">Practice & Discover Jobs</h3>
+              <p className="text-xs text-brand-muted leading-relaxed">
+                Build practical project showcases, track verified skills, and explore curated opportunities.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. REAL PROJECTS SHOWCASE */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
             <Badge variant="cyan" size="sm" className="mb-2">
-              Curated Showcase
+              Real Showcase Blueprints
             </Badge>
             <h2 className="text-3xl font-display font-bold text-brand-text">
-              What Should You Build Next?
+              Practical Projects
             </h2>
             <p className="mt-2 text-sm text-brand-muted max-w-xl">
-              Explore vetted projects with clear objectives, architecture guidelines, and tech stacks.
+              Real projects published by students on CareerPlatform with architecture guidelines and tech stacks.
             </p>
           </div>
 
           <Link to="/projects">
             <Button variant="outline" rightIcon={ArrowRight} className="text-xs">
-              View All 150+ Projects
+              Browse All Projects
             </Button>
           </Link>
         </div>
 
-        {/* Domain Filter Pills */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          {domainFilters.map((df) => (
-            <button
-              key={df.id}
-              onClick={() => setSelectedDomain(df.id)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                selectedDomain === df.id
-                  ? 'bg-brand-primary text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-brand-border hover:bg-slate-50'
-              }`}
-            >
-              {df.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Project Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <ProjectCard key={project.id} {...project} />
-          ))}
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. RESUME BUILDER & AI ATS ANALYZER FEATURETTE */}
-      {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-brand-veryLight via-white to-sky-50 border border-brand-border shadow-card">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <Badge variant="primary" size="sm" className="mb-3">
-              Career Preparation
-            </Badge>
-            <h2 className="text-3xl font-display font-extrabold text-brand-text">
-              Build an ATS-Proof Resume with Live AI Feedback
-            </h2>
-            <p className="mt-3 text-sm text-brand-muted">
-              Never guess whether your resume will pass applicant tracking systems again.
+        {/* Dynamic Project Grid / Honest Empty State */}
+        {projectsLoading ? (
+          <div className="p-12 text-center bg-white rounded-3xl border border-brand-border">
+            <RefreshCw className="w-6 h-6 text-brand-primary animate-spin mx-auto mb-2" />
+            <p className="text-xs text-brand-muted">Loading published project showcases...</p>
+          </div>
+        ) : projectsError ? (
+          <div className="p-8 text-center bg-white rounded-3xl border border-brand-border">
+            <p className="text-xs text-slate-600 mb-3">{projectsError}</p>
+            <Link to="/projects">
+              <Button size="sm" variant="outline">Browse Projects Page</Button>
+            </Link>
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-3xl border border-brand-border space-y-3">
+            <FolderGit2 className="w-10 h-10 text-slate-300 mx-auto" />
+            <h4 className="text-sm font-bold text-brand-text">No Published Showcases Yet</h4>
+            <p className="text-xs text-brand-muted max-w-md mx-auto">
+              Student showcases appear here as they are published and approved by our review team. You can submit your own project or browse the blueprints catalogue.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Left: Resume Builder Preview Mockup */}
-            <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm">
-              <div className="flex items-center justify-between pb-4 border-b border-brand-border mb-4">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-brand-primary" />
-                  <span className="font-semibold text-sm text-brand-text">Interactive Split-Pane Builder</span>
-                </div>
-                <Badge variant="approved" size="sm">
-                  ATS Verified
-                </Badge>
-              </div>
-
-              <div className="space-y-3 text-xs">
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">1. Personal Info & Headline</span>
-                  <Check className="w-4 h-4 text-brand-success" />
-                </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">2. Highlighted Showcase Projects</span>
-                  <span className="text-[11px] font-semibold text-brand-primary">Imported from Portfolio</span>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
-                  <span className="text-slate-600 font-medium">3. Skills Matrix & Frameworks</span>
-                  <Check className="w-4 h-4 text-brand-success" />
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-brand-border flex items-center justify-between">
-                <span className="text-xs text-brand-muted">One-click clean PDF export</span>
-                <Link to="/templates">
-                  <Button size="sm" variant="outline" rightIcon={ArrowRight}>
-                    Browse Templates
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Right: AI ATS Analyzer Mockup */}
-            <div className="bg-white rounded-2xl border border-brand-border p-6 shadow-sm">
-              <div className="flex items-center justify-between pb-4 border-b border-brand-border mb-4">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-brand-primary" />
-                  <span className="font-semibold text-sm text-brand-text">Google Gemini ATS Analyzer</span>
-                </div>
-                <span className="text-xs font-bold text-brand-primary bg-brand-veryLight px-2.5 py-1 rounded-full border border-brand-border">
-                  Score: 84 / 100
-                </span>
-              </div>
-
-              {/* Matched vs Missing */}
-              <div className="space-y-3 text-xs">
-                <div>
-                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-brand-success" />
-                    <span>Matched Competencies (8)</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {['FastAPI', 'React', 'REST APIs', 'PostgreSQL', 'Docker'].map((s) => (
-                      <span key={s} className="px-2 py-0.5 rounded bg-green-50 text-green-700 border border-green-200 text-[11px]">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span>Missing Target Keywords (2)</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {['Redis Caching', 'CI/CD Pipeline'].map((s) => (
-                      <span key={s} className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[11px]">
-                        {s}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-3 bg-brand-veryLight rounded-lg border border-brand-border text-xs text-brand-text leading-relaxed">
-                  <strong>AI Suggestion:</strong> Add metrics to your "AI Resume Matcher" project (e.g. <em>"achieved 92% extraction accuracy"</em>).
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-brand-border flex items-center justify-between">
-                <span className="text-xs text-brand-muted">Private backend analysis</span>
-                <Link to="/login">
-                  <Button size="sm" variant="primary" rightIcon={ArrowRight}>
-                    Try ATS Scorer
-                  </Button>
-                </Link>
-              </div>
+            <div className="pt-2 flex justify-center gap-3">
+              <Link to="/projects">
+                <Button size="sm" variant="outline">Explore Blueprints</Button>
+              </Link>
+              <Link to="/login">
+                <Button size="sm" variant="primary">Submit a Project</Button>
+              </Link>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} {...project} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. CURATED JOBS & INTERNSHIPS SHOWCASE */}
+      {/* 5. JOBS & INTERNSHIPS SHOWCASE */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
             <Badge variant="primary" size="sm" className="mb-2">
-              Verified Opportunities
+              Opportunity Board
             </Badge>
             <h2 className="text-3xl font-display font-bold text-brand-text">
-              Jobs & Internships Tailored for Students
+              Jobs & Internships
             </h2>
             <p className="mt-2 text-sm text-brand-muted max-w-xl">
-              No senior roles disguised as entry-level. Every opportunity is curated for college students and recent grads.
+              Authentic junior roles and internships verified for college learners and recent graduates.
             </p>
           </div>
 
@@ -512,140 +461,201 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Jobs Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {featuredJobs.map((job) => (
-            <JobCard key={job.id} {...job} />
-          ))}
+        {/* Dynamic Jobs Grid / Honest Empty State */}
+        {jobsLoading ? (
+          <div className="p-12 text-center bg-white rounded-3xl border border-brand-border">
+            <RefreshCw className="w-6 h-6 text-brand-primary animate-spin mx-auto mb-2" />
+            <p className="text-xs text-brand-muted">Loading current opportunities...</p>
+          </div>
+        ) : jobsError ? (
+          <div className="p-8 text-center bg-white rounded-3xl border border-brand-border">
+            <p className="text-xs text-slate-600 mb-3">{jobsError}</p>
+            <Link to="/jobs">
+              <Button size="sm" variant="outline">Open Jobs Board</Button>
+            </Link>
+          </div>
+        ) : jobs.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-3xl border border-brand-border space-y-3">
+            <Briefcase className="w-10 h-10 text-slate-300 mx-auto" />
+            <h4 className="text-sm font-bold text-brand-text">No Open Postings Right Now</h4>
+            <p className="text-xs text-brand-muted max-w-md mx-auto">
+              We are constantly reviewing and verifying legitimate entry-level and internship listings. New opportunities appear as verified hiring partners post them.
+            </p>
+            <div className="pt-2">
+              <Link to="/jobs">
+                <Button size="sm" variant="outline">Visit Jobs Board</Button>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {jobs.map((job) => (
+              <JobCard key={job.id} {...job} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 6. LEARNING & AI MENTOR SPOTLIGHT */}
+      {/* ========================================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-blue-900 via-brand-primary to-blue-700 text-white shadow-card relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-bold text-white tracking-wide uppercase inline-flex items-center gap-1.5">
+                <BrainCircuit className="w-3.5 h-3.5 text-cyan-300" /> Grounded Mentorship
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-white">
+                Personalized Career Guidance Powered by Real Data
+              </h2>
+              <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
+                Unlike generic AI chatbots, the CareerPlatform AI Mentor is grounded in your authenticated student data: your confirmed competencies, target career track, and verified project records.
+              </p>
+              <ul className="space-y-2 text-xs text-blue-100">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-300 shrink-0" />
+                  <span>Explains role-match scoring and critical skill gaps without speculation.</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-300 shrink-0" />
+                  <span>Clarifies technical prerequisites and structured learning milestones.</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-300 shrink-0" />
+                  <span>Suggests practical portfolio projects from our real catalogue.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-5 space-y-3 text-xs text-white">
+              <div className="flex items-center gap-2 font-bold text-cyan-300 pb-2 border-b border-white/10">
+                <Sparkles className="w-4 h-4" />
+                <span>AI Mentor Sample Conversation</span>
+              </div>
+              <div className="space-y-2.5">
+                <div className="bg-white/15 p-3 rounded-xl">
+                  <p className="font-semibold text-cyan-200 text-[11px] mb-1">Student:</p>
+                  <p className="text-slate-100">"What should I prioritize first for Frontend Developer between TypeScript and Testing?"</p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-xl border border-white/20">
+                  <p className="font-semibold text-cyan-300 text-[11px] mb-1">Career Mentor:</p>
+                  <p className="text-blue-50 leading-relaxed">
+                    "Prioritize TypeScript first (Stage 1 prerequisite). 78% of modern frontend job listings require static typing before testing frameworks. Once you build a component with TypeScript, Jest and Playwright testing will be significantly more intuitive."
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-blue-200/80 italic pt-1">
+                * Recommendations depend on your selected role and confirmed skills. CareerPlatform never guarantees employment.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 6. STUDENT SUCCESS STORIES / TESTIMONIALS */}
+      {/* 7. TRUST AND PLATFORM VALUES */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <Badge variant="cyan" size="sm" className="mb-3">
-            Real Student Outcomes
+          <Badge variant="cyan" size="sm" className="mb-2">
+            Why CareerPlatform
           </Badge>
           <h2 className="text-3xl font-display font-bold text-brand-text">
-            Proven Results Across Campuses
+            Built on Honest Principles
           </h2>
           <p className="mt-2 text-sm text-brand-muted">
-            See how students leveraged project showcases and ATS scoring to land real tech jobs.
+            We avoid fabricated statistics and inflated marketing claims to focus on real student growth.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-1 text-amber-500 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                “Building the Cloud-Native Observability project and linking my verified showcase directly on my resume was the exact talking point that landed my Stripe interview.”
-              </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="p-6 space-y-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center font-bold">
+              <Code2 className="w-5 h-5" />
             </div>
-            <div className="mt-6 pt-4 border-t border-brand-border flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-blue-500 text-white font-bold text-xs flex items-center justify-center">
-                SL
-              </div>
-              <div>
-                <div className="text-xs font-bold text-brand-text">Sarah Lin</div>
-                <div className="text-[11px] text-brand-muted">Software Engineer @ Stripe (UC Berkeley '24)</div>
-              </div>
-            </div>
+            <h3 className="font-bold text-base text-brand-text">Demonstrated Evidence</h3>
+            <p className="text-xs text-brand-muted leading-relaxed">
+              Real projects and runnable code speak louder than keyword-stuffed resumes or course completion certificates.
+            </p>
           </Card>
 
-          <Card className="flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-1 text-amber-500 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                “The ATS Analyzer pointed out 4 critical missing keywords for entry-level React roles. After updating my resume bullets, I received 3 callback invitations in two weeks.”
-              </p>
+          <Card className="p-6 space-y-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-50 text-brand-cyan flex items-center justify-center font-bold">
+              <Award className="w-5 h-5" />
             </div>
-            <div className="mt-6 pt-4 border-t border-brand-border flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-cyan-500 text-white font-bold text-xs flex items-center justify-center">
-                AC
-              </div>
-              <div>
-                <div className="text-xs font-bold text-brand-text">Alex Chen</div>
-                <div className="text-[11px] text-brand-muted">Frontend Intern @ Nexa AI (UT Austin '25)</div>
-              </div>
-            </div>
+            <h3 className="font-bold text-base text-brand-text">Transparent Math</h3>
+            <p className="text-xs text-brand-muted leading-relaxed">
+              Deterministic skill-match scoring formulas that explain exactly which competencies were counted and why.
+            </p>
           </Card>
 
-          <Card className="flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-1 text-amber-500 mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-current" />
-                ))}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-600 italic leading-relaxed">
-                “I didn't have a traditional target-school degree, but sharing my public profile link with verified code archives proved my competency immediately to recruiters.”
-              </p>
+          <Card className="p-6 space-y-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+              <Lock className="w-5 h-5" />
             </div>
-            <div className="mt-6 pt-4 border-t border-brand-border flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center justify-center">
-                DM
-              </div>
-              <div>
-                <div className="text-xs font-bold text-brand-text">David Miller</div>
-                <div className="text-[11px] text-brand-muted">Junior Backend Dev @ CloudScale Labs</div>
-              </div>
+            <h3 className="font-bold text-base text-brand-text">Privacy & Security</h3>
+            <p className="text-xs text-brand-muted leading-relaxed">
+              Your resume files, contact details, and learning progress are strictly protected and isolated per user.
+            </p>
+          </Card>
+
+          <Card className="p-6 space-y-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <TrendingUp className="w-5 h-5" />
             </div>
+            <h3 className="font-bold text-base text-brand-text">Continuous Journey</h3>
+            <p className="text-xs text-brand-muted leading-relaxed">
+              A unified pathway connecting resume writing, gap detection, verified practice, and opportunity tracking.
+            </p>
           </Card>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 7. FINAL HIGH-CONVERTING CTA BANNER */}
+      {/* 8. FINAL HIGH-CONVERTING CTA BANNER */}
       {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-600 p-8 sm:p-16 text-center text-white shadow-xl">
-          {/* Subtle background circles */}
           <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-64 h-64 rounded-full bg-cyan-400/20 blur-2xl pointer-events-none" />
 
           <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
-              Start Your Journey
-            </div>
-
             <h2 className="text-3xl sm:text-5xl font-display font-extrabold tracking-tight">
-              Ready to move your career forward today?
+              Your next career opportunity starts with preparation.
             </h2>
 
             <p className="text-sm sm:text-lg text-blue-100 leading-relaxed">
-              Join thousands of students turning practical projects into real job offers.
-              Free for students worldwide.
+              Build your resume, understand your skill gaps, practice with projects, and take the next step toward your career goals.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
               {isAuthenticated ? (
                 <Link to={getDashboardPath(user)} className="w-full sm:w-auto">
-                  <Button size="lg" className="w-full sm:w-auto bg-white text-brand-primary hover:bg-slate-50 font-bold px-8 py-3.5 shadow-lg">
-                    Go to Dashboard
+                  <Button
+                    size="lg"
+                    variant="white"
+                    className="w-full sm:w-auto !bg-white !text-blue-700 hover:!bg-blue-50 font-bold px-8 py-3.5 shadow-xl text-base"
+                  >
+                    <span className="text-blue-700 font-bold">Go to Dashboard</span>
                   </Button>
                 </Link>
               ) : (
                 <Link to="/register" className="w-full sm:w-auto">
-                  <Button size="lg" className="w-full sm:w-auto bg-white text-brand-primary hover:bg-slate-50 font-bold px-8 py-3.5 shadow-lg">
-                    Get Started Free
+                  <Button
+                    size="lg"
+                    variant="white"
+                    className="w-full sm:w-auto !bg-white !text-blue-700 hover:!bg-blue-50 font-bold px-8 py-3.5 shadow-xl text-base"
+                  >
+                    <span className="text-blue-700 font-bold">Get Started Free</span>
                   </Button>
                 </Link>
               )}
               <Link to="/projects" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-white border-white/60 hover:bg-white/10 px-8 py-3.5">
-                  Browse Project Showcase
+                  Explore Projects
                 </Button>
               </Link>
             </div>

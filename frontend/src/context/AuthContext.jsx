@@ -107,7 +107,7 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = Boolean(token && user);
   const isAdmin = user?.role === 'ADMIN';
-  const isStudent = user?.role === 'STUDENT';
+  const isStudent = user?.role === 'STUDENT' || user?.role === 'CONTRIBUTOR';
 
   const value = {
     user,

@@ -45,7 +45,9 @@ async def get_admin_stats(db: AsyncSession = Depends(get_db)):
     pub_stmt = select(func.count(Project.id)).where(Project.status == "Published")
     pub_count = (await db.execute(pub_stmt)).scalar() or 0
 
-    students_stmt = select(func.count(User.id)).where(User.role == UserRole.STUDENT)
+    students_stmt = select(func.count(User.id)).where(
+        User.role.in_([UserRole.STUDENT, UserRole.CONTRIBUTOR])
+    )
     students_count = (await db.execute(students_stmt)).scalar() or 0
 
     jobs_stmt = select(func.count(Job.id))
@@ -467,7 +469,7 @@ async def get_admin_students(
     """
     List all registered student profiles with their submission count and academic details.
     """
-    conditions = [User.role == UserRole.STUDENT]
+    conditions = [User.role.in_([UserRole.STUDENT, UserRole.CONTRIBUTOR])]
 
     stmt = (
         select(User)

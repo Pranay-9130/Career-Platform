@@ -41,6 +41,7 @@ const ApplicationsPage = lazy(() => import('./pages/student/ApplicationsPage'));
 const SavedWorkspacePage = lazy(() => import('./pages/student/SavedWorkspacePage'));
 const ResumeBuilderPage = lazy(() => import('./pages/student/ResumeBuilderPage'));
 const AtsAnalyzerPage = lazy(() => import('./pages/student/AtsAnalyzerPage'));
+const SkillIntelligencePage = lazy(() => import('./pages/student/SkillIntelligencePage'));
 
 // Lazy Loaded Admin Pages
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
@@ -60,7 +61,7 @@ export default function App() {
               <Route
                 path="/projects/submit"
                 element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']}>
+                  <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
                     <ProjectSubmissionPage />
                   </ProtectedRoute>
                 }
@@ -68,7 +69,7 @@ export default function App() {
               <Route
                 path="/projects/:slug/edit"
                 element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']}>
+                  <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
                     <ProjectSubmissionPage />
                   </ProtectedRoute>
                 }
@@ -76,7 +77,7 @@ export default function App() {
               <Route
                 path="/projects/edit/:slug"
                 element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']}>
+                  <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
                     <ProjectSubmissionPage />
                   </ProtectedRoute>
                 }
@@ -106,12 +107,13 @@ export default function App() {
             </Route>
 
             {/* Student Workspace Routes: Protected by Session */}
-            <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'ADMIN']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']} />}>
               <Route element={<StudentLayout />}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/my-projects" element={<MyProjectsPage />} />
                 <Route path="/resume-builder" element={<ResumeBuilderPage />} />
                 <Route path="/ats-analyzer" element={<AtsAnalyzerPage />} />
+                <Route path="/skill-intelligence" element={<SkillIntelligencePage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/saved" element={<SavedWorkspacePage />} />
                 <Route path="/profile" element={<ProfilePage />} />

@@ -34,6 +34,22 @@ export default function PublicNavbar() {
     setUserMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   // Handle click outside user menu
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -71,6 +87,7 @@ export default function PublicNavbar() {
 
   const displayName = user?.full_name || 'Student';
   const displayEmail = user?.email || '';
+  const workspaceLabel = user?.role === 'CONTRIBUTOR' ? 'Job Seeker' : 'Student';
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-brand-border transition-all">
@@ -148,7 +165,7 @@ export default function PublicNavbar() {
                       {displayName}
                     </p>
                     <p className="text-[10px] text-brand-primary font-medium">
-                      {user?.role === 'ADMIN' ? 'Administrator' : 'Student Workspace'}
+                      {user?.role === 'ADMIN' ? 'Administrator' : `${workspaceLabel} Workspace`}
                     </p>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -166,7 +183,7 @@ export default function PublicNavbar() {
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-brand-primary border border-brand-border">
-                            Student
+                            {workspaceLabel}
                           </span>
                         )}
                       </div>
@@ -311,7 +328,7 @@ export default function PublicNavbar() {
       {mobileMenuOpen && (
         <div
           id="mobile-navigation"
-          className="md:hidden border-b border-brand-border bg-white px-4 pt-3 pb-6 space-y-4 shadow-xl max-h-[85vh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+          className="md:hidden border-b border-brand-border bg-white px-4 pt-3 pb-6 space-y-4 shadow-xl max-h-[85vh] max-h-[85dvh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
         >
           {/* Section: Explore Platform */}
           <div>

@@ -22,6 +22,8 @@ import { dashboardService } from '@/services/dashboardService';
 import Button from '@/components/common/Button';
 import Badge from '@/components/common/Badge';
 import Skeleton from '@/components/common/Skeleton';
+import Modal from '@/components/common/Modal';
+import SkillIntelligenceSummaryCard from '@/components/dashboard/SkillIntelligenceSummaryCard';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [recFilter, setRecFilter] = useState('all'); // 'all' | 'project' | 'job'
+  const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
 
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -113,11 +116,6 @@ export default function DashboardPage() {
           >
             Refresh
           </Button>
-          <Link to="/my-projects">
-            <Button variant="primary" size="sm" leftIcon={PlusCircle}>
-              Add Project
-            </Button>
-          </Link>
         </div>
       </div>
 
@@ -308,7 +306,7 @@ export default function DashboardPage() {
           <div className="max-w-2xl space-y-2">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-[11px] font-bold text-white tracking-wide uppercase">
-                {loading ? 'Calculating...' : data?.readiness_stage || 'Stage 2: Skill Builder'}
+                {loading ? 'Calculating...' : data?.readiness_stage || 'Stage 1: Profile Setup'}
               </span>
               <span className="text-xs text-blue-100 flex items-center gap-1">
                 <Award className="w-3.5 h-3.5 text-cyan-300" /> Career Readiness Track
@@ -319,7 +317,7 @@ export default function DashboardPage() {
               {loading ? (
                 'Assessing profile strength...'
               ) : (
-                <span>Profile Strength: <span className="text-cyan-300">{data?.readiness_score || 55}%</span> Ready for Job Market</span>
+                <span>Profile Strength: <span className="text-cyan-300">{data?.readiness_score ?? 0}%</span> Ready for Job Market</span>
               )}
             </h2>
 
@@ -327,7 +325,7 @@ export default function DashboardPage() {
               {loading
                 ? 'Gathering achievements and milestone metrics...'
                 : data?.next_milestone ||
-                  'Showcase your first practical project to reach Stage 3: Verified Creator.'}
+                  'Complete your profile details to unlock career readiness progress.'}
             </p>
           </div>
 
@@ -335,55 +333,47 @@ export default function DashboardPage() {
             <div className="w-full sm:w-64 bg-blue-950/40 p-3 rounded-2xl border border-white/10 backdrop-blur-sm">
               <div className="flex justify-between text-xs font-semibold mb-1.5">
                 <span className="text-blue-200">Readiness Score</span>
-                <span className="text-cyan-300 font-bold">{data?.readiness_score || 55}%</span>
+                <span className="text-cyan-300 font-bold">{data?.readiness_score ?? 0}%</span>
               </div>
               <div className="w-full bg-blue-950/80 h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-gradient-to-r from-cyan-400 to-blue-200 h-full rounded-full transition-all duration-700"
-                  style={{ width: `${data?.readiness_score || 55}%` }}
+                  style={{ width: `${Math.min(Math.max(data?.readiness_score ?? 0, 0), 100)}%` }}
                 />
               </div>
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Link to="/resume-builder" className="flex-1 sm:flex-initial">
+              <Link
+                to={data?.readiness_details?.recommended_action_link || '/profile'}
+                className="flex-1 sm:flex-initial"
+              >
                 <Button
                   size="sm"
                   variant="white"
                   className="w-full font-bold shadow-sm"
                 >
-                  Boost Score
+                  {data?.readiness_details?.recommended_action_label || 'Boost Score'}
                 </Button>
               </Link>
-              <Link to="/about" className="flex-1 sm:flex-initial">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-white hover:bg-white/10 w-full font-semibold border border-white/20"
-                >
-                  View Criteria
-                </Button>
-              </Link>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setCriteriaModalOpen(true)}
+                className="text-white hover:bg-white/10 flex-1 sm:flex-initial font-semibold border border-white/20"
+              >
+                View Criteria
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 6. Quick Action Cards Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Link
-          to="/my-projects"
-          className="p-3.5 bg-white rounded-2xl border border-brand-border shadow-xs hover:border-brand-primary/40 hover:bg-blue-50/40 transition-all flex items-center gap-3 group"
-        >
-          <div className="w-8 h-8 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <PlusCircle className="w-4 h-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-brand-text truncate">Add Project</p>
-            <p className="text-[11px] text-brand-muted truncate">Showcase code</p>
-          </div>
-        </Link>
+      {/* 5.5 Skill Intelligence Summary Card */}
+      <SkillIntelligenceSummaryCard />
 
+      {/* 6. Quick Action Cards Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Link
           to="/resume-builder"
           className="p-3.5 bg-white rounded-2xl border border-brand-border shadow-xs hover:border-brand-primary/40 hover:bg-blue-50/40 transition-all flex items-center gap-3 group"
@@ -865,6 +855,107 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* 8. CAREER READINESS CRITERIA MODAL */}
+      <Modal
+        isOpen={criteriaModalOpen}
+        onClose={() => setCriteriaModalOpen(false)}
+        title="Career Readiness Track & Criteria"
+        size="lg"
+      >
+        <div className="space-y-5">
+          {/* Header Summary */}
+          <div className="p-4 bg-gradient-to-r from-blue-900 to-brand-primary rounded-2xl text-white flex items-center justify-between shadow-sm">
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-200 block">
+                {data?.readiness_stage || 'Stage 1: Profile Setup'}
+              </span>
+              <h3 className="font-display font-bold text-xl text-white">
+                Readiness Score: <span className="text-cyan-300">{data?.readiness_score ?? 0}%</span>
+              </h3>
+              <p className="text-xs text-blue-100 mt-0.5">
+                {data?.readiness_details?.stage_description || 'Track your progress from profile setup to industry candidate.'}
+              </p>
+            </div>
+            <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex flex-col items-center justify-center shrink-0">
+              <span className="text-lg font-extrabold text-cyan-300">{data?.readiness_score ?? 0}</span>
+              <span className="text-[9px] font-bold text-blue-200 uppercase">/ 100</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Your Career Readiness Score is calculated from 5 documented platform criteria with transparent weights totalling 100%. Scores update automatically when you achieve verified milestones.
+          </p>
+
+          {/* Criteria List */}
+          <div className="space-y-3">
+            {(data?.readiness_details?.criteria || [
+              { id: 'profile', name: 'Profile Foundation', weight: 20, score: 0, status: 'not_started', improvement: 'Add headline, bio, university, and social links in Profile.', link: '/profile' },
+              { id: 'resume', name: 'Resume & ATS Optimization', weight: 20, score: 0, status: 'not_started', improvement: 'Build a structured resume and run an ATS match scan.', link: '/resume-builder' },
+              { id: 'skills', name: 'Skill Intelligence & Roadmap', weight: 20, score: 0, status: 'not_started', improvement: 'Select target role and confirm technical skills.', link: '/skill-intelligence' },
+              { id: 'projects', name: 'Practical Projects & Verification', weight: 25, score: 0, status: 'not_started', improvement: 'Create and submit a project with GitHub repo in My Projects.', link: '/my-projects' },
+              { id: 'applications', name: 'Opportunities & Applications', weight: 15, score: 0, status: 'not_started', improvement: 'Submit internship or job applications to connect with employers.', link: '/jobs' },
+            ]).map((crit) => (
+              <div
+                key={crit.id}
+                className="p-3.5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-2 hover:border-brand-primary/30 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-brand-text">{crit.name}</span>
+                    <span className="text-[10px] font-semibold text-slate-400">({crit.weight}% weight)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-brand-primary">
+                      {crit.score} / {crit.weight} pts
+                    </span>
+                    <Badge
+                      variant={crit.status === 'completed' ? 'approved' : crit.status === 'in_progress' ? 'pending' : 'neutral'}
+                      size="sm"
+                    >
+                      {crit.status === 'completed' ? 'Completed' : crit.status === 'in_progress' ? 'In Progress' : 'Not Started'}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-brand-primary to-cyan-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(Math.max(crit.percentage ?? ((crit.score / crit.weight) * 100), 0), 100)}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1">
+                  <span className="text-slate-500 text-xs">{crit.improvement}</span>
+                  <Link
+                    to={crit.link}
+                    onClick={() => setCriteriaModalOpen(false)}
+                    className="shrink-0 text-brand-primary font-bold hover:underline inline-flex items-center gap-1 ml-2"
+                  >
+                    <span>Take Action</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Action Footer */}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              Next Step: {data?.next_milestone}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCriteriaModalOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

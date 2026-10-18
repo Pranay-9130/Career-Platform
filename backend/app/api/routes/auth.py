@@ -43,6 +43,7 @@ from app.services.email_service import EmailService
 from app.api.dependencies.auth import (
     get_current_active_user,
     require_role,
+    require_roles,
 )
 from app.core.rate_limiter import auth_rate_limiter
 
@@ -132,7 +133,7 @@ async def register_user(
         email=normalized_email,
         hashed_password=hashed_password,
         full_name=user_in.full_name.strip(),
-        role=UserRole.STUDENT,
+        role=user_in.role,
         headline=user_in.headline,
         is_active=True,
         is_verified=False,
@@ -885,10 +886,12 @@ async def get_my_profile(
 
 @router.get("/student-only", status_code=status.HTTP_200_OK)
 async def verify_student_access(
-    current_user: User = Depends(require_role(UserRole.STUDENT)),
+    current_user: User = Depends(
+        require_roles([UserRole.STUDENT, UserRole.CONTRIBUTOR, UserRole.ADMIN])
+    ),
 ):
     """
-    Protected route accessible by STUDENT (and ADMIN) roles.
+    Protected route accessible by career-workspace users and administrators.
     """
     return {
         "success": True,

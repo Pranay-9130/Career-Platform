@@ -16,6 +16,7 @@ import {
   Briefcase,
   Compass,
   FileCheck,
+  BrainCircuit,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { StudentNavbar } from '@/components/navbar';
@@ -58,6 +59,22 @@ export default function StudentLayout() {
       window.removeEventListener('workspace-counts-updated', handleWorkspaceUpdate);
     };
   }, [fetchCounts, location.pathname]);
+
+  useEffect(() => {
+    if (!mobileSidebarOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setMobileSidebarOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileSidebarOpen]);
 
   const navSections = [
     {
@@ -107,6 +124,12 @@ export default function StudentLayout() {
           icon: Sparkles,
           description: 'AI match & optimization',
         },
+        {
+          name: 'Skill Intelligence',
+          path: '/skill-intelligence',
+          icon: BrainCircuit,
+          description: 'Gap analysis & roadmap',
+        },
       ],
     },
     {
@@ -146,20 +169,10 @@ export default function StudentLayout() {
 
   const displayName = user?.full_name || 'Student';
   const displayHeadline = user?.headline || 'Computer Science Student';
+  const workspaceLabel = user?.role === 'CONTRIBUTOR' ? 'Job Seeker Workspace' : 'Student Workspace';
 
   const renderNavLinks = () => (
     <div className="p-3 space-y-6">
-      {/* Quick Action: Submit Project */}
-      <div className="px-1">
-        <Link
-          to="/projects/submit"
-          onClick={() => setMobileSidebarOpen(false)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-brand-primary to-blue-600 hover:from-blue-600 hover:to-brand-primary shadow-sm hover:shadow transition-all group"
-        >
-          <PlusCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
-          <span>+ Submit Project</span>
-        </Link>
-      </div>
 
       {/* Categorized Nav Sections */}
       {navSections.map((section) => (
@@ -238,7 +251,7 @@ export default function StudentLayout() {
                 Career<span className="text-brand-primary">Platform</span>
               </span>
               <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mt-1">
-                Student Workspace
+                {workspaceLabel}
               </span>
             </div>
           </Link>
@@ -305,7 +318,7 @@ export default function StudentLayout() {
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-primary to-brand-cyan flex items-center justify-center text-white text-xs font-bold">
                   CP
                 </div>
-                <span>Student Workspace</span>
+                <span>{workspaceLabel}</span>
               </Link>
               <button
                 type="button"

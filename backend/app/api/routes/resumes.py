@@ -1,8 +1,10 @@
 import uuid
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy import select, func, desc, update
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -475,6 +477,13 @@ async def analyze_resume_ats(
     # 3. Perform AI / NLP Analysis
     try:
         result = await analyze_ats(resume_text, job_description)
+        if payload.resume_id and resume:
+            pi = dict(resume.personal_info or {})
+            pi["latest_ats_score"] = int(result.overall_score)
+            pi["latest_ats_date"] = datetime.now(timezone.utc).isoformat()
+            resume.personal_info = pi
+            flag_modified(resume, "personal_info")
+            await db.commit()
         return AtsAnalysisResponse.model_validate(result)
     except Exception as exc:
         raise HTTPException(

@@ -17,6 +17,12 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
 import { getDashboardPath } from '@/utils/navigation';
+import { REGISTRATION_ROLE_OPTIONS, getDefaultHeadline } from '@/utils/registration';
+
+const roleIcons = {
+  STUDENT: GraduationCap,
+  CONTRIBUTOR: Briefcase,
+};
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -121,11 +127,7 @@ export default function RegisterPage() {
         email: formData.email.trim(),
         password: formData.password,
         role: formData.role,
-        headline:
-          formData.headline.trim() ||
-          (formData.role === 'STUDENT'
-            ? 'Computer Science Student'
-            : 'Software Developer'),
+        headline: formData.headline.trim() || getDefaultHeadline(formData.role),
       });
 
       const targetPath = getDashboardPath(response.user);
@@ -214,31 +216,28 @@ export default function RegisterPage() {
               <label className="block text-xs font-semibold text-brand-text mb-1.5">
                 I am joining as a
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleRoleSelect('STUDENT')}
-                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold border transition-all ${
-                    formData.role === 'STUDENT'
-                      ? 'bg-brand-veryLight border-brand-primary text-brand-primary shadow-xs'
-                      : 'bg-white border-brand-border text-brand-muted hover:border-slate-300'
-                  }`}
-                >
-                  <GraduationCap className="w-4 h-4" />
-                  <span>Student / Learner</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRoleSelect('STUDENT')} // Future roles mapped cleanly
-                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold border transition-all ${
-                    formData.role === 'CONTRIBUTOR'
-                      ? 'bg-brand-veryLight border-brand-primary text-brand-primary shadow-xs'
-                      : 'bg-white border-brand-border text-brand-muted hover:border-slate-300'
-                  }`}
-                >
-                  <Briefcase className="w-4 h-4" />
-                  <span>Job Seeker</span>
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
+                {REGISTRATION_ROLE_OPTIONS.map((option) => {
+                  const RoleIcon = roleIcons[option.value];
+                  const selected = formData.role === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => handleRoleSelect(option.value)}
+                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                        selected
+                          ? 'bg-brand-veryLight border-brand-primary text-brand-primary shadow-xs'
+                          : 'bg-white border-brand-border text-brand-muted hover:border-slate-300'
+                      }`}
+                    >
+                      <RoleIcon className="w-4 h-4" />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

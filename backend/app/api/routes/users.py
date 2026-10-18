@@ -16,12 +16,15 @@ from app.models.job_bookmark import JobBookmark
 from app.models.resume import Resume
 from app.models.notification import Notification
 from app.models.job import Job
+from app.models.skill_intelligence import StudentTargetRole, StudentSkill
 from app.schemas.dashboard import (
     DashboardStats,
     DashboardActivity,
     DashboardRecommendation,
     DashboardRecentApplication,
     DashboardSummaryResponse,
+    ReadinessCriterionItem,
+    ReadinessDetails,
 )
 from app.schemas.profile import (
     ProfileRead,
@@ -155,13 +158,13 @@ async def get_or_create_user_profile(user: User, db: AsyncSession) -> Profile:
     profile = Profile(
         user_id=user.id,
         username=username,
-        headline=user.headline or "Student & Aspiring Software Engineer",
-        bio="Passionate student developer building full-stack and cloud-native applications.",
+        headline=user.headline or None,
+        bio=None,
         avatar_url=user.avatar_url,
-        university="University of Technology",
-        degree="B.S. in Computer Science",
-        graduation_year=2026,
-        skills=["React", "Python", "FastAPI", "Tailwind CSS"],
+        university=None,
+        degree=None,
+        graduation_year=None,
+        skills=[],
         github_url=None,
         linkedin_url=None,
         portfolio_url=None,
@@ -448,32 +451,200 @@ async def get_dashboard_summary(
             if len(recommended_opportunities) < 4:
                 recommended_opportunities.append(fg)
 
-    # I. Dynamic Career Readiness Calculation
-    # Email verification is optional and must not reduce career readiness.
-    score = 25
-    score += int((profile_completion / 100) * 25)
-    score += int((resume_completion / 100) * 20)
-    if projects_count > 0:
-        score += 15
-    if projects_published > 0:
-        score += 15
-    readiness_score = min(max(score, 10), 100)
+    # I. Transparent 5-Criterion Career Readiness Calculation (Total: 100%)
+    # Email verification is optional and must not artificially penalize or inflate career readiness.
+    # Base score begins strictly at 0. Every point represents verified student milestones.
 
-    if readiness_score < 40:
+    # 1. Profile Foundation (20% weight)
+    prof_pts = 0
+    if current_user.full_name and current_user.full_name.strip():
+        prof_pts += 5
+    if profile and (profile.headline or current_user.headline) and (profile.bio and len(profile.bio.strip()) >= 20):
+        prof_pts += 5
+    elif profile and ((profile.headline or current_user.headline) or (profile.bio and len(profile.bio.strip()) > 0)):
+        prof_pts += 3
+    if profile and (profile.university or profile.degree or profile.graduation_year):
+        prof_pts += 5
+    if profile and (
+        clean_social_profile_url(profile.github_url, "github")
+        or clean_social_profile_url(profile.linkedin_url, "linkedin")
+        or profile.portfolio_url
+    ):
+        prof_pts += 5
+    prof_pts = min(prof_pts, 20)
+
+    # 2. Resume & ATS Optimization (20% weight)
+    res_pts = 0
+    if has_resume:
+        res_pts += int((resume_completion / 100.0) * 10)
+    latest_ats_score = None
+    if user_resume and user_resume.personal_info:
+        latest_ats_score = user_resume.personal_info.get("latest_ats_score")
+    if latest_ats_score is not None:
+        res_pts += 10
+    res_pts = min(res_pts, 20)
+
+    # 3. Skills & Roadmap (20% weight)
+    stmt_target_role = select(StudentTargetRole).where(StudentTargetRole.user_id == current_user.id)
+    target_role_rec = (await db.scalars(stmt_target_role)).first()
+    has_target_role = bool(target_role_rec and target_role_rec.target_role)
+
+    stmt_confirmed_skills = select(func.count(StudentSkill.id)).where(
+        StudentSkill.user_id == current_user.id,
+        StudentSkill.is_confirmed == True,
+    )
+    confirmed_skills_count = (await db.scalar(stmt_confirmed_skills)) or 0
+    if profile and profile.skills and confirmed_skills_count == 0:
+        confirmed_skills_count = len(profile.skills)
+
+    stmt_active_roadmap = select(func.count(StudentSkill.id)).where(
+        StudentSkill.user_id == current_user.id,
+        StudentSkill.status.in_(["Learning", "Practiced", "Completed"]),
+    )
+    active_roadmap_skills = (await db.scalar(stmt_active_roadmap)) or 0
+
+    skills_pts = 0
+    if has_target_role:
+        skills_pts += 6
+    if confirmed_skills_count >= 3:
+        skills_pts += 8
+    elif confirmed_skills_count > 0:
+        skills_pts += 4
+    if active_roadmap_skills > 0:
+        skills_pts += 6
+    skills_pts = min(skills_pts, 20)
+
+    # 4. Practical Projects & Verification (25% weight)
+    proj_pts = 0
+    if projects_count > 0:
+        proj_pts += 8
+    if (projects_under_review + projects_published) > 0:
+        proj_pts += 7
+    if projects_published > 0:
+        proj_pts += 10
+    proj_pts = min(proj_pts, 25)
+
+    # 5. Opportunities & Applications (15% weight)
+    app_pts = 0
+    if active_applications_count > 0:
+        app_pts += 10
+    if active_applications_count >= 2 or interviews_scheduled_count > 0:
+        app_pts += 5
+    app_pts = min(app_pts, 15)
+
+    # Total Score: Strictly derived from real data
+    readiness_score = prof_pts + res_pts + skills_pts + proj_pts + app_pts
+    readiness_score = min(max(readiness_score, 0), 100)
+
+    # Stage Progression (Explicit criteria)
+    if readiness_score < 25:
+        stage_number = 1
         readiness_stage = "Stage 1: Profile Setup"
-        next_milestone = (
-            "Verify your student email and complete profile fields to unlock recruiter discovery."
-        )
-    elif readiness_score < 70:
+        stage_desc = "Establish your verified identity, educational credentials, and target career role."
+        next_milestone = "Complete your bio, academic credentials, and configure your target role in Skill Intelligence."
+    elif readiness_score < 50:
+        stage_number = 2
         readiness_stage = "Stage 2: Skill Builder"
-        next_milestone = (
-            "Showcase your first practical project to reach Stage 3: Verified Creator."
-        )
+        stage_desc = "Building core domain competencies, structured ATS resume, and active learning roadmap."
+        next_milestone = "Showcase your first practical project in My Projects to advance to Stage 3."
+    elif readiness_score < 75 or projects_count == 0:
+        stage_number = 3
+        readiness_stage = "Stage 3: Project Creator"
+        stage_desc = "Developing and showcasing verified engineering artifacts and practical software systems."
+        next_milestone = "Publish a verified project and run an ATS scan to achieve Stage 4: Career Ready."
     else:
-        readiness_stage = "Stage 3: Verified Creator"
-        next_milestone = (
-            "Run an ATS scan in ATS Analyzer to optimize your match for target opportunities."
-        )
+        stage_number = 4
+        readiness_stage = "Stage 4: Career Ready"
+        stage_desc = "Industry-ready candidate with verified projects, optimized ATS profile, and active job pursuit."
+        next_milestone = "Apply for target internships and practice interview questions with recruiters."
+
+    # Dynamic Boost Score Action
+    if prof_pts < 15:
+        rec_link = "/profile"
+        rec_label = "Complete Profile (+15 pts)"
+    elif skills_pts < 14:
+        rec_link = "/skill-intelligence"
+        rec_label = "Configure Skills (+14 pts)"
+    elif res_pts < 15:
+        if not has_resume:
+            rec_link = "/resume-builder"
+            rec_label = "Build ATS Resume (+10 pts)"
+        else:
+            rec_link = "/ats-analyzer"
+            rec_label = "Scan Resume ATS (+10 pts)"
+    elif proj_pts < 15:
+        rec_link = "/my-projects"
+        rec_label = "Submit Project (+15 pts)"
+    elif app_pts < 10:
+        rec_link = "/jobs"
+        rec_label = "Apply for Roles (+10 pts)"
+    else:
+        rec_link = "/skill-intelligence"
+        rec_label = "Level Up Skills"
+
+    criteria_breakdown = [
+        ReadinessCriterionItem(
+            id="profile",
+            name="Profile Foundation",
+            weight=20,
+            score=prof_pts,
+            percentage=int((prof_pts / 20.0) * 100),
+            status="completed" if prof_pts >= 20 else ("in_progress" if prof_pts > 0 else "not_started"),
+            improvement="Add your headline, bio, university/degree, and social links in your Profile.",
+            link="/profile",
+        ),
+        ReadinessCriterionItem(
+            id="resume",
+            name="Resume & ATS Optimization",
+            weight=20,
+            score=res_pts,
+            percentage=int((res_pts / 20.0) * 100),
+            status="completed" if res_pts >= 20 else ("in_progress" if res_pts > 0 else "not_started"),
+            improvement="Craft a structured resume in Resume Builder and run an ATS match scan in ATS Analyzer.",
+            link="/resume-builder" if not has_resume else "/ats-analyzer",
+        ),
+        ReadinessCriterionItem(
+            id="skills",
+            name="Skill Intelligence & Roadmap",
+            weight=20,
+            score=skills_pts,
+            percentage=int((skills_pts / 20.0) * 100),
+            status="completed" if skills_pts >= 20 else ("in_progress" if skills_pts > 0 else "not_started"),
+            improvement="Select your target career role, confirm your technical skills, and begin your roadmap in Skill Intelligence.",
+            link="/skill-intelligence",
+        ),
+        ReadinessCriterionItem(
+            id="projects",
+            name="Practical Projects & Verification",
+            weight=25,
+            score=proj_pts,
+            percentage=int((proj_pts / 25.0) * 100),
+            status="completed" if proj_pts >= 25 else ("in_progress" if proj_pts > 0 else "not_started"),
+            improvement="Create and submit a project with GitHub code repo and live preview in My Projects.",
+            link="/my-projects",
+        ),
+        ReadinessCriterionItem(
+            id="applications",
+            name="Opportunities & Applications",
+            weight=15,
+            score=app_pts,
+            percentage=int((app_pts / 15.0) * 100),
+            status="completed" if app_pts >= 15 else ("in_progress" if app_pts > 0 else "not_started"),
+            improvement="Explore platform internships and jobs and submit your applications to connect with recruiters.",
+            link="/jobs",
+        ),
+    ]
+
+    readiness_details = ReadinessDetails(
+        score=readiness_score,
+        stage=readiness_stage,
+        stage_number=stage_number,
+        stage_description=stage_desc,
+        next_milestone=next_milestone,
+        recommended_action_link=rec_link,
+        recommended_action_label=rec_label,
+        criteria=criteria_breakdown,
+    )
 
     stats = DashboardStats(
         projects_count=projects_count,
@@ -481,7 +652,7 @@ async def get_dashboard_summary(
         projects_under_review=projects_under_review,
         projects_published=projects_published,
         resume_completion_percentage=resume_completion,
-        ats_score=None,
+        ats_score=latest_ats_score,
         active_applications_count=active_applications_count,
         applications_applied=applications_applied,
         interviews_scheduled_count=interviews_scheduled_count,
@@ -503,6 +674,7 @@ async def get_dashboard_summary(
         readiness_score=readiness_score,
         readiness_stage=readiness_stage,
         next_milestone=next_milestone,
+        readiness_details=readiness_details,
     )
 
 

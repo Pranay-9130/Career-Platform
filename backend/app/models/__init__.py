@@ -16,6 +16,12 @@ from app.models.resume import Resume
 from app.models.auth_session import AuthSession
 from app.models.stored_archive import StoredArchive
 from app.models.stored_image import StoredImage
+from app.models.skill_intelligence import (
+    StudentTargetRole,
+    StudentSkill,
+    SkillStatus,
+    SkillSource,
+)
 
 __all__ = [
     "Base",
@@ -39,6 +45,10 @@ __all__ = [
     "AuthSession",
     "StoredArchive",
     "StoredImage",
+    "StudentTargetRole",
+    "StudentSkill",
+    "SkillStatus",
+    "SkillSource",
 ]
 
 

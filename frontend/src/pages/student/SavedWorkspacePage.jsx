@@ -116,10 +116,10 @@ export default function SavedWorkspacePage() {
 
       {/* Tabs & Search Bar */}
       <div className="bg-white rounded-2xl border border-brand-border shadow-card p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto pb-1 md:w-auto md:pb-0">
           <button
             onClick={() => setActiveTab('projects')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
               activeTab === 'projects'
                 ? 'bg-brand-primary text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -138,7 +138,7 @@ export default function SavedWorkspacePage() {
 
           <button
             onClick={() => setActiveTab('jobs')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+            className={`flex shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
               activeTab === 'jobs'
                 ? 'bg-brand-primary text-white shadow-xs'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -156,7 +156,7 @@ export default function SavedWorkspacePage() {
           </button>
         </div>
 
-        <div className="relative min-w-[260px]">
+        <div className="relative w-full min-w-0 md:w-auto md:min-w-[260px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"

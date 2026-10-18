@@ -121,3 +121,61 @@ async def test_unverified_student_receives_profile_setup_stage(db_session):
         assert data["stats"]["projects_count"] == 0
 
     app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_brand_new_student_transparent_readiness_model(db_session):
+    """Brand new student starts with transparent data-driven score, no fake baseline, and accurate criteria."""
+    new_student = User(
+        id=uuid.UUID("55555555-5555-5555-5555-555555555555"),
+        email="newcomer@university.edu",
+        hashed_password="hash",
+        full_name="New Student",
+        role=UserRole.STUDENT,
+        headline=None,
+        is_active=True,
+        is_verified=False,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    app.dependency_overrides[get_current_active_user] = lambda: new_student
+    app.dependency_overrides[get_db] = lambda: db_session
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/users/dashboard-summary")
+        assert response.status_code == 200
+        data = response.json()
+
+        # Score is legitimate data-driven score (only name = 5 pts, no 25 or 55 fake baseline)
+        assert data["readiness_score"] == 5
+        assert data["readiness_stage"] == "Stage 1: Profile Setup"
+        assert data["stats"]["projects_count"] == 0
+        assert data["stats"]["ats_score"] is None
+        assert data["stats"]["active_applications_count"] == 0
+        assert data["has_resume"] is False
+
+        # Verify Readiness Details & 5 Criteria Breakdown
+        assert "readiness_details" in data
+        details = data["readiness_details"]
+        assert details["stage_number"] == 1
+        assert details["recommended_action_link"] == "/profile"
+
+        criteria = details["criteria"]
+        assert len(criteria) == 5
+        weights_sum = sum(c["weight"] for c in criteria)
+        assert weights_sum == 100
+
+        crit_ids = [c["id"] for c in criteria]
+        assert crit_ids == ["profile", "resume", "skills", "projects", "applications"]
+
+        # Only profile has partial points from name (5/20); others are 0
+        crit_by_id = {c["id"]: c for c in criteria}
+        assert crit_by_id["profile"]["score"] == 5
+        assert crit_by_id["resume"]["score"] == 0
+        assert crit_by_id["skills"]["score"] == 0
+        assert crit_by_id["projects"]["score"] == 0
+        assert crit_by_id["applications"]["score"] == 0
+
+    app.dependency_overrides.clear()
+

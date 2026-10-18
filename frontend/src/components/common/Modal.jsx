@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
 export default function Modal({
@@ -11,21 +11,30 @@ export default function Modal({
   size = 'md',
   className = '',
 }) {
+  const closeButtonRef = useRef(null);
+  const titleId = useId();
+
   useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement;
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape') {
         onClose();
       }
     };
 
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    closeButtonRef.current?.focus();
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+        previouslyFocused.focus();
+      }
     };
   }, [isOpen, onClose]);
 
@@ -42,7 +51,8 @@ export default function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-6"
+      aria-labelledby={title ? titleId : undefined}
+      className="fixed inset-0 z-50 overflow-y-auto flex items-start sm:items-center justify-center p-4 sm:p-6"
     >
       {/* Backdrop */}
       <div
@@ -53,7 +63,7 @@ export default function Modal({
 
       {/* Modal Surface */}
       <div
-        className={`relative w-full bg-white rounded-card border border-brand-border shadow-modal p-6 my-8 z-10 transition-all transform animate-in fade-in zoom-in-95 duration-150 ${
+        className={`relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-card border border-brand-border shadow-modal p-4 sm:p-6 my-auto z-10 transition-all transform animate-in fade-in zoom-in-95 duration-150 ${
           sizeStyles[size] || sizeStyles.md
         } ${className}`}
       >
@@ -61,7 +71,7 @@ export default function Modal({
         <div className="flex items-start justify-between pb-4 border-b border-brand-border">
           <div>
             {title && (
-              <h3 className="text-lg font-display font-bold text-brand-text">
+              <h3 id={titleId} className="text-lg font-display font-bold text-brand-text">
                 {title}
               </h3>
             )}
@@ -70,6 +80,7 @@ export default function Modal({
             )}
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="Close modal"
@@ -84,7 +95,7 @@ export default function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="pt-4 border-t border-brand-border flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-brand-border flex flex-wrap items-center justify-end gap-3">
             {footer}
           </div>
         )}

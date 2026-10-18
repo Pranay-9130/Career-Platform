@@ -5,6 +5,7 @@ from app.models.base import BaseUUIDModel
 
 class UserRole(str, enum.Enum):
     STUDENT = "STUDENT"
+    CONTRIBUTOR = "CONTRIBUTOR"
     ADMIN = "ADMIN"
 
 class User(BaseUUIDModel):

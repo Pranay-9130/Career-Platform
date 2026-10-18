@@ -116,6 +116,35 @@ async def test_register_student_success(client):
 
 
 @pytest.mark.asyncio
+async def test_register_job_seeker_preserves_contributor_role(client, db_session):
+    """Job Seeker registration creates a contributor account end to end."""
+    payload = {
+        "email": "jobseeker@example.com",
+        "password": "StrongPassword123!",
+        "full_name": "Taylor Morgan",
+        "role": "CONTRIBUTOR",
+        "headline": "Software Developer",
+    }
+
+    response = await client.post("/api/auth/register", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["user"]["role"] == "CONTRIBUTOR"
+
+    stored_user = (
+        await db_session.execute(select(User).where(User.email == payload["email"]))
+    ).scalar_one()
+    assert stored_user.role == UserRole.CONTRIBUTOR
+
+    workspace_access = await client.get(
+        "/api/auth/student-only",
+        headers={"Authorization": f"Bearer {data['access_token']}"},
+    )
+    assert workspace_access.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_register_duplicate_email_rejected(client):
     """Registering with an already existing email returns HTTP 409 Conflict."""
     payload = {

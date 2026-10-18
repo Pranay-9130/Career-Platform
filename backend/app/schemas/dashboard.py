@@ -47,6 +47,26 @@ class DashboardRecentApplication(BaseModel):
     work_mode: Optional[str] = "Remote"
     salary_or_stipend: Optional[str] = None
 
+class ReadinessCriterionItem(BaseModel):
+    id: str
+    name: str
+    weight: int
+    score: int
+    percentage: int
+    status: str  # 'completed' | 'in_progress' | 'not_started'
+    improvement: str
+    link: str
+
+class ReadinessDetails(BaseModel):
+    score: int
+    stage: str
+    stage_number: int
+    stage_description: str
+    next_milestone: str
+    recommended_action_link: str
+    recommended_action_label: str
+    criteria: List[ReadinessCriterionItem] = []
+
 class DashboardSummaryResponse(BaseModel):
     user: UserRead
     stats: DashboardStats
@@ -55,6 +75,7 @@ class DashboardSummaryResponse(BaseModel):
     recent_applications: List[DashboardRecentApplication] = []
     has_resume: bool = False
     latest_resume_title: Optional[str] = None
-    readiness_score: int = 55
-    readiness_stage: str = "Stage 2: Skill Builder"
-    next_milestone: str = "Showcase your first practical project to reach Stage 3: Verified Creator"
+    readiness_score: int = 0
+    readiness_stage: str = "Stage 1: Profile Setup"
+    next_milestone: str = "Complete your profile details to unlock career readiness progress."
+    readiness_details: Optional[ReadinessDetails] = None

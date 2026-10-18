@@ -162,11 +162,18 @@ export default function MyProjectsPage() {
           </p>
         </div>
 
-        <Link to="/submission-guidelines">
-          <Button variant="primary" size="md" leftIcon={Plus} className="shadow-xs shrink-0">
-            New Submission
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link to="/submission-guidelines">
+            <Button variant="outline" size="md" className="shadow-xs">
+              Guidelines
+            </Button>
+          </Link>
+          <Link to="/projects/submit">
+            <Button variant="primary" size="md" leftIcon={Plus} className="shadow-xs">
+              + Submit Project
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stat Cards Row */}
@@ -291,11 +298,18 @@ export default function MyProjectsPage() {
                 : 'Submit a project with architecture specs and code to get noticed by recruiters.'}
             </p>
           </div>
-          <Link to="/submission-guidelines">
-            <Button variant="primary" size="md" leftIcon={Plus}>
-              Start New Submission
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link to="/submission-guidelines">
+              <Button variant="outline" size="md">
+                Submission Guidelines
+              </Button>
+            </Link>
+            <Link to="/projects/submit">
+              <Button variant="primary" size="md" leftIcon={Plus}>
+                + Submit Project
+              </Button>
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
