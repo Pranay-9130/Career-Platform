@@ -485,6 +485,13 @@ export default function ProjectDetailPage() {
     activeScreenshot?.image_url && !failedImages.has(activeScreenshot.image_url)
   );
 
+  const hasValidZip = Boolean(
+    project?.zip_storage_key ||
+    (project?.zip_download_url &&
+      (project.zip_download_url.includes('/download') ||
+        project.zip_download_url.endsWith('.zip')))
+  );
+
   const difficultyVariant =
     project?.difficulty === 'Beginner' ? 'approved' : project?.difficulty === 'Intermediate' ? 'published' : 'changesRequested';
 
@@ -578,45 +585,49 @@ export default function ProjectDetailPage() {
             {/* Top Action CTAs */}
             <div className="flex flex-row lg:flex-col gap-2.5 shrink-0">
               {/* Star Button with Gold Accent */}
-              <Button
-                variant="outline"
+              <button
+                type="button"
                 onClick={handleStarToggle}
                 disabled={isStarUpdating}
-                className={`flex-1 lg:flex-initial justify-center transition-all ${
+                className={`flex-1 lg:flex-initial inline-flex items-center justify-center font-semibold text-sm px-4 py-2.5 rounded-xl border transition-all duration-150 shadow-xs active:scale-[0.98] ${
                   project.is_starred
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500 shadow-sm shadow-amber-500/25'
-                    : 'border-slate-200 text-slate-700 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50/50'
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 shadow-amber-500/25 ring-2 ring-amber-400/30'
+                    : 'bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-800 border-slate-300 hover:border-amber-400'
                 }`}
               >
                 <Star
-                  className={`w-4 h-4 mr-2 ${
-                    project.is_starred ? 'fill-white text-white' : 'text-amber-500'
+                  className={`w-4 h-4 mr-2 shrink-0 ${
+                    project.is_starred ? 'fill-white text-white' : 'text-amber-500 fill-amber-400/30'
                   }`}
                 />
-                {isStarUpdating ? 'Updating...' : project.is_starred ? 'Starred' : 'Star this Project'}
-              </Button>
+                <span className={project.is_starred ? 'text-white' : 'text-slate-800'}>
+                  {isStarUpdating ? 'Updating...' : project.is_starred ? 'Starred' : 'Star this Project'}
+                </span>
+              </button>
 
               {/* Bookmark Button with Blue Accent */}
-              <Button
-                variant="outline"
+              <button
+                type="button"
                 onClick={handleBookmarkToggle}
-                className={`flex-1 lg:flex-initial justify-center transition-all ${
+                className={`flex-1 lg:flex-initial inline-flex items-center justify-center font-semibold text-sm px-4 py-2.5 rounded-xl border transition-all duration-150 shadow-xs active:scale-[0.98] ${
                   project.is_bookmarked
-                    ? 'bg-brand-primary hover:bg-brand-primary/90 text-white border-brand-primary shadow-sm shadow-brand-primary/25'
-                    : 'border-slate-200 text-slate-700 hover:border-brand-primary/40 hover:text-brand-primary hover:bg-blue-50/40'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700 shadow-blue-500/25 ring-2 ring-blue-400/30'
+                    : 'bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-800 border-slate-300 hover:border-blue-400'
                 }`}
               >
                 <Bookmark
-                  className={`w-4 h-4 mr-2 ${
-                    project.is_bookmarked ? 'fill-white text-white' : 'text-brand-primary'
+                  className={`w-4 h-4 mr-2 shrink-0 ${
+                    project.is_bookmarked ? 'fill-white text-white' : 'text-blue-600 fill-blue-500/20'
                   }`}
                 />
-                {project.is_bookmarked ? 'Saved to Bookmarks' : 'Bookmark Project'}
-              </Button>
+                <span className={project.is_bookmarked ? 'text-white' : 'text-slate-800'}>
+                  {project.is_bookmarked ? 'Saved to Bookmarks' : 'Bookmark Project'}
+                </span>
+              </button>
 
               {/* Resource & Link Buttons */}
               <div className="flex flex-wrap items-center gap-2">
-                {project.zip_download_url && (
+                {hasValidZip && (
                   <a
                     href={project.zip_download_url}
                     download
@@ -1167,7 +1178,7 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
 
-              {project.zip_download_url ? (
+              {hasValidZip ? (
                 <a
                   href={project.zip_download_url}
                   download
