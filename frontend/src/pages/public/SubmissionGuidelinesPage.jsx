@@ -43,6 +43,11 @@ const FAQS = [
       'Once submitted, your project enters the moderation queue. Platform reviewers verify the code structure, check that setup instructions work, and inspect UI presentation. If approved, your project becomes public with author attribution. If adjustments are needed, you receive actionable feedback.',
   },
   {
+    question: 'Is a live demo URL required to submit my project?',
+    answer:
+      'No. A live production demo link is completely optional. However, you must provide at least one source code option: either a public GitHub repository URL OR an uploaded ZIP archive of your source code so reviewers can inspect your implementation.',
+  },
+  {
     question: 'Who owns the intellectual property of my submitted code?',
     answer:
       'You retain 100% intellectual property ownership of your code. By submitting, you grant the platform a license to showcase and index your project for prospective employers, student portfolios, and community learning.',

@@ -23,6 +23,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { projectService } from '@/services/projectService';
 import { Button, Input, Badge, Card, Modal, Spinner } from '@/components/common';
+import { resolveMediaUrl } from '@/utils/media';
 
 export default function MyProjectsPage() {
   const { user } = useAuth();
@@ -323,7 +324,7 @@ export default function MyProjectsPage() {
                 <div className="relative h-40 bg-slate-100 overflow-hidden">
                   {project.cover_image_url ? (
                     <img
-                      src={project.cover_image_url}
+                      src={resolveMediaUrl(project.cover_image_url)}
                       alt={project.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       onError={(e) => {

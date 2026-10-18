@@ -113,22 +113,22 @@ export default function LoginPage() {
 
       <div className="max-w-md w-full space-y-6">
         {/* Brand Header */}
-        <div className="text-center">
-          <Link to="/" className="inline-block mb-3">
+        <div className="flex flex-col items-center text-center">
+          <Link to="/" className="inline-block mb-3 transition-transform hover:scale-105">
             <img
               src="/logo.png"
               alt="AspirePath"
-              className="h-10 w-auto mx-auto object-contain transition-transform hover:scale-105"
+              className="h-11 w-auto object-contain mx-auto"
             />
           </Link>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold mb-3 shadow-sm">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold mb-4 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
             <span>Welcome to AspirePath</span>
           </div>
           <h1 className="text-3xl font-display font-bold text-brand-text tracking-tight">
             Sign in to your account
           </h1>
-          <p className="mt-2 text-sm text-brand-muted">
+          <p className="mt-2 text-sm text-brand-muted max-w-sm">
             Access your projects, resume builder, and job application tracker.
           </p>
         </div>

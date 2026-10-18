@@ -30,6 +30,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { projectService } from '@/services/projectService';
 import { Button, Input, Textarea, Select, Badge, Card, Alert, Modal, Spinner } from '@/components/common';
+import { resolveMediaUrl } from '@/utils/media';
 
 const STORAGE_KEY = 'student_project_draft';
 
@@ -500,12 +501,20 @@ export default function ProjectSubmissionPage() {
     return Boolean(formData.cover_image_url && formData.cover_image_url.trim().length > 0);
   }, [formData.cover_image_url]);
 
+  const isStep5Valid = useMemo(() => {
+    return Boolean(
+      (formData.github_url && formData.github_url.trim().length > 0) ||
+      (formData.zip_storage_key && formData.zip_storage_key.trim().length > 0)
+    );
+  }, [formData.github_url, formData.zip_storage_key]);
+
   const canAdvance = () => {
     if (currentStep === 1) return isStep1Valid;
     if (currentStep === 2) return isStep2Valid;
     if (currentStep === 3) return isStep3Valid;
     if (currentStep === 4) return isStep4Valid;
-    return true; // Step 5 has sensible defaults
+    if (currentStep === 5) return isStep5Valid;
+    return true;
   };
 
   // Final submission handlers
@@ -542,8 +551,14 @@ export default function ProjectSubmissionPage() {
   };
 
   const handleSubmitFinal = async () => {
-    if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid) {
-      alert('Please provide a mandatory project cover image and complete all required fields across the steps before submitting.');
+    if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid || !isStep5Valid) {
+      if (!isStep4Valid) {
+        alert('Please provide a mandatory project cover banner image before submitting.');
+      } else if (!isStep5Valid) {
+        alert('Please provide either a GitHub Repository URL OR upload a ZIP source code archive. At least one source code option is mandatory (live demo links are optional).');
+      } else {
+        alert('Please complete all required fields across the steps before submitting.');
+      }
       return;
     }
 
@@ -576,8 +591,8 @@ export default function ProjectSubmissionPage() {
     { number: 1, title: 'Basic Info', icon: FileText, valid: isStep1Valid },
     { number: 2, title: 'Problem & Features', icon: Layers, valid: isStep2Valid },
     { number: 3, title: 'Tech Stack', icon: Code2, valid: isStep3Valid },
-    { number: 4, title: 'Visuals & Media', icon: ImageIcon, valid: true },
-    { number: 5, title: 'Repository & Links', icon: LinkIcon, valid: true },
+    { number: 4, title: 'Visuals & Media', icon: ImageIcon, valid: isStep4Valid },
+    { number: 5, title: 'Repository & Links', icon: LinkIcon, valid: isStep5Valid },
     { number: 6, title: 'Contributors & Review', icon: Users, valid: true },
   ];
 
@@ -1158,7 +1173,7 @@ export default function ProjectSubmissionPage() {
                   {formData.cover_image_url && (
                     <div className="mt-3 relative rounded-2xl overflow-hidden border border-brand-border h-48 bg-slate-100 flex items-center justify-center shadow-xs">
                       <img
-                        src={formData.cover_image_url}
+                        src={resolveMediaUrl(formData.cover_image_url)}
                         alt="Cover Preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -1285,7 +1300,7 @@ export default function ProjectSubmissionPage() {
                         >
                           <div className="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                             <img
-                              src={s.image_url}
+                              src={resolveMediaUrl(s.image_url)}
                               alt={s.caption}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -1333,16 +1348,52 @@ export default function ProjectSubmissionPage() {
                   Step 5: Code Repository, Demos & ZIP Source
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Connect your GitHub repo, deployment URL, or attach an encrypted source ZIP package.
+                  Connect your GitHub repo or attach an encrypted source ZIP package (at least one is required). Live demo and video links are optional.
                 </p>
+              </div>
+
+              {/* Requirement Alert Banner */}
+              <div
+                className={`p-4 rounded-2xl border text-xs flex items-start gap-3 transition-colors ${
+                  isStep5Valid
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
+                    : 'bg-amber-50/80 border-amber-200 text-amber-900'
+                }`}
+              >
+                {isStep5Valid ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <strong className="block font-semibold">
+                    {isStep5Valid
+                      ? 'Source Code Requirement Met'
+                      : 'Source Code is Mandatory (GitHub Repo OR Uploaded ZIP)'}
+                  </strong>
+                  <p className="mt-0.5 text-[11px] leading-relaxed opacity-90">
+                    To maintain reviewer credibility, you must provide <strong>either a public GitHub Repository URL OR upload a ZIP source archive</strong> (at least one is required). The live production demo link is <strong>optional</strong>.
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <Github className="w-3.5 h-3.5" />
-                    <span>GitHub Repository URL</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Github className="w-3.5 h-3.5" />
+                      <span>GitHub Repository URL</span>
+                    </label>
+                    {formData.github_url?.trim() ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Repo Linked
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">
+                        {formData.zip_storage_key ? '(Optional — ZIP archive attached)' : '* Required if no ZIP uploaded'}
+                      </span>
+                    )}
+                  </div>
                   <Input
                     placeholder="https://github.com/username/project-repo"
                     value={formData.github_url}
@@ -1352,10 +1403,13 @@ export default function ProjectSubmissionPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5" />
-                      <span>Live Production Demo URL</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5" />
+                        <span>Live Production Demo URL</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-medium">(Optional)</span>
+                    </div>
                     <Input
                       placeholder="https://my-app.vercel.app"
                       value={formData.live_demo_url}
@@ -1364,10 +1418,13 @@ export default function ProjectSubmissionPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                      <Video className="w-3.5 h-3.5" />
-                      <span>Walkthrough / Loom Video URL</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Walkthrough / Loom Video URL</span>
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-medium">(Optional)</span>
+                    </div>
                     <Input
                       placeholder="https://youtu.be/... or Loom link"
                       value={formData.video_demo_url}
@@ -1383,7 +1440,18 @@ export default function ProjectSubmissionPage() {
                       <UploadCloud className="w-3.5 h-3.5 text-brand-primary" />
                       <span>Project Source Archive (ZIP)</span>
                     </label>
-                    <span className="text-[11px] text-slate-400 font-mono">Max 50 MB</span>
+                    <div className="flex items-center gap-2">
+                      {formData.zip_storage_key ? (
+                        <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" /> ZIP Attached
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">
+                          {formData.github_url?.trim() ? '(Optional — GitHub linked)' : '* Required if no GitHub URL'}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-slate-400 font-mono">Max 50 MB</span>
+                    </div>
                   </div>
 
                   {zipUploadError && (
@@ -1773,7 +1841,7 @@ export default function ProjectSubmissionPage() {
                 {formData.cover_image_url ? (
                   <div className="h-56 sm:h-72 w-full relative">
                     <img
-                      src={formData.cover_image_url}
+                      src={resolveMediaUrl(formData.cover_image_url)}
                       alt={formData.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -1948,7 +2016,7 @@ export default function ProjectSubmissionPage() {
                       >
                         <div className="h-44 bg-slate-200 overflow-hidden">
                           <img
-                            src={s.image_url}
+                            src={resolveMediaUrl(s.image_url)}
                             alt={s.caption}
                             className="w-full h-full object-cover"
                             onError={(e) => {

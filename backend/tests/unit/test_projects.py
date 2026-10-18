@@ -595,4 +595,54 @@ async def test_delete_project_by_owner_and_forbidden_by_others(client, db_sessio
     assert p3.slug not in [p["slug"] for p in my_subs.json()]
 
 
+@pytest.mark.asyncio
+async def test_create_project_requires_github_or_zip_when_submitted(client, db_session):
+    """Submitting a project requires either a GitHub repo URL or ZIP source key, while live demo is optional."""
+    student, _, _, _ = await seed_test_data(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "DevPassword123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+
+    base_payload = {
+        "title": "Mandatory Code Test Project",
+        "domain": "Web Development",
+        "short_description": "Validating that either GitHub or ZIP is mandatory on submission.",
+        "difficulty": "Beginner",
+        "estimated_duration": "1-2 weeks",
+        "tech_stack": ["React", "FastAPI"],
+        "cover_image_url": "https://images.unsplash.com/photo-test",
+        "problem_statement": "Ensuring source code is present for student projects.",
+        "features": ["Source code enforcement"],
+        "status": "Submitted",
+        # No github_url and no zip_storage_key:
+        "live_demo_url": "https://optional-demo.vercel.app",
+    }
+
+    # 1. Neither GitHub nor ZIP -> Rejected with 400
+    fail_resp = await client.post("/api/projects", json=base_payload, headers=headers)
+    assert fail_resp.status_code == 400
+    assert "source code repository" in fail_resp.json()["detail"].lower()
+
+    # 2. Provide GitHub URL only (live_demo_url omitted) -> Accepted with 201
+    github_payload = dict(base_payload)
+    github_payload["title"] = "GitHub Source Project"
+    github_payload["github_url"] = "https://github.com/student/my-project"
+    github_payload.pop("live_demo_url", None)
+    ok_resp = await client.post("/api/projects", json=github_payload, headers=headers)
+    assert ok_resp.status_code == 201
+    assert ok_resp.json()["github_url"] == "https://github.com/student/my-project"
+    assert ok_resp.json()["live_demo_url"] is None
+
+    # 3. Provide ZIP key only (github_url omitted) -> Accepted with 201
+    zip_payload = dict(base_payload)
+    zip_payload["title"] = "ZIP Archive Project"
+    zip_payload["zip_storage_key"] = "test-archive-key.zip"
+    zip_payload.pop("live_demo_url", None)
+    ok_zip_resp = await client.post("/api/projects", json=zip_payload, headers=headers)
+    assert ok_zip_resp.status_code == 201
+
+
+
 

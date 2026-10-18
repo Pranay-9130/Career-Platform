@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Bookmark, Clock, ArrowRight, Star, Code2, Eye } from 'lucide-react';
 import { Card, Badge, Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
+import { resolveMediaUrl } from '@/utils/media';
 
 export default function ProjectCard({
   id = '1',
@@ -36,7 +37,7 @@ export default function ProjectCard({
   const author = authorName || author_name || 'Contributor';
   const avatar = authorAvatar || author_avatar || author.slice(0, 2).toUpperCase();
   const dur = duration || estimated_duration || '2-3 weeks';
-  const img = coverImage || cover_image_url;
+  const img = resolveMediaUrl(coverImage || cover_image_url);
   const initialSaved = isSaved !== undefined ? isSaved : is_bookmarked;
   const starCount = stars !== undefined ? stars : stars_count;
 

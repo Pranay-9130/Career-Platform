@@ -42,6 +42,7 @@ import { projectService } from '@/services/projectService';
 import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getProjectCreativeWorkSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
+import { resolveMediaUrl } from '@/utils/media';
 
 /**
  * Premium generative canvas rendered when screenshots fail to load or are not provided.
@@ -259,10 +260,13 @@ export default function ProjectDetailPage() {
   // Aggregate screenshots list (declared at top level to satisfy React Rules of Hooks)
   const screenshots = useMemo(() => {
     if (Array.isArray(project?.screenshots) && project.screenshots.length > 0) {
-      return project.screenshots;
+      return project.screenshots.map((s) => ({
+        ...s,
+        image_url: resolveMediaUrl(s.image_url),
+      }));
     }
     if (project?.cover_image_url) {
-      return [{ image_url: project.cover_image_url, caption: project.title }];
+      return [{ image_url: resolveMediaUrl(project.cover_image_url), caption: project.title }];
     }
     return [];
   }, [project?.screenshots, project?.cover_image_url, project?.title]);
@@ -502,7 +506,7 @@ export default function ProjectDetailPage() {
         description={project.short_description || `Explore ${project.title} on Student Career Platform.`}
         canonical={`/projects/${project.slug}`}
         ogType="article"
-        ogImage={project.screenshots?.[0]?.image_url || project.cover_image_url || undefined}
+        ogImage={resolveMediaUrl(project.screenshots?.[0]?.image_url || project.cover_image_url) || undefined}
         schema={[
           getProjectCreativeWorkSchema(project),
           getBreadcrumbListSchema([

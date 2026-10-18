@@ -915,11 +915,21 @@ async def create_project(
         payload.cover_image_url
         or (payload.screenshots[0].image_url if payload.screenshots else None)
     )
-    if payload.status == "Submitted" and (not effective_cover or not str(effective_cover).strip()):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A cover image is mandatory when submitting a project for review.",
+    if payload.status == "Submitted":
+        if not effective_cover or not str(effective_cover).strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A cover image is mandatory when submitting a project for review.",
+            )
+        has_code = bool(
+            (payload.github_url and str(payload.github_url).strip())
+            or (payload.zip_storage_key and str(payload.zip_storage_key).strip())
         )
+        if not has_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one source code repository (GitHub URL or uploaded ZIP source archive) is mandatory.",
+            )
 
     screenshots_json = [s.model_dump() for s in payload.screenshots]
     contributors_json = [c.model_dump() for c in payload.contributors]
@@ -1035,6 +1045,17 @@ async def update_project(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="A cover image is mandatory when submitting a project for review.",
+            )
+        target_github = payload.github_url if payload.github_url is not None else project.github_url
+        target_zip = payload.zip_storage_key if payload.zip_storage_key is not None else project.zip_storage_key
+        has_code = bool(
+            (target_github and str(target_github).strip())
+            or (target_zip and str(target_zip).strip())
+        )
+        if not has_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one source code repository (GitHub URL or uploaded ZIP source archive) is mandatory.",
             )
 
     update_dict = payload.model_dump(exclude_unset=True)

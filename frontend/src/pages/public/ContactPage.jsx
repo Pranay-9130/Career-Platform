@@ -106,7 +106,7 @@ export default function ContactPage() {
     },
     {
       q: 'Do I need prior GitHub or cloud deployment experience to submit a project?',
-      a: 'No. You only need to upload your project files as a ZIP archive along with application screenshots. GitHub and live demo URLs are completely optional.',
+      a: 'No. You can either provide a public GitHub repository link or upload your project code directly as a ZIP archive. Live demo links are completely optional.',
     },
     {
       q: 'How does the ATS Resume Analyzer evaluate my resume?',
