@@ -125,6 +125,23 @@ export const adminService = {
   },
 
   /**
+   * 1-Click direct template upload & publication:
+   * Uploads file, automatically creates, and publishes template to candidate portal.
+   */
+  async directUploadTemplate(file, extraData = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (extraData.title) formData.append('title', extraData.title);
+    if (extraData.badge) formData.append('badge', extraData.badge);
+    if (extraData.description) formData.append('description', extraData.description);
+
+    const response = await api.post('/admin/templates/direct-upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /**
    * Delete or remove a custom template from the catalog.
    */
   async deleteTemplate(templateId) {

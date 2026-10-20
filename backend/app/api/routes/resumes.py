@@ -73,17 +73,49 @@ AVAILABLE_TEMPLATES = [
 
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
-async def list_templates():
+async def list_templates(db: AsyncSession = Depends(get_db)):
     """
     Public catalogue of ATS resume templates.
     """
+    try:
+        from pathlib import Path
+        import json
+        from app.models.stored_archive import StoredArchive
+
+        # Check disk catalog
+        catalog_path = Path("uploads/templates/catalog.json")
+        if catalog_path.exists():
+            disk_data = json.loads(catalog_path.read_text(encoding="utf-8"))
+            if isinstance(disk_data, list) and disk_data:
+                existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
+                for item in disk_data:
+                    if item.get("id") not in existing_ids:
+                        AVAILABLE_TEMPLATES.insert(0, item)
+        else:
+            # Check DB archive
+            stmt = select(StoredArchive).where(StoredArchive.storage_key == "system/templates_catalog.json")
+            archive = (await db.execute(stmt)).scalar_one_or_none()
+            if archive and archive.content:
+                db_data = json.loads(archive.content.decode("utf-8"))
+                if isinstance(db_data, list) and db_data:
+                    existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
+                    for item in db_data:
+                        if item.get("id") not in existing_ids:
+                            AVAILABLE_TEMPLATES.insert(0, item)
+    except Exception:
+        pass
+
     return [t for t in AVAILABLE_TEMPLATES if t.get("is_active", True)]
 
 
 @router.get("/templates/file/{storage_key:path}")
-async def serve_template_file(storage_key: str, db: AsyncSession = Depends(get_db)):
+async def serve_template_file(
+    storage_key: str,
+    download: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Public direct download endpoint for uploaded resume templates.
+    Public direct download and preview endpoint for uploaded resume templates.
     """
     from pathlib import Path
     from app.models.stored_archive import StoredArchive
@@ -127,11 +159,14 @@ async def serve_template_file(storage_key: str, db: AsyncSession = Depends(get_d
     }
     media_type = media_types.get(ext, "application/octet-stream")
 
+    is_previewable = ext in {".pdf", ".png", ".jpg", ".jpeg"}
+    disposition = "attachment" if download == "1" or not is_previewable else "inline"
+
     return Response(
         content=content,
         media_type=media_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{clean_filename}"',
+            "Content-Disposition": f'{disposition}; filename="{clean_filename}"',
             "Cache-Control": "public, max-age=3600",
         },
     )

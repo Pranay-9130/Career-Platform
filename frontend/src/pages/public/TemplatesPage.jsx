@@ -53,14 +53,18 @@ export default function TemplatesPage() {
 
   const handleDownloadTemplate = async (template) => {
     if (template.download_url && template.download_url.trim()) {
+      let downloadLink = template.download_url;
+      if (downloadLink.startsWith('/api/')) {
+        downloadLink = `${downloadLink}${downloadLink.includes('?') ? '&' : '?'}download=1`;
+      }
       const url =
-        template.download_url.startsWith('http') || template.download_url.startsWith('data:')
-          ? template.download_url
-          : `${import.meta.env.VITE_API_URL || ''}${template.download_url}`;
+        downloadLink.startsWith('http') || downloadLink.startsWith('data:')
+          ? downloadLink
+          : `${import.meta.env.VITE_API_URL || ''}${downloadLink}`;
 
       const link = document.createElement('a');
       link.href = url;
-      link.download = template.name || 'resume-template';
+      link.download = template.uploaded_file_name || `${template.name || 'resume-template'}.pdf`;
       link.target = '_blank';
       document.body.appendChild(link);
       link.click();
@@ -419,12 +423,18 @@ export default function TemplatesPage() {
               </div>
 
               {/* Modal Body: Full Canvas Display */}
-              <div className="p-6 sm:p-8 bg-[#1e232a] flex justify-center max-h-[70vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 bg-[#1e232a] flex justify-center max-h-[75vh] overflow-y-auto">
                 {previewTemplate.preview_image_url ? (
                   <img
                     src={previewTemplate.preview_image_url}
                     alt={previewTemplate.name}
                     className="max-w-2xl w-full rounded shadow-xl object-contain bg-white"
+                  />
+                ) : previewTemplate.download_url && (previewTemplate.download_url.toLowerCase().includes('.pdf') || previewTemplate.uploaded_file_name?.toLowerCase().endsWith('.pdf')) ? (
+                  <iframe
+                    src={previewTemplate.download_url.startsWith('http') ? previewTemplate.download_url : `${import.meta.env.VITE_API_URL || ''}${previewTemplate.download_url}`}
+                    title={previewTemplate.name}
+                    className="w-full max-w-3xl h-[68vh] rounded-2xl bg-white shadow-2xl border-0"
                   />
                 ) : (
                   <div className="w-full max-w-2xl bg-white p-8 sm:p-10 rounded shadow-2xl text-slate-800 text-xs space-y-4">

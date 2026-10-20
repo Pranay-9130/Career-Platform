@@ -477,6 +477,45 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const [directUploading, setDirectUploading] = useState(false);
+
+  const handleDirectFilesUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    try {
+      setDirectUploading(true);
+      const uploadedTemplates = [];
+      for (const file of files) {
+        if (file.size > 25 * 1024 * 1024) {
+          alert(`File ${file.name} is too large (>25MB).`);
+          continue;
+        }
+        const created = await adminService.directUploadTemplate(file);
+        uploadedTemplates.push(created);
+      }
+      if (uploadedTemplates.length > 0) {
+        setTemplatesList((prev) => [
+          ...uploadedTemplates,
+          ...prev.filter((t) => !uploadedTemplates.some((u) => u.id === t.id)),
+        ]);
+        setTemplateActionFeedback({
+          type: 'success',
+          text: `Success! ${uploadedTemplates.length} template(s) uploaded and immediately published to student portal!`,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to directly upload template:', err);
+      setTemplateActionFeedback({
+        type: 'error',
+        text: err.response?.data?.detail || 'Failed to upload template file. Please try again.',
+      });
+    } finally {
+      setDirectUploading(false);
+      e.target.value = '';
+    }
+  };
+
   const handleTemplateFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -493,21 +532,26 @@ export default function AdminDashboardPage() {
 
       const cleanFileName = file.name
         .replace(/\.[^/.]+$/, '')
-        .replace(/[-_]+/g, ' ')
+        .replace(/[-_.]+/g, ' ')
         .trim();
-      const suggestedName = cleanFileName.charAt(0).toUpperCase() + cleanFileName.slice(1);
+      const suggestedName = cleanFileName
+        .split(' ')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
       const suggestedId = file.name
         .replace(/\.[^/.]+$/, '')
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-');
+      const ext = file.name.split('.').pop().toUpperCase();
 
       setTemplateFormData((prev) => ({
         ...prev,
         download_url: downloadUrl,
         uploaded_file_name: file.name,
-        name: prev.name.trim() ? prev.name : suggestedName,
-        id: prev.id.trim() ? prev.id : suggestedId,
-        description: prev.description.trim() ? prev.description : `Ready-to-use ${file.name.split('.').pop().toUpperCase()} resume template format`,
+        name: suggestedName || 'Resume Template',
+        id: suggestedId || 'custom-template',
+        badge: prev.badge?.trim() ? prev.badge : 'ATS-Friendly',
+        description: `Ready-to-use ${ext} resume template format ready for student download and customisation.`,
       }));
     } catch (err) {
       console.error('Failed to upload template file to backend:', err);
@@ -518,6 +562,8 @@ export default function AdminDashboardPage() {
           ...prev,
           download_url: event.target.result,
           uploaded_file_name: file.name,
+          name: prev.name.trim() ? prev.name : file.name.replace(/\.[^/.]+$/, ''),
+          description: prev.description.trim() ? prev.description : 'Ready-to-use professional resume template format.',
         }));
       };
       reader.readAsDataURL(file);
@@ -544,30 +590,43 @@ export default function AdminDashboardPage() {
   };
 
   const handleSaveTemplate = async (e) => {
-    e.preventDefault();
-    if (!templateFormData.name.trim() || !templateFormData.description.trim()) {
-      setTemplateActionFeedback({ type: 'error', text: 'Template Name and Description are required.' });
-      return;
-    }
+    if (e && e.preventDefault) e.preventDefault();
+
+    // Auto-resolve title and description if empty so user is never blocked
+    const resolvedName = templateFormData.name.trim() ||
+      (templateFormData.uploaded_file_name
+        ? templateFormData.uploaded_file_name.replace(/\.[^/.]+$/, '').replace(/[-_.]+/g, ' ').trim()
+        : 'Resume Template');
+
+    const resolvedBadge = templateFormData.badge.trim() || 'Professional';
+    const resolvedDesc = templateFormData.description.trim() ||
+      (templateFormData.uploaded_file_name
+        ? `Ready-to-use ${templateFormData.uploaded_file_name.split('.').pop().toUpperCase()} resume template format.`
+        : 'Ready-to-use professional resume template format.');
 
     try {
       setTemplateFormSubmitting(true);
       const generatedId = templateFormData.id.trim()
         ? templateFormData.id.trim().toLowerCase().replace(/\s+/g, '-')
-        : templateFormData.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        : resolvedName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
       const payload = {
         ...templateFormData,
-        id: generatedId,
-        badge: templateFormData.badge.trim() || 'Professional',
+        name: resolvedName,
+        badge: resolvedBadge,
+        description: resolvedDesc,
+        id: generatedId || 'custom-template',
       };
 
       if (editingTemplate) {
         await adminService.updateTemplate(editingTemplate.id, payload);
         setTemplateActionFeedback({ type: 'success', text: 'Template updated successfully!' });
       } else {
-        await adminService.createTemplate(payload);
-        setTemplateActionFeedback({ type: 'success', text: 'Template registered and published!' });
+        const created = await adminService.createTemplate(payload);
+        setTemplateActionFeedback({ type: 'success', text: 'Template registered and published to Student Portal!' });
+        if (created) {
+          setTemplatesList((prev) => [created, ...prev.filter((t) => t.id !== created.id)]);
+        }
       }
 
       fetchTemplates();
@@ -580,7 +639,7 @@ export default function AdminDashboardPage() {
       console.error('Template save failed:', err);
       setTemplateActionFeedback({
         type: 'error',
-        text: err?.response?.data?.detail || 'Failed to save template. Please check the fields.',
+        text: err.response?.data?.detail || 'Failed to save template. Please check inputs and try again.',
       });
     } finally {
       setTemplateFormSubmitting(false);
@@ -1342,26 +1401,47 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Quick Guide Card */}
-          <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/50 p-5 rounded-2xl border border-brand-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-brand-primary" />
-                How to Add a Template with Clear Description
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed max-w-3xl">
-                When adding a template, provide a recognizable <strong>Template Title</strong> (e.g. <em>Template 1</em>), 
-                a <strong>Category Badge</strong> (e.g. <em>Professional</em>), and a <strong>Short Description</strong> 
-                (e.g. <em>Ready-to-use professional resume format</em>). You can upload a preview image or let the platform auto-generate a document preview.
+          {/* 1-Click Direct Template Upload Hero */}
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-brand-primary p-6 rounded-3xl text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-5 border border-blue-400/30">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold text-white border border-white/20">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>1-Click Instant Upload & Publish</span>
+              </div>
+              <h3 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                Upload Resume Templates
+              </h3>
+              <p className="text-xs text-blue-100 leading-relaxed">
+                Directly upload resume template files (.pdf, .docx, .doc, image). They will <strong>automatically publish to the student portal</strong> with real document preview and direct candidate download — <em>no manual form entry required!</em>
               </p>
             </div>
-            <button
-              type="button"
-              onClick={handleOpenCreateTemplate}
-              className="shrink-0 px-4 py-2 bg-white text-brand-primary font-bold text-xs rounded-xl border border-brand-border shadow-xs hover:bg-brand-veryLight transition"
-            >
-              + Create Template
-            </button>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <label className={`cursor-pointer px-5 py-3 rounded-2xl font-bold text-xs shadow-md transition-all inline-flex items-center gap-2 ${
+                directUploading
+                  ? 'bg-blue-200 text-blue-800 cursor-not-allowed'
+                  : 'bg-white text-brand-primary hover:bg-blue-50 hover:scale-[1.02] active:scale-[0.98]'
+              }`}>
+                <Upload className={`w-4 h-4 ${directUploading ? 'animate-spin' : ''}`} />
+                <span>{directUploading ? 'Uploading & Publishing...' : 'Upload Template File (.pdf, .docx)'}</span>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.doc,.zip,.tex,.odt,.rtf,.txt,.png,.jpg,.jpeg"
+                  multiple
+                  disabled={directUploading}
+                  onChange={handleDirectFilesUpload}
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={handleOpenCreateTemplate}
+                className="px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition"
+              >
+                + Manual Form
+              </button>
+            </div>
           </div>
 
           {/* Search & Filter Toolbar */}
@@ -2091,40 +2171,133 @@ export default function AdminDashboardPage() {
 
             {/* Two-Column Form & Live Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Left Column: Form Fields with Clear Descriptions */}
+              {/* Left Column: Form Fields */}
               <form onSubmit={handleSaveTemplate} className="lg:col-span-7 space-y-4 text-xs">
-                {/* 1. Template Title */}
+                {/* 1. Resume Template File (Direct Upload) - FIRST SECTION */}
+                <div className="bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-white p-4 rounded-2xl border-2 border-dashed border-brand-primary/40 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                      <Upload className="w-4 h-4 text-brand-primary" />
+                      <span>1. Resume Template File (Upload to Publish)</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-full border border-brand-primary/20">
+                      Primary Action
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-600 block leading-relaxed">
+                    Select any template file you have (.pdf, .docx, .doc, image). The system will <strong>automatically extract the title, format, and prepare the live preview</strong> so you can publish it in 1 click!
+                  </span>
+
+                  {/* Upload action area */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <label className={`cursor-pointer px-4 py-2.5 rounded-xl font-bold text-xs transition inline-flex items-center gap-2 shadow-sm ${
+                      templateFileUploading
+                        ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                        : 'bg-brand-primary hover:bg-blue-600 text-white'
+                    }`}>
+                      <Upload className={`w-4 h-4 ${templateFileUploading ? 'animate-spin' : ''}`} />
+                      <span>{templateFileUploading ? 'Uploading Template...' : 'Choose Template File (.pdf, .docx, .doc)'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.doc,.zip,.tex,.odt,.rtf,.txt,.png,.jpg,.jpeg"
+                        onChange={handleTemplateFileUpload}
+                        disabled={templateFileUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-[11px] text-slate-400">PDF, Word .docx, images up to 25MB</span>
+                  </div>
+
+                  {/* Attached File Preview Card */}
+                  {templateFormData.download_url && (
+                    <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-slate-900 truncate">
+                            {templateFormData.uploaded_file_name || 'Resume Template File Attached'}
+                          </div>
+                          <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                            <Check className="w-3 h-3 text-emerald-600" /> Ready for live candidate download & preview
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleSaveTemplate}
+                          className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition"
+                        >
+                          Publish Now
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTemplateFormData({
+                              ...templateFormData,
+                              download_url: '',
+                              uploaded_file_name: '',
+                            })
+                          }
+                          className="px-2 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fallback or Custom File URL Input */}
+                  <div className="pt-1">
+                    <span className="text-[10px] text-slate-500 font-medium block mb-1">
+                      Or paste an external file download URL (optional):
+                    </span>
+                    <input
+                      type="url"
+                      value={templateFormData.download_url}
+                      onChange={(e) =>
+                        setTemplateFormData({
+                          ...templateFormData,
+                          download_url: e.target.value,
+                          uploaded_file_name: e.target.value ? e.target.value.split('/').pop() : '',
+                        })
+                      }
+                      placeholder="https://example.com/template.docx or template.pdf"
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Template Title */}
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block font-bold text-slate-800">
-                      1. Template Title <span className="text-rose-500">*</span>
+                      2. Template Title <span className="text-slate-400 font-normal">(Auto-filled from file name)</span>
                     </label>
                     <span className="text-[10px] text-slate-400">Card headline</span>
                   </div>
                   <input
                     type="text"
-                    required
                     value={templateFormData.name}
                     onChange={(e) => setTemplateFormData({ ...templateFormData, name: e.target.value })}
-                    placeholder="e.g. Template 1, Modern Tech Resume, Executive Minimal"
+                    placeholder="e.g. Modern Developer Resume, Template 1"
                     className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
-                  <span className="text-[11px] text-slate-500 mt-1 block">
-                    The prominent bold title displayed directly below the preview mockup.
-                  </span>
                 </div>
 
-                {/* 2. Category Badge Tag */}
+                {/* 3. Category Badge Tag */}
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block font-bold text-slate-800">
-                      2. Category Badge (Card Tag) <span className="text-rose-500">*</span>
+                      3. Category Badge <span className="text-slate-400 font-normal">(Auto-selected)</span>
                     </label>
                     <span className="text-[10px] text-slate-400">Pill tag under title</span>
                   </div>
                   <input
                     type="text"
-                    required
                     value={templateFormData.badge}
                     onChange={(e) => setTemplateFormData({ ...templateFormData, badge: e.target.value })}
                     placeholder="e.g. Professional"
@@ -2134,7 +2307,7 @@ export default function AdminDashboardPage() {
                   {/* Preset Badge Chips */}
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <span className="text-[10px] text-slate-400 font-medium">Suggestions:</span>
-                    {['Professional', 'Entry-Level', 'Tech / IT', 'Executive', 'Academic', 'Creative'].map((tag) => (
+                    {['Professional', 'ATS-Friendly', 'Entry-Level', 'Tech / IT', 'Executive', 'Academic', 'Creative'].map((tag) => (
                       <button
                         key={tag}
                         type="button"
@@ -2145,39 +2318,32 @@ export default function AdminDashboardPage() {
                       </button>
                     ))}
                   </div>
-                  <span className="text-[11px] text-slate-500 mt-1 block">
-                    Displays as the styled badge (e.g. <em>Professional</em>) on the template card.
-                  </span>
                 </div>
 
-                {/* 3. Short Description */}
+                {/* 4. Short Description */}
                 <div>
                   <div className="flex items-center justify-between">
                     <label className="block font-bold text-slate-800">
-                      3. Short Description <span className="text-rose-500">*</span>
+                      4. Short Description <span className="text-slate-400 font-normal">(Auto-generated or custom)</span>
                     </label>
                     <span className="text-[10px] text-slate-400">Card description</span>
                   </div>
                   <textarea
                     rows={2}
-                    required
                     value={templateFormData.description}
                     onChange={(e) => setTemplateFormData({ ...templateFormData, description: e.target.value })}
-                    placeholder="e.g. Ready-to-use professional resume format"
+                    placeholder="e.g. Ready-to-use professional resume format for software engineers"
                     className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
-                  <span className="text-[11px] text-slate-500 mt-1 block">
-                    Explains what the template is suited for (e.g. <em>Ready-to-use professional resume format</em>).
-                  </span>
                 </div>
 
-                {/* 4. Document Mockup Preview Image */}
+                {/* 5. Document Mockup Preview Image */}
                 <div>
                   <label className="block font-bold text-slate-800">
-                    4. Template Preview Mockup (Image or Auto Document)
+                    5. Template Preview Mockup (Image Screenshot - Optional)
                   </label>
                   <span className="text-[11px] text-slate-500 mb-1.5 block">
-                    Upload a screenshot image of the template or enter an image URL. If left empty, an automated clean document layout will be displayed.
+                    Upload an optional screenshot of the resume. If left empty, PDF files display the real document iframe or clean candidate layout automatically.
                   </span>
 
                   <div className="space-y-2">
@@ -2222,105 +2388,6 @@ export default function AdminDashboardPage() {
                         </button>
                       </div>
                     )}
-                  </div>
-                </div>
-
-                {/* 5. Resume Template File (Direct Upload or Custom URL) */}
-                <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block font-bold text-slate-800">
-                      5. Resume Template File <span className="text-brand-primary font-semibold">(Direct Upload)</span>
-                    </label>
-                    <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-full border border-brand-primary/20">
-                      Direct Candidate Download
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-600 block">
-                    Upload your downloaded resume template file (PDF, Word DOCX, ZIP, or LaTeX). When candidates click <strong>Download</strong> on the templates page, they will directly download this exact file!
-                  </span>
-
-                  {/* Upload action area */}
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <label className={`cursor-pointer px-4 py-2.5 rounded-xl font-bold text-xs transition inline-flex items-center gap-2 shadow-xs ${
-                      templateFileUploading
-                        ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
-                        : 'bg-brand-primary hover:bg-blue-600 text-white'
-                    }`}>
-                      <Upload className={`w-4 h-4 ${templateFileUploading ? 'animate-spin' : ''}`} />
-                      <span>{templateFileUploading ? 'Uploading Template...' : 'Upload Template File (.docx, .pdf, .zip)'}</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.docx,.doc,.zip,.tex,.odt,.rtf,.txt"
-                        onChange={handleTemplateFileUpload}
-                        disabled={templateFileUploading}
-                        className="hidden"
-                      />
-                    </label>
-                    <span className="text-[11px] text-slate-400">Word .docx, .pdf, .zip, .tex up to 25MB</span>
-                  </div>
-
-                  {/* Attached File Preview Card */}
-                  {templateFormData.download_url && (
-                    <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-xs flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
-                          <FileText className="w-5 h-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-bold text-xs text-slate-900 truncate">
-                            {templateFormData.uploaded_file_name || 'Resume Template File Attached'}
-                          </div>
-                          <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                            <Check className="w-3 h-3 text-emerald-600" /> Attached & ready for instant candidate download
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <a
-                          href={templateFormData.download_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                          className="px-2.5 py-1 text-xs font-semibold text-brand-primary bg-brand-veryLight hover:bg-blue-100 rounded-lg transition"
-                        >
-                          Test Download
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTemplateFormData({
-                              ...templateFormData,
-                              download_url: '',
-                              uploaded_file_name: '',
-                            })
-                          }
-                          className="px-2 py-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Fallback or Custom File URL Input */}
-                  <div className="pt-1">
-                    <span className="text-[10px] text-slate-500 font-medium block mb-1">
-                      Or paste an external file download URL (optional):
-                    </span>
-                    <input
-                      type="url"
-                      value={templateFormData.download_url}
-                      onChange={(e) =>
-                        setTemplateFormData({
-                          ...templateFormData,
-                          download_url: e.target.value,
-                          uploaded_file_name: e.target.value ? e.target.value.split('/').pop() : '',
-                        })
-                      }
-                      placeholder="https://example.com/template.docx or template.pdf"
-                      className="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                    />
                   </div>
                 </div>
 

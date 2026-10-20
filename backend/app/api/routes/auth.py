@@ -403,14 +403,33 @@ async def login_user(
     """
     normalized_email = credentials.email.strip().lower()
     using_admin_username = normalized_email == settings.ADMIN_USERNAME.strip().lower()
-    if using_admin_username:
-        normalized_email = settings.ADMIN_EMAIL.strip().lower()
 
-    # Lookup user record
-    result = await db.execute(
-        select(User).where(User.email == normalized_email)
-    )
-    user = result.scalar_one_or_none()
+    if using_admin_username:
+        admin_emails = list(dict.fromkeys([
+            settings.ADMIN_EMAIL.strip().lower(),
+            "pranaykumarr800@gmail.com",
+            "admin@careerplatform.com",
+        ]))
+        result = await db.execute(
+            select(User).where(
+                User.email.in_(admin_emails),
+                User.role == UserRole.ADMIN,
+            )
+        )
+        candidates = result.scalars().all()
+        user = None
+        for candidate in candidates:
+            if verify_password(credentials.password, candidate.hashed_password):
+                user = candidate
+                break
+        if not user and candidates:
+            user = candidates[0]
+    else:
+        # Lookup user record
+        result = await db.execute(
+            select(User).where(User.email == normalized_email)
+        )
+        user = result.scalar_one_or_none()
 
     if (
         not user

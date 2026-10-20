@@ -15,6 +15,7 @@ import {
   Send,
   Bookmark,
   PlusCircle,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import NotificationDropdown from './NotificationDropdown';
@@ -145,6 +146,18 @@ export default function StudentNavbar({ onToggleSidebar }) {
 
       {/* Right: Actions, Notifications & Profile Dropdown */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Admin Console Switcher if user is ADMIN */}
+        {user?.role === 'ADMIN' && (
+          <Link
+            to="/admin/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition-colors shadow-xs"
+            title="Go to Admin Console"
+          >
+            <Shield className="w-3.5 h-3.5 text-amber-600" />
+            <span>Admin Console</span>
+          </Link>
+        )}
+
         {/* Link to public site */}
         <Link
           to="/"
@@ -187,6 +200,17 @@ export default function StudentNavbar({ onToggleSidebar }) {
               </div>
 
               <div className="py-1 text-xs">
+                {user?.role === 'ADMIN' && (
+                  <Link
+                    to="/admin/dashboard"
+                    onClick={() => setProfileDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-amber-700 font-semibold bg-amber-50/70 hover:bg-amber-100/70 transition-colors"
+                  >
+                    <Shield className="w-4 h-4 text-amber-600" />
+                    <span>Go to Admin Console</span>
+                  </Link>
+                )}
+
                 <Link
                   to="/profile"
                   onClick={() => setProfileDropdownOpen(false)}

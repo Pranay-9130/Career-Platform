@@ -1,12 +1,14 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Form
 from sqlalchemy import select, func, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from pathlib import Path
 import re
+import json
+import logging
 
 from app.core.database import get_db
 from app.models.project import Project
@@ -537,15 +539,74 @@ async def get_admin_students(
 # RESUME TEMPLATES MANAGEMENT (Add, List, Delete)
 # =========================================================================
 
+CATALOG_STORAGE_KEY = "system/templates_catalog.json"
+CATALOG_DISK_PATH = Path("uploads/templates/catalog.json")
+
+
+async def persist_templates_catalog(db: AsyncSession, owner_id: Any = None):
+    try:
+        data_bytes = json.dumps(AVAILABLE_TEMPLATES, indent=2).encode("utf-8")
+        CATALOG_DISK_PATH.parent.mkdir(parents=True, exist_ok=True)
+        CATALOG_DISK_PATH.write_bytes(data_bytes)
+
+        if owner_id:
+            stmt = select(StoredArchive).where(StoredArchive.storage_key == CATALOG_STORAGE_KEY)
+            archive = (await db.execute(stmt)).scalar_one_or_none()
+            if archive:
+                archive.content = data_bytes
+            else:
+                db.add(StoredArchive(
+                    storage_key=CATALOG_STORAGE_KEY,
+                    owner_id=owner_id,
+                    content=data_bytes
+                ))
+            await db.commit()
+    except Exception:
+        pass
+
+
+async def ensure_templates_catalog_loaded(db: AsyncSession):
+    try:
+        if CATALOG_DISK_PATH.exists():
+            disk_data = json.loads(CATALOG_DISK_PATH.read_text(encoding="utf-8"))
+            if isinstance(disk_data, list) and disk_data:
+                existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
+                for item in disk_data:
+                    if item.get("id") not in existing_ids:
+                        AVAILABLE_TEMPLATES.append(item)
+                    else:
+                        for idx, curr in enumerate(AVAILABLE_TEMPLATES):
+                            if curr.get("id") == item.get("id"):
+                                AVAILABLE_TEMPLATES[idx] = item
+                return
+
+        stmt = select(StoredArchive).where(StoredArchive.storage_key == CATALOG_STORAGE_KEY)
+        archive = (await db.execute(stmt)).scalar_one_or_none()
+        if archive and archive.content:
+            db_data = json.loads(archive.content.decode("utf-8"))
+            if isinstance(db_data, list) and db_data:
+                existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
+                for item in db_data:
+                    if item.get("id") not in existing_ids:
+                        AVAILABLE_TEMPLATES.append(item)
+                    else:
+                        for idx, curr in enumerate(AVAILABLE_TEMPLATES):
+                            if curr.get("id") == item.get("id"):
+                                AVAILABLE_TEMPLATES[idx] = item
+    except Exception:
+        pass
+
+
 @router.get(
     "/templates",
     response_model=List[Dict[str, Any]],
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def get_admin_templates():
+async def get_admin_templates(db: AsyncSession = Depends(get_db)):
     """
     Retrieve all ATS resume templates in the catalog for administration.
     """
+    await ensure_templates_catalog_loaded(db)
     return AVAILABLE_TEMPLATES
 
 
@@ -555,11 +616,15 @@ async def get_admin_templates():
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def create_resume_template(payload: ResumeTemplateCreate):
+async def create_resume_template(
+    payload: ResumeTemplateCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Add a new ATS-compatible resume template to the platform catalog.
     """
-    import re
+    await ensure_templates_catalog_loaded(db)
     # Generate ID if not provided
     template_id = payload.id
     if not template_id or not template_id.strip():
@@ -569,7 +634,7 @@ async def create_resume_template(payload: ResumeTemplateCreate):
     # Ensure unique ID
     candidate_id = template_id
     counter = 1
-    while any(t["id"].lower() == candidate_id.lower() for t in AVAILABLE_TEMPLATES):
+    while any(t.get("id", "").lower() == candidate_id.lower() for t in AVAILABLE_TEMPLATES):
         candidate_id = f"{template_id}-{counter}"
         counter += 1
 
@@ -577,7 +642,8 @@ async def create_resume_template(payload: ResumeTemplateCreate):
     new_template["id"] = candidate_id
     new_template["is_custom"] = True
     new_template["is_active"] = payload.is_active if payload.is_active is not None else True
-    AVAILABLE_TEMPLATES.append(new_template)
+    AVAILABLE_TEMPLATES.insert(0, new_template)
+    await persist_templates_catalog(db, current_user.id)
     return new_template
 
 
@@ -611,13 +677,19 @@ async def update_resume_template(template_id: str, payload: ResumeTemplateUpdate
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def toggle_resume_template_status(template_id: str):
+async def toggle_resume_template_status(
+    template_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Toggle a template between Active (visible to candidates) and Inactive (hidden draft).
     """
+    await ensure_templates_catalog_loaded(db)
     for t in AVAILABLE_TEMPLATES:
         if t["id"] == template_id:
             t["is_active"] = not t.get("is_active", True)
+            await persist_templates_catalog(db, current_user.id)
             return {"id": t["id"], "is_active": t["is_active"], "message": "Status updated successfully."}
 
     raise HTTPException(
@@ -631,13 +703,18 @@ async def toggle_resume_template_status(template_id: str):
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def delete_resume_template(template_id: str):
+async def delete_resume_template(
+    template_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Remove a template from the platform catalog.
     """
+    await ensure_templates_catalog_loaded(db)
     found_idx = None
     for idx, t in enumerate(AVAILABLE_TEMPLATES):
-        if t["id"] == template_id:
+        if t.get("id") == template_id:
             found_idx = idx
             break
 
@@ -648,6 +725,7 @@ async def delete_resume_template(template_id: str):
         )
 
     removed = AVAILABLE_TEMPLATES.pop(found_idx)
+    await persist_templates_catalog(db, current_user.id)
     return {"message": f"Template '{template_id}' removed successfully.", "removed": removed}
 
 
@@ -657,10 +735,14 @@ async def delete_resume_template(template_id: str):
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def seed_default_templates():
+async def seed_default_templates(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Seed/restore the clean Resume Templates (Template 1, Template 2, Template 3) as displayed in the templates section.
     """
+    await ensure_templates_catalog_loaded(db)
     demo_defaults = [
         {
             "id": "template-1",
@@ -706,12 +788,12 @@ async def seed_default_templates():
         },
     ]
 
-    # Prepend or add if not already present
-    existing_ids = {t["id"] for t in AVAILABLE_TEMPLATES}
+    existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
     for item in demo_defaults:
         if item["id"] not in existing_ids:
-            AVAILABLE_TEMPLATES.insert(0, item)
+            AVAILABLE_TEMPLATES.append(item)
 
+    await persist_templates_catalog(db, current_user.id)
     return AVAILABLE_TEMPLATES
 
 
@@ -721,11 +803,15 @@ async def seed_default_templates():
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def clear_all_templates():
+async def clear_all_templates(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Clear all templates from the catalog so the admin can add their own from scratch.
     """
     AVAILABLE_TEMPLATES.clear()
+    await persist_templates_catalog(db, current_user.id)
     return {"message": "All templates cleared. Catalog is now empty."}
 
 
@@ -804,17 +890,125 @@ async def upload_template_file(
     media_type = media_types.get(ext, "application/octet-stream")
 
     return {
-        "download_url": f"/api/admin/templates/file/{storage_key}",
+        "download_url": f"/api/resumes/templates/file/{storage_key}",
         "filename": raw_filename,
         "size_bytes": len(content),
         "media_type": media_type,
     }
 
 
-@router.get("/templates/file/{storage_key:path}")
-async def serve_template_file(storage_key: str, db: AsyncSession = Depends(get_db)):
+@router.post(
+    "/templates/direct-upload",
+    response_model=Dict[str, Any],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def direct_upload_template(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    badge: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Public direct download endpoint for uploaded resume templates.
+    1-Click direct template upload: Takes a resume template file (PDF, Word DOCX, image, etc.),
+    automatically derives clean title, description, and badge, stores the file, and immediately publishes
+    it to the candidate catalog. No tedious manual entry required!
+    """
+    await ensure_templates_catalog_loaded(db)
+
+    raw_filename = file.filename or "template.pdf"
+    ext = Path(raw_filename).suffix.lower()
+    if ext not in ALLOWED_TEMPLATE_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(sorted(ALLOWED_TEMPLATE_EXTENSIONS))}",
+        )
+
+    content = await file.read(MAX_TEMPLATE_FILE_SIZE + 1)
+    if len(content) > MAX_TEMPLATE_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds maximum allowed size of 25MB.",
+        )
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty.",
+        )
+
+    safe_name = re.sub(r"[^a-zA-Z0-9._-]", "_", Path(raw_filename).name)
+    storage_key = f"templates/{uuid.uuid4().hex[:12]}_{safe_name}"
+
+    # 1. Save in database (survives container teardown and ephemeral disks)
+    stored = StoredArchive(
+        storage_key=storage_key,
+        owner_id=current_user.id,
+        content=content,
+    )
+    db.add(stored)
+    await db.commit()
+
+    # 2. Also cache to local disk
+    try:
+        disk_dir = Path("uploads/templates")
+        disk_dir.mkdir(parents=True, exist_ok=True)
+        (disk_dir / Path(storage_key).name).write_bytes(content)
+    except Exception:
+        pass
+
+    # 3. Derive clean title and attributes
+    raw_stem = Path(raw_filename).stem
+    auto_name = re.sub(r"[-_.]+", " ", raw_stem).strip().title()
+    template_name = title.strip() if title and title.strip() else (auto_name or "Resume Template")
+
+    fmt_label = ext.upper().replace(".", "")
+    template_badge = badge.strip() if badge and badge.strip() else ("ATS-Friendly" if ext in {".pdf", ".docx"} else "Professional")
+    template_desc = description.strip() if description and description.strip() else f"Ready-to-use {fmt_label} resume template format for download and customization."
+
+    download_url = f"/api/resumes/templates/file/{storage_key}"
+    preview_image_url = download_url if ext in {".png", ".jpg", ".jpeg"} else ""
+
+    slug_base = re.sub(r"[^a-zA-Z0-9]+", "-", template_name.lower()).strip("-") or "template"
+    candidate_id = slug_base
+    counter = 1
+    while any(t.get("id", "").lower() == candidate_id.lower() for t in AVAILABLE_TEMPLATES):
+        candidate_id = f"{slug_base}-{counter}"
+        counter += 1
+
+    new_template = {
+        "id": candidate_id,
+        "name": template_name,
+        "badge": template_badge,
+        "description": template_desc,
+        "tagline": f"Clean {fmt_label} template format ready for instant candidate download.",
+        "ats_score": "98/100",
+        "best_for": "Students, Developers, Technical Professionals",
+        "preview_accent": "#F97316",
+        "preview_image_url": preview_image_url,
+        "download_url": download_url,
+        "uploaded_file_name": raw_filename,
+        "file_type": ext,
+        "is_active": True,
+        "is_custom": True,
+    }
+
+    # Prepend so the newly uploaded template appears at the top of candidate portal
+    AVAILABLE_TEMPLATES.insert(0, new_template)
+    await persist_templates_catalog(db, current_user.id)
+
+    return new_template
+
+
+@router.get("/templates/file/{storage_key:path}")
+async def serve_template_file(
+    storage_key: str,
+    download: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Public direct download and preview endpoint for uploaded resume templates.
     """
     stmt = select(StoredArchive).where(StoredArchive.storage_key == storage_key)
     archive = (await db.execute(stmt)).scalar_one_or_none()
@@ -855,11 +1049,14 @@ async def serve_template_file(storage_key: str, db: AsyncSession = Depends(get_d
     }
     media_type = media_types.get(ext, "application/octet-stream")
 
+    is_previewable = ext in {".pdf", ".png", ".jpg", ".jpeg"}
+    disposition = "attachment" if download == "1" or not is_previewable else "inline"
+
     return Response(
         content=content,
         media_type=media_type,
         headers={
-            "Content-Disposition": f'attachment; filename="{clean_filename}"',
+            "Content-Disposition": f'{disposition}; filename="{clean_filename}"',
             "Cache-Control": "public, max-age=3600",
         },
     )
