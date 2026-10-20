@@ -16,7 +16,7 @@ class Job(BaseUUIDModel):
     job_type = Column(String(50), nullable=False, default="Full-time", index=True)  # Internship, Full-time, Contract
     work_mode = Column(String(50), nullable=False, default="Remote", index=True)     # Remote, Hybrid, Onsite
     location = Column(String(150), nullable=False, default="Remote")
-    stipend_or_salary = Column(String(100), nullable=False, default="Competitive")
+    stipend_or_salary = Column(String(100), nullable=True, default="")
     experience_level = Column(String(50), nullable=False, default="Entry Level", index=True)  # Internship, Entry Level, Mid-Level
     skills_required = Column(JSON, default=list, nullable=False)
     description = Column(Text, nullable=False, default="")

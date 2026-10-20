@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import projectService from '../../services/projectService';
 import jobService from '../../services/jobService';
+import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
 
 export default function SavedWorkspacePage() {
   const [activeTab, setActiveTab] = useState('projects'); // 'projects' | 'jobs'
@@ -334,21 +335,21 @@ export default function SavedWorkspacePage() {
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
                       {job.work_mode}
                     </span>
-                    <span className="text-xs font-semibold text-slate-800 ml-auto">
-                      {job.stipend_or_salary}
-                    </span>
+                    {formatSalary(job.stipend_or_salary) && (
+                      <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60 ml-auto">
+                        {formatSalary(job.stipend_or_salary)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mb-3">
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.location}
                     </span>
-                    {job.deadline && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" /> Deadline:{' '}
-                        {new Date(job.deadline).toLocaleDateString()}
-                      </span>
-                    )}
+                    <span className={`flex items-center gap-1 ${formatDeadline(job.deadline).isExpired ? 'text-rose-600 font-semibold' : ''}`}>
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      {formatDeadline(job.deadline).text}
+                    </span>
                   </div>
 
                   {job.skills_required && job.skills_required.length > 0 && (

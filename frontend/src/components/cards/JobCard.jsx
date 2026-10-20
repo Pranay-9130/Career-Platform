@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Building2, MapPin, DollarSign, Calendar, Bookmark, ArrowRight, Briefcase } from 'lucide-react';
 import { Card, Badge, Button } from '@/components/common';
 
+import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
+
 export default function JobCard({
   id = '1',
   slug,
@@ -18,7 +20,7 @@ export default function JobCard({
   work_mode = 'Remote',
   location = 'Remote',
   salary,
-  stipend_or_salary = 'Competitive',
+  stipend_or_salary = '',
   skills,
   skills_required = [],
   deadline,
@@ -34,7 +36,8 @@ export default function JobCard({
   const displayLogo = companyLogo || company_logo_url;
   const displayType = jobType || job_type;
   const displayMode = workMode || work_mode;
-  const displaySalary = salary || stipend_or_salary;
+  const formattedSalary = formatSalary(salary || stipend_or_salary);
+  const deadlineInfo = formatDeadline(deadline);
   const displaySkills = skills || skills_required || [];
   const [saved, setSaved] = useState(initialSaved);
 
@@ -92,7 +95,7 @@ export default function JobCard({
           </button>
         </div>
 
-        {/* Badges: Type & Work Mode */}
+        {/* Badges: Type & Work Mode & Optional Salary */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <Badge variant={displayType === 'Internship' ? 'cyan' : 'primary'} size="sm">
             {displayType}
@@ -100,9 +103,11 @@ export default function JobCard({
           <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
             {displayMode}
           </span>
-          <span className="text-xs font-semibold text-brand-text flex items-center gap-1">
-            {displaySalary}
-          </span>
+          {formattedSalary && (
+            <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/70">
+              {formattedSalary}
+            </span>
+          )}
         </div>
 
         {/* Location & Deadline */}
@@ -111,12 +116,10 @@ export default function JobCard({
             <MapPin className="w-3.5 h-3.5 text-slate-400" />
             {location}
           </span>
-          {deadline && (
-            <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              Deadline: {deadline}
-            </span>
-          )}
+          <span className={`flex items-center gap-1 ${deadlineInfo.isExpired ? 'text-rose-600 font-semibold' : ''}`}>
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            {deadlineInfo.text}
+          </span>
         </div>
 
         {/* Skills Required */}

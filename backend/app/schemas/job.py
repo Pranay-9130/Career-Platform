@@ -12,7 +12,7 @@ class JobBase(BaseModel):
     job_type: str = Field(default="Full-time", max_length=50)  # Full-time, Internship, Contract
     work_mode: str = Field(default="Remote", max_length=50)    # Remote, Hybrid, Onsite
     location: str = Field(default="Remote", max_length=150)
-    stipend_or_salary: str = Field(default="Competitive", max_length=100)
+    stipend_or_salary: Optional[str] = Field(default="", max_length=100)
     experience_level: str = Field(default="Entry Level", max_length=50)  # Internship, Entry Level, Mid-Level
     skills_required: List[str] = Field(default_factory=list)
     description: str = Field(default="", max_length=10000)

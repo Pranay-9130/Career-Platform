@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Breadcrumbs } from '@/components/common';
 import SEO from '@/components/common/SEO';
 import { getJobPostingSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
+import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
 
 export default function JobDetailPage() {
   const { id } = useParams();
@@ -119,6 +120,9 @@ export default function JobDetailPage() {
     );
   }
 
+  const formattedSalary = formatSalary(job.stipend_or_salary);
+  const deadlineInfo = formatDeadline(job.deadline);
+
   return (
     <div className="min-h-screen bg-slate-50/50 py-10 px-4 sm:px-6 lg:px-8">
       <SEO
@@ -197,19 +201,19 @@ export default function JobDetailPage() {
                   <span className="flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-slate-400" /> {job.location}
                   </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1 font-semibold text-slate-800">
-                    <DollarSign className="w-3.5 h-3.5 text-slate-400" /> {job.stipend_or_salary}
-                  </span>
-                  {job.deadline && (
+                  {formattedSalary && (
                     <>
                       <span>•</span>
-                      <span className="flex items-center gap-1 text-slate-500">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" /> Deadline:{' '}
-                        {new Date(job.deadline).toLocaleDateString()}
+                      <span className="flex items-center gap-1 font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        {formattedSalary}
                       </span>
                     </>
                   )}
+                  <span>•</span>
+                  <span className={`flex items-center gap-1 ${deadlineInfo.isExpired ? 'text-rose-600 font-semibold' : 'text-slate-500'}`}>
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    {deadlineInfo.text}
+                  </span>
                 </div>
               </div>
             </div>

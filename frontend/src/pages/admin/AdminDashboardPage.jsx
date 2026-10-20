@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import adminService from '../../services/adminService';
 import { Button, Badge, Modal, Input, Alert } from '@/components/common';
+import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
 
 export default function AdminDashboardPage() {
   const location = useLocation();
@@ -103,16 +104,18 @@ export default function AdminDashboardPage() {
     domain: 'Software Engineering',
     job_type: 'Full-time',
     work_mode: 'Remote',
-    location: 'Remote, US',
-    stipend_or_salary: '$45/hr or $110,000/yr',
+    location: 'Remote',
+    has_salary: false,
+    stipend_or_salary: '',
     experience_level: 'Entry Level',
     skills_required: '',
     description: '',
     responsibilities: '',
     requirements: '',
-    apply_url: 'https://careers.company.com',
+    apply_url: '',
     is_active: true,
     is_featured: false,
+    no_deadline: true,
     deadline: '',
   };
   const [jobFormData, setJobFormData] = useState(initialJobFormData);
@@ -312,6 +315,14 @@ export default function AdminDashboardPage() {
 
   const handleOpenEditJob = (job) => {
     setEditingJob(job);
+    const hasSalary = Boolean(
+      job.stipend_or_salary &&
+      job.stipend_or_salary.trim() &&
+      job.stipend_or_salary.toLowerCase() !== 'competitive' &&
+      job.stipend_or_salary.toLowerCase() !== 'not disclosed'
+    );
+    const hasDeadline = Boolean(job.deadline);
+
     setJobFormData({
       title: job.title || '',
       company_name: job.company_name || '',
@@ -321,7 +332,8 @@ export default function AdminDashboardPage() {
       job_type: job.job_type || 'Full-time',
       work_mode: job.work_mode || 'Remote',
       location: job.location || '',
-      stipend_or_salary: job.stipend_or_salary || '',
+      has_salary: hasSalary,
+      stipend_or_salary: hasSalary ? job.stipend_or_salary : '',
       experience_level: job.experience_level || 'Entry Level',
       skills_required: Array.isArray(job.skills_required) ? job.skills_required.join(', ') : job.skills_required || '',
       description: job.description || '',
@@ -330,7 +342,8 @@ export default function AdminDashboardPage() {
       apply_url: job.apply_url || '',
       is_active: job.is_active ?? true,
       is_featured: job.is_featured ?? false,
-      deadline: job.deadline ? job.deadline.split('T')[0] : '',
+      no_deadline: !hasDeadline,
+      deadline: hasDeadline ? job.deadline.split('T')[0] : '',
     });
     setJobActionFeedback(null);
     setIsJobModalOpen(true);
@@ -343,8 +356,14 @@ export default function AdminDashboardPage() {
       return;
     }
 
+    const finalSalary = jobFormData.has_salary ? (jobFormData.stipend_or_salary || '').trim() : '';
+    const finalDeadline = (!jobFormData.no_deadline && jobFormData.deadline) ? new Date(jobFormData.deadline).toISOString() : null;
+
+    const { has_salary, no_deadline, ...cleanedData } = jobFormData;
     const payload = {
-      ...jobFormData,
+      ...cleanedData,
+      stipend_or_salary: finalSalary,
+      deadline: finalDeadline,
       skills_required: jobFormData.skills_required
         ? jobFormData.skills_required.split(',').map((s) => s.trim()).filter(Boolean)
         : [],
@@ -354,7 +373,6 @@ export default function AdminDashboardPage() {
       requirements: jobFormData.requirements
         ? jobFormData.requirements.split('\n').map((s) => s.trim()).filter(Boolean)
         : [],
-      deadline: jobFormData.deadline ? new Date(jobFormData.deadline).toISOString() : null,
     };
 
     try {
@@ -988,7 +1006,11 @@ export default function AdminDashboardPage() {
                           <div className="text-[11px] text-slate-400">{job.work_mode}</div>
                         </td>
                         <td className="px-5 py-4 text-slate-700 font-medium">
-                          {job.stipend_or_salary || 'Competitive'}
+                          {formatSalary(job.stipend_or_salary) ? (
+                            <span className="text-emerald-700 font-semibold">{formatSalary(job.stipend_or_salary)}</span>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">Not Disclosed</span>
+                          )}
                         </td>
                         <td className="px-5 py-4">
                           <span
@@ -1758,20 +1780,60 @@ export default function AdminDashboardPage() {
                   type="text"
                   value={jobFormData.location}
                   onChange={(e) => setJobFormData({ ...jobFormData, location: e.target.value })}
-                  placeholder="e.g. Remote (US / Global)"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
+                  placeholder="e.g. Bengaluru, India or Remote"
+                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Stipend or Salary</label>
-                <input
-                  type="text"
-                  value={jobFormData.stipend_or_salary}
-                  onChange={(e) => setJobFormData({ ...jobFormData, stipend_or_salary: e.target.value })}
-                  placeholder="e.g. $45/hr or $110,000/yr"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Stipend or Salary</label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-brand-primary select-none">
+                    <input
+                      type="checkbox"
+                      checked={jobFormData.has_salary}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          has_salary: e.target.checked,
+                          stipend_or_salary: e.target.checked ? jobFormData.stipend_or_salary : '',
+                        })
+                      }
+                      className="w-3.5 h-3.5 text-brand-primary rounded focus:ring-0"
+                    />
+                    <span>Disclose Salary</span>
+                  </label>
+                </div>
+                {jobFormData.has_salary ? (
+                  <div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-slate-500 font-bold text-xs select-none">
+                        ₹
+                      </span>
+                      <input
+                        type="text"
+                        value={jobFormData.stipend_or_salary}
+                        onChange={(e) => setJobFormData({ ...jobFormData, stipend_or_salary: e.target.value })}
+                        placeholder="e.g. ₹50,000/mo or ₹8 - 12 LPA"
+                        className="w-full text-xs pl-7 pr-2.5 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Amount in Indian Rupees (INR). Uncheck "Disclose Salary" to hide.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 flex items-center justify-between">
+                    <span className="italic">Not Disclosed (Hidden from card)</span>
+                    <button
+                      type="button"
+                      onClick={() => setJobFormData({ ...jobFormData, has_salary: true })}
+                      className="text-brand-primary font-semibold text-[11px] hover:underline"
+                    >
+                      + Add Salary
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1830,18 +1892,48 @@ export default function AdminDashboardPage() {
                   value={jobFormData.apply_url}
                   onChange={(e) => setJobFormData({ ...jobFormData, apply_url: e.target.value })}
                   placeholder="https://company.com/apply"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
+                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
                 />
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Application Deadline</label>
-                <input
-                  type="date"
-                  value={jobFormData.deadline}
-                  onChange={(e) => setJobFormData({ ...jobFormData, deadline: e.target.value })}
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Application Deadline</label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-600 select-none">
+                    <input
+                      type="checkbox"
+                      checked={jobFormData.no_deadline}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          no_deadline: e.target.checked,
+                          deadline: e.target.checked ? '' : jobFormData.deadline,
+                        })
+                      }
+                      className="w-3.5 h-3.5 text-brand-primary rounded focus:ring-0"
+                    />
+                    <span>No Expiry (Rolling)</span>
+                  </label>
+                </div>
+                {jobFormData.no_deadline ? (
+                  <div className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 flex items-center justify-between">
+                    <span className="italic">Rolling basis (No expiry date)</span>
+                    <button
+                      type="button"
+                      onClick={() => setJobFormData({ ...jobFormData, no_deadline: false })}
+                      className="text-brand-primary font-semibold text-[11px] hover:underline"
+                    >
+                      Set Date
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="date"
+                    value={jobFormData.deadline}
+                    onChange={(e) => setJobFormData({ ...jobFormData, deadline: e.target.value })}
+                    className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                  />
+                )}
               </div>
             </div>
 

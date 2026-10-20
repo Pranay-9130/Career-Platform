@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     async with AsyncSessionLocal() as session:
         # Seed demo jobs for jobs & internship discovery if not present
         from app.models.job import Job
+        from datetime import datetime, timezone, timedelta
         stmt_job_count = select(func.count(Job.id))
         job_count = (await session.execute(stmt_job_count)).scalar() or 0
         if job_count == 0:
@@ -38,8 +39,8 @@ async def lifespan(app: FastAPI):
                     domain="Frontend",
                     job_type="Internship",
                     work_mode="Remote",
-                    location="Remote (US / Canada)",
-                    stipend_or_salary="$45/hr (~$7,200/mo)",
+                    location="Remote (India / Global)",
+                    stipend_or_salary="₹45,000/mo",
                     experience_level="Internship",
                     skills_required=["React", "TypeScript", "Next.js", "Tailwind CSS"],
                     description="Join Vercel's design systems and web framework team building the future of the Frontend Cloud. You will work closely with staff engineers optimizing component performance and developer experience.",
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI):
                     apply_url="https://vercel.com/careers",
                     is_active=True,
                     is_featured=True,
+                    deadline=None,
                 ),
                 Job(
                     title="Junior Backend Developer",
@@ -65,8 +67,8 @@ async def lifespan(app: FastAPI):
                     domain="Backend",
                     job_type="Full-time",
                     work_mode="Hybrid",
-                    location="Seattle, WA / San Francisco, CA",
-                    stipend_or_salary="$115,000 - $135,000/yr",
+                    location="Bengaluru, Karnataka",
+                    stipend_or_salary="₹12,00,000 - ₹15,00,000/yr",
                     experience_level="Entry Level",
                     skills_required=["Python", "FastAPI", "PostgreSQL", "Docker", "Redis"],
                     description="Stripe is expanding its payments infrastructure team. As an entry-level backend engineer, you will write robust APIs that power millions of financial transactions per minute worldwide.",
@@ -83,6 +85,7 @@ async def lifespan(app: FastAPI):
                     apply_url="https://stripe.com/jobs",
                     is_active=True,
                     is_featured=True,
+                    deadline=None,
                 ),
                 Job(
                     title="AI Research & ML Engineering Intern",
@@ -92,8 +95,8 @@ async def lifespan(app: FastAPI):
                     domain="AI / Machine Learning",
                     job_type="Internship",
                     work_mode="Onsite",
-                    location="San Francisco, CA",
-                    stipend_or_salary="$8,000/mo ($50/hr)",
+                    location="Hyderabad, Telangana",
+                    stipend_or_salary="₹60,000/mo",
                     experience_level="Internship",
                     skills_required=["PyTorch", "Python", "Transformers", "NLP", "LLMs"],
                     description="Work directly with leading AI researchers benchmarking frontier foundation models, fine-tuning task-specific LLMs, and developing evaluation harness suites.",
@@ -110,6 +113,7 @@ async def lifespan(app: FastAPI):
                     apply_url="https://scale.com/careers",
                     is_active=True,
                     is_featured=True,
+                    deadline=datetime.now(timezone.utc) + timedelta(days=30),
                 ),
                 Job(
                     title="Full-Stack Software Engineer (New Grad)",
@@ -119,8 +123,8 @@ async def lifespan(app: FastAPI):
                     domain="Full-Stack Development",
                     job_type="Full-time",
                     work_mode="Remote",
-                    location="Remote (Global)",
-                    stipend_or_salary="$120,000 - $140,000/yr",
+                    location="Remote (India)",
+                    stipend_or_salary="",
                     experience_level="Entry Level",
                     skills_required=["React", "Go", "TypeScript", "PostgreSQL", "Kubernetes"],
                     description="Datadog's Observability Platform team is seeking junior engineers passionate about building real-time telemetry dashboards and scalable telemetry ingestion endpoints.",
@@ -137,6 +141,7 @@ async def lifespan(app: FastAPI):
                     apply_url="https://datadoghq.com/careers",
                     is_active=True,
                     is_featured=False,
+                    deadline=None,
                 ),
                 Job(
                     title="Cloud Infrastructure & DevOps Intern",
@@ -146,8 +151,8 @@ async def lifespan(app: FastAPI):
                     domain="Cloud & DevOps",
                     job_type="Internship",
                     work_mode="Remote",
-                    location="Remote (Americas & EMEA)",
-                    stipend_or_salary="$40/hr (~$6,400/mo)",
+                    location="Pune, Maharashtra",
+                    stipend_or_salary="₹35,000/mo",
                     experience_level="Internship",
                     skills_required=["Terraform", "Docker", "AWS", "Linux", "CI/CD"],
                     description="Help secure and accelerate the internet. Our Infrastructure Engineering team invites interns to contribute directly to edge edge routing, automated deployment pipelines, and zero-downtime infrastructure.",
@@ -164,6 +169,7 @@ async def lifespan(app: FastAPI):
                     apply_url="https://cloudflare.com/careers",
                     is_active=True,
                     is_featured=False,
+                    deadline=datetime.now(timezone.utc) + timedelta(days=45),
                 ),
                 Job(
                     title="Junior Mobile Engineer (React Native)",
@@ -173,8 +179,8 @@ async def lifespan(app: FastAPI):
                     domain="Mobile Development",
                     job_type="Full-time",
                     work_mode="Hybrid",
-                    location="San Francisco, CA",
-                    stipend_or_salary="$110,000 - $130,000/yr",
+                    location="Gurugram, Haryana",
+                    stipend_or_salary="₹14,00,000 - ₹18,00,000/yr",
                     experience_level="Entry Level",
                     skills_required=["React Native", "TypeScript", "iOS", "Android", "GraphQL"],
                     description="Join Airbnb's Guest Experience mobile engineering guild. You will craft fluid, accessible mobile screens that empower millions of travelers around the world.",
@@ -191,6 +197,7 @@ async def lifespan(app: FastAPI):
                     apply_url="https://airbnb.com/careers",
                     is_active=True,
                     is_featured=False,
+                    deadline=None,
                 ),
             ]
             for j in demo_jobs:

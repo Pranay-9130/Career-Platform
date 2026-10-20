@@ -19,6 +19,7 @@ import JobCard from '../../components/cards/JobCard';
 import jobService from '../../services/jobService';
 import SEO from '@/components/common/SEO';
 import { getBreadcrumbListSchema } from '@/utils/seoSchemas';
+import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
@@ -450,9 +451,18 @@ export default function JobsPage() {
                       <MapPin className="w-3 h-3 text-slate-400" />
                       {selectedJob.location}
                     </span>
+                    {formatSalary(selectedJob.stipend_or_salary) && (
+                      <>
+                        <span>•</span>
+                        <span className="font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          {formatSalary(selectedJob.stipend_or_salary)}
+                        </span>
+                      </>
+                    )}
                     <span>•</span>
-                    <span className="font-semibold text-slate-800">
-                      {selectedJob.stipend_or_salary}
+                    <span className={`flex items-center gap-1 ${formatDeadline(selectedJob.deadline).isExpired ? 'text-rose-600 font-semibold' : 'text-slate-500'}`}>
+                      <Calendar className="w-3 h-3 text-slate-400" />
+                      {formatDeadline(selectedJob.deadline).text}
                     </span>
                   </div>
                 </div>
