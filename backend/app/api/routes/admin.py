@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response
 from sqlalchemy import select, func, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from pathlib import Path
+import re
 
 from app.core.database import get_db
 from app.models.project import Project
@@ -12,6 +14,7 @@ from app.models.user import User, UserRole
 from app.models.job import Job
 from app.models.profile import Profile
 from app.models.notification import Notification
+from app.models.stored_archive import StoredArchive
 from app.schemas.project import ProjectDetailRead
 from app.schemas.job import JobRead, JobCreate, JobUpdate
 from app.schemas.admin import (
@@ -21,7 +24,7 @@ from app.schemas.admin import (
     ResumeTemplateCreate,
     ResumeTemplateUpdate,
 )
-from app.api.dependencies.auth import require_role
+from app.api.dependencies.auth import require_role, get_current_active_user
 from app.api.routes.projects import _map_project_to_detail_read
 from app.services.email_service import EmailService
 from app.api.routes.resumes import AVAILABLE_TEMPLATES
@@ -724,3 +727,139 @@ async def clear_all_templates():
     """
     AVAILABLE_TEMPLATES.clear()
     return {"message": "All templates cleared. Catalog is now empty."}
+
+
+MAX_TEMPLATE_FILE_SIZE = 25 * 1024 * 1024  # 25 MB
+ALLOWED_TEMPLATE_EXTENSIONS = {
+    ".pdf", ".docx", ".doc", ".zip", ".tex", ".odt", ".rtf", ".txt", ".png", ".jpg", ".jpeg"
+}
+
+
+@router.post(
+    "/templates/upload-file",
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+)
+async def upload_template_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Direct upload for resume template files (PDF, Word DOCX, ZIP, LaTeX, etc.).
+    Persists durable database record and provides direct candidate download URL.
+    """
+    raw_filename = file.filename or "template.pdf"
+    ext = Path(raw_filename).suffix.lower()
+    if ext not in ALLOWED_TEMPLATE_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(sorted(ALLOWED_TEMPLATE_EXTENSIONS))}",
+        )
+
+    content = await file.read(MAX_TEMPLATE_FILE_SIZE + 1)
+    if len(content) > MAX_TEMPLATE_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds maximum allowed size of 25MB.",
+        )
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty.",
+        )
+
+    safe_name = re.sub(r"[^a-zA-Z0-9._-]", "_", Path(raw_filename).name)
+    storage_key = f"templates/{uuid.uuid4().hex[:12]}_{safe_name}"
+
+    # 1. Save in database (survives container teardown and ephemeral disks)
+    stored = StoredArchive(
+        storage_key=storage_key,
+        owner_id=current_user.id,
+        content=content,
+    )
+    db.add(stored)
+    await db.commit()
+
+    # 2. Also cache to local disk if available
+    try:
+        disk_dir = Path("uploads/templates")
+        disk_dir.mkdir(parents=True, exist_ok=True)
+        (disk_dir / Path(storage_key).name).write_bytes(content)
+    except Exception:
+        pass
+
+    media_types = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".zip": "application/zip",
+        ".tex": "text/x-tex",
+        ".odt": "application/vnd.oasis.opendocument.text",
+        ".rtf": "application/rtf",
+        ".txt": "text/plain",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return {
+        "download_url": f"/api/admin/templates/file/{storage_key}",
+        "filename": raw_filename,
+        "size_bytes": len(content),
+        "media_type": media_type,
+    }
+
+
+@router.get("/templates/file/{storage_key:path}")
+async def serve_template_file(storage_key: str, db: AsyncSession = Depends(get_db)):
+    """
+    Public direct download endpoint for uploaded resume templates.
+    """
+    stmt = select(StoredArchive).where(StoredArchive.storage_key == storage_key)
+    archive = (await db.execute(stmt)).scalar_one_or_none()
+
+    content = None
+    if archive:
+        content = archive.content
+    else:
+        disk_path = Path("uploads/templates") / Path(storage_key).name
+        if disk_path.exists():
+            content = disk_path.read_bytes()
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template file not found.",
+        )
+
+    filename = Path(storage_key).name
+    if "_" in filename:
+        clean_filename = filename.split("_", 1)[1]
+    else:
+        clean_filename = filename
+
+    ext = Path(clean_filename).suffix.lower()
+    media_types = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".zip": "application/zip",
+        ".tex": "text/x-tex",
+        ".odt": "application/vnd.oasis.opendocument.text",
+        ".rtf": "application/rtf",
+        ".txt": "text/plain",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{clean_filename}"',
+            "Cache-Control": "public, max-age=3600",
+        },
+    )

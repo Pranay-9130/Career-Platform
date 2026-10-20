@@ -80,6 +80,63 @@ async def list_templates():
     return [t for t in AVAILABLE_TEMPLATES if t.get("is_active", True)]
 
 
+@router.get("/templates/file/{storage_key:path}")
+async def serve_template_file(storage_key: str, db: AsyncSession = Depends(get_db)):
+    """
+    Public direct download endpoint for uploaded resume templates.
+    """
+    from pathlib import Path
+    from app.models.stored_archive import StoredArchive
+
+    stmt = select(StoredArchive).where(StoredArchive.storage_key == storage_key)
+    archive = (await db.execute(stmt)).scalar_one_or_none()
+
+    content = None
+    if archive:
+        content = archive.content
+    else:
+        disk_path = Path("uploads/templates") / Path(storage_key).name
+        if disk_path.exists():
+            content = disk_path.read_bytes()
+
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Template file not found.",
+        )
+
+    filename = Path(storage_key).name
+    if "_" in filename:
+        clean_filename = filename.split("_", 1)[1]
+    else:
+        clean_filename = filename
+
+    ext = Path(clean_filename).suffix.lower()
+    media_types = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".zip": "application/zip",
+        ".tex": "text/x-tex",
+        ".odt": "application/vnd.oasis.opendocument.text",
+        ".rtf": "application/rtf",
+        ".txt": "text/plain",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{clean_filename}"',
+            "Cache-Control": "public, max-age=3600",
+        },
+    )
+
+
 @router.get("", response_model=ResumeListResponse)
 async def list_resumes(
     db: AsyncSession = Depends(get_db),

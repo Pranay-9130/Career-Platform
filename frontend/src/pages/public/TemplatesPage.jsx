@@ -53,7 +53,18 @@ export default function TemplatesPage() {
 
   const handleDownloadTemplate = async (template) => {
     if (template.download_url && template.download_url.trim()) {
-      window.open(template.download_url, '_blank');
+      const url =
+        template.download_url.startsWith('http') || template.download_url.startsWith('data:')
+          ? template.download_url
+          : `${import.meta.env.VITE_API_URL || ''}${template.download_url}`;
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = template.name || 'resume-template';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       return;
     }
 
@@ -310,10 +321,21 @@ export default function TemplatesPage() {
                     </h3>
 
                     {/* Category Badge matching website color */}
-                    <div className="mt-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-brand-veryLight text-brand-primary border border-brand-border">
                         {tpl.badge || 'Professional'}
                       </span>
+                      {tpl.download_url && (
+                        <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {tpl.download_url.toLowerCase().includes('.docx')
+                            ? 'DOCX'
+                            : tpl.download_url.toLowerCase().includes('.pdf')
+                            ? 'PDF'
+                            : tpl.download_url.toLowerCase().includes('.zip')
+                            ? 'ZIP'
+                            : 'Template File'}
+                        </span>
+                      )}
                     </div>
 
                     {/* Description */}

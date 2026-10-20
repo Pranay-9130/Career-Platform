@@ -113,6 +113,18 @@ export const adminService = {
   },
 
   /**
+   * Upload a resume template file (PDF, Word DOCX, ZIP, LaTeX, etc.).
+   */
+  async uploadTemplateFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/admin/templates/upload-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  /**
    * Delete or remove a custom template from the catalog.
    */
   async deleteTemplate(templateId) {

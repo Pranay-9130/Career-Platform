@@ -36,6 +36,7 @@ import {
   MapPin,
   DollarSign,
   Send,
+  Upload,
 } from 'lucide-react';
 import adminService from '../../services/adminService';
 import { Button, Badge, Modal, Input, Alert } from '@/components/common';
@@ -143,12 +144,14 @@ export default function AdminDashboardPage() {
     tagline: '',
     preview_image_url: '',
     download_url: '',
+    uploaded_file_name: '',
     ats_score: '98/100',
     best_for: 'Software Engineers, Freshers, All Domains',
     preview_accent: '#F97316',
     is_active: true,
   };
   const [templateFormData, setTemplateFormData] = useState(initialTemplateFormData);
+  const [templateFileUploading, setTemplateFileUploading] = useState(false);
 
   // =========================================================================
   // API LOADERS
@@ -436,6 +439,9 @@ export default function AdminDashboardPage() {
 
   const handleOpenEditTemplate = (tpl) => {
     setEditingTemplate(tpl);
+    const existingFileName = tpl.download_url
+      ? tpl.download_url.split('/').pop().replace(/^[a-f0-9]+_/, '')
+      : '';
     setTemplateFormData({
       id: tpl.id || '',
       name: tpl.name || '',
@@ -444,6 +450,7 @@ export default function AdminDashboardPage() {
       tagline: tpl.tagline || '',
       preview_image_url: tpl.preview_image_url || '',
       download_url: tpl.download_url || '',
+      uploaded_file_name: existingFileName,
       ats_score: tpl.ats_score || '98/100',
       best_for: tpl.best_for || 'Software Engineers, Freshers, All Domains',
       preview_accent: tpl.preview_accent || '#F97316',
@@ -462,11 +469,61 @@ export default function AdminDashboardPage() {
       tagline: 'Standard single-column layout preferred by tech recruiters and ATS systems.',
       preview_image_url: '',
       download_url: '',
+      uploaded_file_name: '',
       ats_score: '98/100',
       best_for: 'Software Engineers, Backend Developers, DevOps',
       preview_accent: '#F97316',
       is_active: true,
     });
+  };
+
+  const handleTemplateFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 25 * 1024 * 1024) {
+      alert('Template file must be smaller than 25MB.');
+      return;
+    }
+
+    try {
+      setTemplateFileUploading(true);
+      const res = await adminService.uploadTemplateFile(file);
+      const downloadUrl = res.download_url;
+
+      const cleanFileName = file.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[-_]+/g, ' ')
+        .trim();
+      const suggestedName = cleanFileName.charAt(0).toUpperCase() + cleanFileName.slice(1);
+      const suggestedId = file.name
+        .replace(/\.[^/.]+$/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-');
+
+      setTemplateFormData((prev) => ({
+        ...prev,
+        download_url: downloadUrl,
+        uploaded_file_name: file.name,
+        name: prev.name.trim() ? prev.name : suggestedName,
+        id: prev.id.trim() ? prev.id : suggestedId,
+        description: prev.description.trim() ? prev.description : `Ready-to-use ${file.name.split('.').pop().toUpperCase()} resume template format`,
+      }));
+    } catch (err) {
+      console.error('Failed to upload template file to backend:', err);
+      // Fallback: Read as data URL if server unreachable
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setTemplateFormData((prev) => ({
+          ...prev,
+          download_url: event.target.result,
+          uploaded_file_name: file.name,
+        }));
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setTemplateFileUploading(false);
+    }
   };
 
   const handleTemplateImageUpload = (e) => {
@@ -2168,21 +2225,103 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                {/* 5. Direct Download URL */}
-                <div>
-                  <label className="block font-bold text-slate-800">
-                    5. Download File URL (Optional)
-                  </label>
-                  <input
-                    type="url"
-                    value={templateFormData.download_url}
-                    onChange={(e) => setTemplateFormData({ ...templateFormData, download_url: e.target.value })}
-                    placeholder="https://example.com/template.pdf (optional)"
-                    className="mt-1 w-full text-xs p-2.5 border border-slate-200 rounded-xl"
-                  />
-                  <span className="text-[11px] text-slate-500 mt-1 block">
-                    Leave blank to automatically use the platform's ATS PDF generator when candidates click Download.
+                {/* 5. Resume Template File (Direct Upload or Custom URL) */}
+                <div className="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-slate-800">
+                      5. Resume Template File <span className="text-brand-primary font-semibold">(Direct Upload)</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-brand-primary bg-brand-primary/10 px-2.5 py-0.5 rounded-full border border-brand-primary/20">
+                      Direct Candidate Download
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-600 block">
+                    Upload your downloaded resume template file (PDF, Word DOCX, ZIP, or LaTeX). When candidates click <strong>Download</strong> on the templates page, they will directly download this exact file!
                   </span>
+
+                  {/* Upload action area */}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <label className={`cursor-pointer px-4 py-2.5 rounded-xl font-bold text-xs transition inline-flex items-center gap-2 shadow-xs ${
+                      templateFileUploading
+                        ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                        : 'bg-brand-primary hover:bg-blue-600 text-white'
+                    }`}>
+                      <Upload className={`w-4 h-4 ${templateFileUploading ? 'animate-spin' : ''}`} />
+                      <span>{templateFileUploading ? 'Uploading Template...' : 'Upload Template File (.docx, .pdf, .zip)'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.doc,.zip,.tex,.odt,.rtf,.txt"
+                        onChange={handleTemplateFileUpload}
+                        disabled={templateFileUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-[11px] text-slate-400">Word .docx, .pdf, .zip, .tex up to 25MB</span>
+                  </div>
+
+                  {/* Attached File Preview Card */}
+                  {templateFormData.download_url && (
+                    <div className="p-3 bg-white rounded-xl border border-emerald-200 shadow-xs flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-xs text-slate-900 truncate">
+                            {templateFormData.uploaded_file_name || 'Resume Template File Attached'}
+                          </div>
+                          <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                            <Check className="w-3 h-3 text-emerald-600" /> Attached & ready for instant candidate download
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={templateFormData.download_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          download
+                          className="px-2.5 py-1 text-xs font-semibold text-brand-primary bg-brand-veryLight hover:bg-blue-100 rounded-lg transition"
+                        >
+                          Test Download
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTemplateFormData({
+                              ...templateFormData,
+                              download_url: '',
+                              uploaded_file_name: '',
+                            })
+                          }
+                          className="px-2 py-1 text-xs font-semibold text-rose-600 hover:text-rose-800 hover:bg-rose-50 rounded-lg transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fallback or Custom File URL Input */}
+                  <div className="pt-1">
+                    <span className="text-[10px] text-slate-500 font-medium block mb-1">
+                      Or paste an external file download URL (optional):
+                    </span>
+                    <input
+                      type="url"
+                      value={templateFormData.download_url}
+                      onChange={(e) =>
+                        setTemplateFormData({
+                          ...templateFormData,
+                          download_url: e.target.value,
+                          uploaded_file_name: e.target.value ? e.target.value.split('/').pop() : '',
+                        })
+                      }
+                      placeholder="https://example.com/template.docx or template.pdf"
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                  </div>
                 </div>
 
                 {/* 6. Template Machine Key */}
