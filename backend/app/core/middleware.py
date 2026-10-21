@@ -18,7 +18,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Apply security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
+
+        # Template preview files can be embedded in candidate previews
+        path = request.url.path
+        if "/templates/file/" in path:
+            response.headers.pop("X-Frame-Options", None)
+            response.headers["Content-Security-Policy"] = "frame-ancestors *"
+        else:
+            response.headers["X-Frame-Options"] = "DENY"
+
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), camera=(), microphone=()"

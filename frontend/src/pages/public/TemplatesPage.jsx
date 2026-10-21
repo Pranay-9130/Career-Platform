@@ -11,6 +11,7 @@ import {
   ExternalLink,
   ShieldAlert,
 } from 'lucide-react';
+import api from '../../services/api';
 import { resumeService } from '../../services/resumeService';
 import { useAuth } from '../../context/AuthContext';
 import SEO from '@/components/common/SEO';
@@ -23,6 +24,68 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
+
+  // Fetch local blob for preview when a template is selected
+  useEffect(() => {
+    let active = true;
+    let createdUrl = null;
+
+    async function loadPdfBlob() {
+      if (!previewTemplate) {
+        setPreviewBlobUrl(null);
+        setPreviewError(false);
+        setPreviewLoading(false);
+        return;
+      }
+
+      const isPdf =
+        previewTemplate.download_url &&
+        (previewTemplate.download_url.toLowerCase().includes('.pdf') ||
+          previewTemplate.uploaded_file_name?.toLowerCase().endsWith('.pdf') ||
+          previewTemplate.file_type === '.pdf');
+
+      if (!isPdf || previewTemplate.preview_image_url) {
+        setPreviewBlobUrl(null);
+        setPreviewLoading(false);
+        return;
+      }
+
+      try {
+        setPreviewLoading(true);
+        setPreviewError(false);
+        const endpoint = previewTemplate.download_url;
+        const response = await api.get(endpoint, {
+          responseType: 'blob',
+        });
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        createdUrl = URL.createObjectURL(blob);
+        if (active) {
+          setPreviewBlobUrl(createdUrl);
+        }
+      } catch (err) {
+        console.error('Failed to load PDF preview blob:', err);
+        if (active) {
+          setPreviewError(true);
+        }
+      } finally {
+        if (active) {
+          setPreviewLoading(false);
+        }
+      }
+    }
+
+    loadPdfBlob();
+
+    return () => {
+      active = false;
+      if (createdUrl) {
+        URL.revokeObjectURL(createdUrl);
+      }
+    };
+  }, [previewTemplate]);
 
   useEffect(() => {
     async function loadTemplates() {
@@ -53,23 +116,37 @@ export default function TemplatesPage() {
 
   const handleDownloadTemplate = async (template) => {
     if (template.download_url && template.download_url.trim()) {
-      let downloadLink = template.download_url;
-      if (downloadLink.startsWith('/api/')) {
-        downloadLink = `${downloadLink}${downloadLink.includes('?') ? '&' : '?'}download=1`;
+      try {
+        setDownloadingId(template.id);
+        const endpoint = template.download_url;
+        const response = await api.get(
+          endpoint.includes('?') ? `${endpoint}&download=1` : `${endpoint}?download=1`,
+          { responseType: 'blob' }
+        );
+        const blob = new Blob([response.data], {
+          type: response.headers?.['content-type'] || 'application/pdf',
+        });
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download =
+          template.uploaded_file_name || `${template.name || 'resume-template'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        return;
+      } catch (err) {
+        console.error('Blob download failed, using link fallback:', err);
+        let downloadLink = template.download_url;
+        if (downloadLink.startsWith('/api/')) {
+          downloadLink = `${downloadLink}${downloadLink.includes('?') ? '&' : '?'}download=1`;
+        }
+        window.open(downloadLink, '_blank');
+        return;
+      } finally {
+        setDownloadingId(null);
       }
-      const url =
-        downloadLink.startsWith('http') || downloadLink.startsWith('data:')
-          ? downloadLink
-          : `${import.meta.env.VITE_API_URL || ''}${downloadLink}`;
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = template.uploaded_file_name || `${template.name || 'resume-template'}.pdf`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return;
     }
 
     try {
@@ -403,6 +480,18 @@ export default function TemplatesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {previewBlobUrl && (
+                    <a
+                      href={previewBlobUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+                      title="Open PDF in a new tab"
+                    >
+                      <span>Open Fullscreen</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleUseTemplate(previewTemplate.id)}
@@ -423,109 +512,61 @@ export default function TemplatesPage() {
               </div>
 
               {/* Modal Body: Full Canvas Display */}
-              <div className="p-4 sm:p-6 bg-[#1e232a] flex justify-center max-h-[75vh] overflow-y-auto">
+              <div className="p-4 sm:p-6 bg-[#1e232a] flex flex-col items-center justify-center min-h-[50vh] max-h-[75vh] overflow-y-auto">
                 {previewTemplate.preview_image_url ? (
                   <img
                     src={previewTemplate.preview_image_url}
                     alt={previewTemplate.name}
                     className="max-w-2xl w-full rounded shadow-xl object-contain bg-white"
                   />
-                ) : previewTemplate.download_url && (previewTemplate.download_url.toLowerCase().includes('.pdf') || previewTemplate.uploaded_file_name?.toLowerCase().endsWith('.pdf')) ? (
+                ) : previewLoading ? (
+                  <div className="py-20 flex flex-col items-center justify-center text-white space-y-3">
+                    <div className="w-10 h-10 border-3 border-blue-400 border-t-white rounded-full animate-spin" />
+                    <p className="text-xs text-slate-300 font-medium">Loading document preview...</p>
+                  </div>
+                ) : previewBlobUrl ? (
                   <iframe
-                    src={previewTemplate.download_url.startsWith('http') ? previewTemplate.download_url : `${import.meta.env.VITE_API_URL || ''}${previewTemplate.download_url}`}
+                    src={`${previewBlobUrl}#toolbar=0`}
                     title={previewTemplate.name}
                     className="w-full max-w-3xl h-[68vh] rounded-2xl bg-white shadow-2xl border-0"
                   />
                 ) : (
-                  <div className="w-full max-w-2xl bg-white p-8 sm:p-10 rounded shadow-2xl text-slate-800 text-xs space-y-4">
-                    {/* Header */}
-                    <div className="text-center border-b pb-4 border-slate-300">
-                      <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                        MOUNIKA RAYOTH
-                      </h2>
-                      <p className="text-slate-600 text-xs mt-1">Software Engineer (Full Stack)</p>
-                      <p className="text-slate-500 text-[11px] mt-1">
-                        +91 9391033355 • mounika.rayoth@example.com • Hyderabad, India
+                  <div className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl p-8 text-center text-white space-y-5 shadow-2xl">
+                    <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-white">{previewTemplate.name}</h4>
+                      <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                        {previewTemplate.uploaded_file_name || 'Resume Template Document'}
                       </p>
-                      <p className="text-brand-primary text-[11px] mt-0.5">
-                        linkedin.com/in/mounika-rayoth • github.com/mounika-rayoth
-                      </p>
+                      <span className="inline-block mt-2 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        {previewTemplate.badge || 'Professional'}
+                      </span>
                     </div>
 
-                    {/* Summary */}
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1.5">
-                        Profile Summary
-                      </h4>
-                      <p className="text-slate-700 leading-relaxed text-[11px]">
-                        Results-driven software engineer with background developing robust web architectures, reactive client dashboards, and automated test pipelines. Solid understanding of data structures, algorithm efficiency, and modern cloud deployment frameworks.
-                      </p>
-                    </div>
-
-                    {/* Education */}
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1.5">
-                        Education
-                      </h4>
-                      <div className="flex justify-between items-start text-[11px]">
-                        <div>
-                          <div className="font-bold text-slate-900">Osmania University, Hyderabad</div>
-                          <div className="text-slate-700">Bachelor of Technology in Computer Science & Engineering</div>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold text-slate-800">CGPA: 8.5 / 10.0</span>
-                          <div className="text-slate-500 text-[10px]">2020 – 2024</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Technical Skills */}
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1.5">
-                        Technical Skills
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
-                        <div>
-                          <span className="font-semibold text-slate-800">Languages: </span>
-                          <span className="text-slate-700">Python, JavaScript, TypeScript, SQL, HTML5/CSS3</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-slate-800">Frameworks: </span>
-                          <span className="text-slate-700">React.js, FastAPI, Node.js, Express, Tailwind CSS</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-slate-800">Databases: </span>
-                          <span className="text-slate-700">PostgreSQL, MySQL, SQLite, MongoDB</span>
-                        </div>
-                        <div>
-                          <span className="font-semibold text-slate-800">Developer Tools: </span>
-                          <span className="text-slate-700">Git, GitHub, Docker, Postman, Linux/Unix</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Work Experience */}
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-1 mb-1.5">
-                        Work Experience
-                      </h4>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center text-[11px]">
-                          <span className="font-bold text-slate-900">
-                            Software Developer Intern — <span className="font-medium text-slate-700">Tech Solutions Inc</span>
-                          </span>
-                          <span className="text-slate-500 text-[10px]">Jan 2024 – Jul 2024</span>
-                        </div>
-                        <ul className="list-disc list-inside space-y-0.5 text-[11px] text-slate-700">
-                          <li>Developed scalable REST APIs with automated validation and JWT authentication.</li>
-                          <li>Integrated reactive UI components with real-time feedback using React.</li>
-                          <li>Implemented unit and integration test runners achieving 90%+ branch coverage.</li>
-                        </ul>
-                      </div>
+                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadTemplate(previewTemplate)}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-900 hover:bg-slate-100 transition inline-flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download Template File</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUseTemplate(previewTemplate.id)}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-primary hover:bg-blue-600 text-white transition inline-flex items-center justify-center gap-2"
+                      >
+                        <span>Use in Resume Builder</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
+
 
               {/* Modal Footer */}
               <div className="px-6 py-4 bg-brand-veryLight border-t border-brand-border flex flex-wrap justify-between items-center gap-3">

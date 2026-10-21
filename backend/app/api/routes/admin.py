@@ -995,5 +995,7 @@ async def serve_template_file(
         headers={
             "Content-Disposition": f'{disposition}; filename="{clean_filename}"',
             "Cache-Control": "public, max-age=3600",
+            "Content-Security-Policy": "frame-ancestors *",
+            "Access-Control-Allow-Origin": "*",
         },
     )
