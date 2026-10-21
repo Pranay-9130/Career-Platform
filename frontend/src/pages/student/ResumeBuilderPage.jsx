@@ -43,8 +43,9 @@ export default function ResumeBuilderPage() {
   const [currentResumeId, setCurrentResumeId] = useState(null);
 
   // Resume form state
+  const [availableTemplates, setAvailableTemplates] = useState([]);
   const [title, setTitle] = useState('Software Engineering Resume');
-  const [templateId, setTemplateId] = useState(searchParams.get('template') || 'classic-tech');
+  const [templateId, setTemplateId] = useState(searchParams.get('template') || '');
   const [personalInfo, setPersonalInfo] = useState({
     full_name: '',
     headline: '',
@@ -62,6 +63,25 @@ export default function ResumeBuilderPage() {
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState('');
   const [certifications, setCertifications] = useState([]);
+
+  // Load available templates from catalog
+  useEffect(() => {
+    async function fetchTemplatesCatalog() {
+      try {
+        const tpls = await resumeService.getTemplates();
+        const activeTpls = Array.isArray(tpls) ? tpls.filter((t) => t.is_active !== false) : [];
+        setAvailableTemplates(activeTpls);
+        if (activeTpls.length > 0) {
+          const currentTplParam = searchParams.get('template');
+          const matched = activeTpls.find((t) => t.id === currentTplParam);
+          setTemplateId(matched ? matched.id : activeTpls[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load templates catalog:', err);
+      }
+    }
+    fetchTemplatesCatalog();
+  }, [searchParams]);
 
   // Load existing resumes or initialize new
   useEffect(() => {
@@ -92,7 +112,9 @@ export default function ResumeBuilderPage() {
   const loadResumeIntoState = (r) => {
     setCurrentResumeId(r.id);
     setTitle(r.title || 'Software Engineering Resume');
-    setTemplateId(r.template_id || 'classic-tech');
+    if (r.template_id) {
+      setTemplateId(r.template_id);
+    }
     const info = r.personal_info || {};
     setPersonalInfo({
       ...info,
@@ -555,10 +577,15 @@ export default function ResumeBuilderPage() {
               onChange={(e) => setTemplateId(e.target.value)}
               className="text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 text-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none cursor-pointer"
             >
-              <option value="classic-tech">Classic Tech (Ivy CS)</option>
-              <option value="modern-minimal">Modern Minimal</option>
-              <option value="research-academic">Research & Academic</option>
-              <option value="compact-dense">Compact Executive</option>
+              {availableTemplates.length > 0 ? (
+                availableTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name || t.id}
+                  </option>
+                ))
+              ) : (
+                <option value="">No templates available</option>
+              )}
             </select>
           </div>
 

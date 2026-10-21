@@ -1365,16 +1365,6 @@ export default function AdminDashboardPage() {
                 <ExternalLink className="w-3.5 h-3.5" />
               </Link>
 
-              <button
-                type="button"
-                onClick={handleSeedScreenshotTemplates}
-                disabled={loadingTemplates}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-brand-primary bg-brand-veryLight hover:bg-blue-100 border border-brand-border transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
-                title="Populate the 3 templates from the screenshot (Template 1, 2, 3)"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Seed (Template 1, 2, 3)</span>
-              </button>
 
               {templatesList.length > 0 && (
                 <button
@@ -1495,18 +1485,11 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                   {templateSearchQuery.trim()
                     ? `No templates matching "${templateSearchQuery}". Try clearing search.`
-                    : 'The resume templates catalog is currently empty. Add your own template or load default sample templates.'}
+                    : 'The resume templates catalog is currently empty. Upload your template files (.pdf, .docx) using the upload section above.'}
                 </p>
               </div>
 
               <div className="pt-2 flex flex-wrap justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleSeedScreenshotTemplates}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-brand-veryLight text-brand-primary hover:bg-blue-100 border border-brand-border transition"
-                >
-                  Load Sample Templates (1, 2, 3)
-                </button>
                 <button
                   type="button"
                   onClick={handleOpenCreateTemplate}

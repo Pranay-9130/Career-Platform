@@ -569,30 +569,18 @@ async def ensure_templates_catalog_loaded(db: AsyncSession):
     try:
         if CATALOG_DISK_PATH.exists():
             disk_data = json.loads(CATALOG_DISK_PATH.read_text(encoding="utf-8"))
-            if isinstance(disk_data, list) and disk_data:
-                existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
-                for item in disk_data:
-                    if item.get("id") not in existing_ids:
-                        AVAILABLE_TEMPLATES.append(item)
-                    else:
-                        for idx, curr in enumerate(AVAILABLE_TEMPLATES):
-                            if curr.get("id") == item.get("id"):
-                                AVAILABLE_TEMPLATES[idx] = item
+            if isinstance(disk_data, list):
+                AVAILABLE_TEMPLATES.clear()
+                AVAILABLE_TEMPLATES.extend(disk_data)
                 return
 
         stmt = select(StoredArchive).where(StoredArchive.storage_key == CATALOG_STORAGE_KEY)
         archive = (await db.execute(stmt)).scalar_one_or_none()
         if archive and archive.content:
             db_data = json.loads(archive.content.decode("utf-8"))
-            if isinstance(db_data, list) and db_data:
-                existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
-                for item in db_data:
-                    if item.get("id") not in existing_ids:
-                        AVAILABLE_TEMPLATES.append(item)
-                    else:
-                        for idx, curr in enumerate(AVAILABLE_TEMPLATES):
-                            if curr.get("id") == item.get("id"):
-                                AVAILABLE_TEMPLATES[idx] = item
+            if isinstance(db_data, list):
+                AVAILABLE_TEMPLATES.clear()
+                AVAILABLE_TEMPLATES.extend(db_data)
     except Exception:
         pass
 
@@ -740,60 +728,9 @@ async def seed_default_templates(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Seed/restore the clean Resume Templates (Template 1, Template 2, Template 3) as displayed in the templates section.
+    Reload catalog and return currently active uploaded templates.
     """
     await ensure_templates_catalog_loaded(db)
-    demo_defaults = [
-        {
-            "id": "template-1",
-            "name": "Template 1",
-            "badge": "Professional",
-            "description": "Ready-to-use professional resume format",
-            "tagline": "Standard single-column layout preferred by tech recruiters and ATS systems.",
-            "ats_score": "98/100",
-            "best_for": "Software Engineers, Backend Developers, DevOps",
-            "preview_accent": "#F97316",
-            "preview_image_url": "",
-            "download_url": "",
-            "is_active": True,
-            "is_custom": False,
-        },
-        {
-            "id": "template-2",
-            "name": "Template 2",
-            "badge": "Professional",
-            "description": "Ready-to-use professional resume format",
-            "tagline": "Clean modern hierarchy with subtle slate dividers and high readability.",
-            "ats_score": "95/100",
-            "best_for": "Full Stack Engineers, Frontend Developers, Product Designers",
-            "preview_accent": "#F97316",
-            "preview_image_url": "",
-            "download_url": "",
-            "is_active": True,
-            "is_custom": False,
-        },
-        {
-            "id": "template-3",
-            "name": "Template 3",
-            "badge": "Professional",
-            "description": "Ready-to-use professional resume format",
-            "tagline": "Structured academic and engineering format highlighting education and projects.",
-            "ats_score": "96/100",
-            "best_for": "Data Scientists, ML Researchers, Graduate Applicants",
-            "preview_accent": "#F97316",
-            "preview_image_url": "",
-            "download_url": "",
-            "is_active": True,
-            "is_custom": False,
-        },
-    ]
-
-    existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
-    for item in demo_defaults:
-        if item["id"] not in existing_ids:
-            AVAILABLE_TEMPLATES.append(item)
-
-    await persist_templates_catalog(db, current_user.id)
     return AVAILABLE_TEMPLATES
 
 

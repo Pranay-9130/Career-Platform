@@ -28,54 +28,14 @@ from app.services.ats_analyzer import analyze_ats, extract_resume_text_from_dict
 
 router = APIRouter(prefix="/resumes", tags=["Resume Builder"])
 
-AVAILABLE_TEMPLATES = [
-    {
-        "id": "classic-tech",
-        "name": "Classic Tech",
-        "tagline": "Ivy-league single column layout standard preferred by FAANG recruiters and ATS systems.",
-        "description": "Standardized, highly parseable ATS layout with clean serif/sans typography, prominent technical skills matrix, and bullet-point impact metrics.",
-        "badge": "Highest ATS Score",
-        "ats_score": "98/100",
-        "best_for": "Software Engineers, Backend Developers, DevOps",
-        "preview_accent": "#0284c7",
-    },
-    {
-        "id": "modern-minimal",
-        "name": "Modern Minimal",
-        "tagline": "Sleek, contemporary aesthetic featuring subtle dividers and structured section blocks.",
-        "description": "Clean modern hierarchy with subtle slate dividers and high-readability typography designed for high-growth tech companies.",
-        "badge": "Popular",
-        "ats_score": "95/100",
-        "best_for": "Full Stack Engineers, Frontend Developers, Product Designers",
-        "preview_accent": "#2563eb",
-    },
-    {
-        "id": "research-academic",
-        "name": "Research & Academic",
-        "tagline": "Curated for students highlighting publications, capstones, thesis, and university honors.",
-        "description": "Structured academic format highlighting education, coursework, publications, laboratory experience, and open-source contributions.",
-        "badge": "Academic",
-        "ats_score": "94/100",
-        "best_for": "Data Scientists, ML/AI Researchers, Graduate Applicants",
-        "preview_accent": "#0d9488",
-    },
-    {
-        "id": "compact-dense",
-        "name": "Compact Executive",
-        "tagline": "Dense, single-page powerhouse layout maximizing impact per square inch without clutter.",
-        "description": "Tight margins and compact spacing specifically calibrated to fit extensive internship experience and multiple flagship projects onto 1 page.",
-        "badge": "High Density",
-        "ats_score": "96/100",
-        "best_for": "Multi-internship candidates, Senior students, Career switchers",
-        "preview_accent": "#4f46e5",
-    },
-]
+AVAILABLE_TEMPLATES: List[Dict[str, Any]] = []
 
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
 async def list_templates(db: AsyncSession = Depends(get_db)):
     """
     Public catalogue of ATS resume templates.
+    Returns exclusively templates added or uploaded by the administrator.
     """
     try:
         from pathlib import Path
@@ -86,22 +46,18 @@ async def list_templates(db: AsyncSession = Depends(get_db)):
         catalog_path = Path("uploads/templates/catalog.json")
         if catalog_path.exists():
             disk_data = json.loads(catalog_path.read_text(encoding="utf-8"))
-            if isinstance(disk_data, list) and disk_data:
-                existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
-                for item in disk_data:
-                    if item.get("id") not in existing_ids:
-                        AVAILABLE_TEMPLATES.insert(0, item)
+            if isinstance(disk_data, list):
+                AVAILABLE_TEMPLATES.clear()
+                AVAILABLE_TEMPLATES.extend(disk_data)
         else:
             # Check DB archive
             stmt = select(StoredArchive).where(StoredArchive.storage_key == "system/templates_catalog.json")
             archive = (await db.execute(stmt)).scalar_one_or_none()
             if archive and archive.content:
                 db_data = json.loads(archive.content.decode("utf-8"))
-                if isinstance(db_data, list) and db_data:
-                    existing_ids = {t.get("id") for t in AVAILABLE_TEMPLATES}
-                    for item in db_data:
-                        if item.get("id") not in existing_ids:
-                            AVAILABLE_TEMPLATES.insert(0, item)
+                if isinstance(db_data, list):
+                    AVAILABLE_TEMPLATES.clear()
+                    AVAILABLE_TEMPLATES.extend(db_data)
     except Exception:
         pass
 
