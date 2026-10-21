@@ -565,22 +565,39 @@ async def persist_templates_catalog(db: AsyncSession, owner_id: Any = None):
         pass
 
 
+DEFAULT_EXCLUDED_TEMPLATE_IDS = {
+    "classic-tech",
+    "modern-minimal",
+    "research-academic",
+    "compact-dense",
+    "template-1",
+    "template-2",
+    "template-3",
+}
+
+
 async def ensure_templates_catalog_loaded(db: AsyncSession):
     try:
-        if CATALOG_DISK_PATH.exists():
-            disk_data = json.loads(CATALOG_DISK_PATH.read_text(encoding="utf-8"))
-            if isinstance(disk_data, list):
-                AVAILABLE_TEMPLATES.clear()
-                AVAILABLE_TEMPLATES.extend(disk_data)
-                return
-
+        loaded_data = None
+        # Prioritize DB archive as single source of truth
         stmt = select(StoredArchive).where(StoredArchive.storage_key == CATALOG_STORAGE_KEY)
         archive = (await db.execute(stmt)).scalar_one_or_none()
         if archive and archive.content:
-            db_data = json.loads(archive.content.decode("utf-8"))
-            if isinstance(db_data, list):
-                AVAILABLE_TEMPLATES.clear()
-                AVAILABLE_TEMPLATES.extend(db_data)
+            parsed = json.loads(archive.content.decode("utf-8"))
+            if isinstance(parsed, list):
+                loaded_data = parsed
+
+        if loaded_data is None and CATALOG_DISK_PATH.exists():
+            disk_data = json.loads(CATALOG_DISK_PATH.read_text(encoding="utf-8"))
+            if isinstance(disk_data, list):
+                loaded_data = disk_data
+
+        if loaded_data is not None:
+            AVAILABLE_TEMPLATES.clear()
+            AVAILABLE_TEMPLATES.extend([
+                t for t in loaded_data
+                if t.get("id") not in DEFAULT_EXCLUDED_TEMPLATE_IDS
+            ])
     except Exception:
         pass
 
@@ -595,7 +612,7 @@ async def get_admin_templates(db: AsyncSession = Depends(get_db)):
     Retrieve all ATS resume templates in the catalog for administration.
     """
     await ensure_templates_catalog_loaded(db)
-    return AVAILABLE_TEMPLATES
+    return [t for t in AVAILABLE_TEMPLATES if t.get("id") not in DEFAULT_EXCLUDED_TEMPLATE_IDS]
 
 
 @router.post(

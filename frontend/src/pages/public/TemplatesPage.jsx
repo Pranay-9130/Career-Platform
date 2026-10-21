@@ -91,8 +91,21 @@ export default function TemplatesPage() {
     async function loadTemplates() {
       try {
         const data = await resumeService.getTemplates();
+        const excludedIds = new Set([
+          'classic-tech',
+          'modern-minimal',
+          'research-academic',
+          'compact-dense',
+          'template-1',
+          'template-2',
+          'template-3',
+        ]);
         const activeList = Array.isArray(data)
-          ? data.filter((t) => t.is_active !== false)
+          ? data.filter(
+              (t) =>
+                t.is_active !== false &&
+                !excludedIds.has((t.id || '').toLowerCase())
+            )
           : [];
         setTemplates(activeList);
       } catch (err) {

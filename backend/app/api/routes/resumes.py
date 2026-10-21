@@ -30,6 +30,16 @@ router = APIRouter(prefix="/resumes", tags=["Resume Builder"])
 
 AVAILABLE_TEMPLATES: List[Dict[str, Any]] = []
 
+DEFAULT_EXCLUDED_TEMPLATE_IDS = {
+    "classic-tech",
+    "modern-minimal",
+    "research-academic",
+    "compact-dense",
+    "template-1",
+    "template-2",
+    "template-3",
+}
+
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
 async def list_templates(db: AsyncSession = Depends(get_db)):
@@ -42,26 +52,33 @@ async def list_templates(db: AsyncSession = Depends(get_db)):
         import json
         from app.models.stored_archive import StoredArchive
 
-        # Check disk catalog
-        catalog_path = Path("uploads/templates/catalog.json")
-        if catalog_path.exists():
-            disk_data = json.loads(catalog_path.read_text(encoding="utf-8"))
-            if isinstance(disk_data, list):
-                AVAILABLE_TEMPLATES.clear()
-                AVAILABLE_TEMPLATES.extend(disk_data)
-        else:
-            # Check DB archive
-            stmt = select(StoredArchive).where(StoredArchive.storage_key == "system/templates_catalog.json")
-            archive = (await db.execute(stmt)).scalar_one_or_none()
-            if archive and archive.content:
-                db_data = json.loads(archive.content.decode("utf-8"))
-                if isinstance(db_data, list):
-                    AVAILABLE_TEMPLATES.clear()
-                    AVAILABLE_TEMPLATES.extend(db_data)
+        loaded_data = None
+
+        # Prioritize DB archive as single source of truth
+        stmt = select(StoredArchive).where(StoredArchive.storage_key == "system/templates_catalog.json")
+        archive = (await db.execute(stmt)).scalar_one_or_none()
+        if archive and archive.content:
+            parsed = json.loads(archive.content.decode("utf-8"))
+            if isinstance(parsed, list):
+                loaded_data = parsed
+
+        if loaded_data is None:
+            catalog_path = Path("uploads/templates/catalog.json")
+            if catalog_path.exists():
+                disk_data = json.loads(catalog_path.read_text(encoding="utf-8"))
+                if isinstance(disk_data, list):
+                    loaded_data = disk_data
+
+        if loaded_data is not None:
+            AVAILABLE_TEMPLATES.clear()
+            AVAILABLE_TEMPLATES.extend(loaded_data)
     except Exception:
         pass
 
-    return [t for t in AVAILABLE_TEMPLATES if t.get("is_active", True)]
+    return [
+        t for t in AVAILABLE_TEMPLATES
+        if t.get("is_active", True) and t.get("id") not in DEFAULT_EXCLUDED_TEMPLATE_IDS
+    ]
 
 
 @router.get("/templates/file/{storage_key:path}")

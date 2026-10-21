@@ -97,11 +97,21 @@ export const adminService = {
   },
 
   /**
-   * List all active resume templates.
+   * List all active resume templates (exclusively user-uploaded/added).
    */
   async getTemplates() {
     const response = await api.get('/admin/templates');
-    return response.data;
+    const excluded = new Set([
+      'classic-tech',
+      'modern-minimal',
+      'research-academic',
+      'compact-dense',
+      'template-1',
+      'template-2',
+      'template-3',
+    ]);
+    const list = Array.isArray(response.data) ? response.data : [];
+    return list.filter((t) => !excluded.has(t.id));
   },
 
   /**

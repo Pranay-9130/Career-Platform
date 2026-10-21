@@ -1,12 +1,23 @@
 import api from './api';
 
+export const DEFAULT_EXCLUDED_TEMPLATE_IDS = new Set([
+  'classic-tech',
+  'modern-minimal',
+  'research-academic',
+  'compact-dense',
+  'template-1',
+  'template-2',
+  'template-3',
+]);
+
 export const resumeService = {
   /**
-   * Fetch catalogue of available ATS templates.
+   * Fetch catalogue of available ATS templates (exclusively user-uploaded/added).
    */
   async getTemplates() {
     const response = await api.get('/resumes/templates');
-    return response.data;
+    const list = Array.isArray(response.data) ? response.data : [];
+    return list.filter((t) => !DEFAULT_EXCLUDED_TEMPLATE_IDS.has(t.id));
   },
 
   /**

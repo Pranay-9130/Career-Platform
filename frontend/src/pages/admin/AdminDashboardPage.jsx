@@ -716,7 +716,17 @@ export default function AdminDashboardPage() {
   }, [studentsList, studentSearchQuery]);
 
   const filteredTemplates = useMemo(() => {
+    const excluded = new Set([
+      'classic-tech',
+      'modern-minimal',
+      'research-academic',
+      'compact-dense',
+      'template-1',
+      'template-2',
+      'template-3',
+    ]);
     return templatesList.filter((t) => {
+      if (excluded.has((t.id || '').toLowerCase())) return false;
       if (templateStatusFilter === 'ACTIVE' && t.is_active === false) return false;
       if (templateStatusFilter === 'INACTIVE' && t.is_active !== false) return false;
       if (templateSearchQuery.trim()) {
