@@ -117,7 +117,7 @@ async def create_application(
             if not salary_or_stipend:
                 salary_or_stipend = job.stipend_or_salary
             if not job_url:
-                job_url = job.apply_url
+                job_url = job.application_url or job.apply_url or ""
 
     new_app = JobApplication(
         user_id=current_user.id,

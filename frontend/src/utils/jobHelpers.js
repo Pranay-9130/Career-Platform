@@ -71,3 +71,188 @@ export function formatDeadline(deadline) {
     label: formattedDate,
   };
 }
+
+export const APPLICATION_METHODS = [
+  {
+    value: 'INTERNAL',
+    label: 'Apply on CareerPlatform (Internal Application)',
+    shortLabel: 'Internal Application',
+    description: 'Students apply directly through CareerPlatform with their student workspace and projects.',
+    helpText: 'Students apply directly through CareerPlatform with their student workspace and projects.',
+  },
+  {
+    value: 'GOOGLE_FORM',
+    label: 'External Google Form',
+    shortLabel: 'Google Form',
+    description: "Directs applicants to the company's official Google Form response page.",
+    helpText: "Directs applicants to the company's official Google Form response page.",
+  },
+  {
+    value: 'EMAIL',
+    label: 'Recruiter Email',
+    shortLabel: 'Recruiter Email',
+    description: "Opens the applicant's default mail client addressed to the hiring recruiter.",
+    helpText: "Opens the applicant's default mail client addressed to the hiring recruiter.",
+  },
+  {
+    value: 'EXTERNAL_URL',
+    label: 'External Application Website',
+    shortLabel: 'External Website',
+    description: "Directs applicants to the company's external career site or ATS portal.",
+    helpText: "Directs applicants to the company's external career site or ATS portal.",
+  },
+];
+
+APPLICATION_METHODS.INTERNAL = APPLICATION_METHODS[0];
+APPLICATION_METHODS.GOOGLE_FORM = APPLICATION_METHODS[1];
+APPLICATION_METHODS.EMAIL = APPLICATION_METHODS[2];
+APPLICATION_METHODS.EXTERNAL_URL = APPLICATION_METHODS[3];
+
+/**
+ * Validates whether a URL uses secure HTTPS and has no forbidden schemes.
+ */
+export function isValidSafeHttpsUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed.toLowerCase().startsWith('https://')) return false;
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates Google Form URL (forms.gle or docs.google.com/forms).
+ */
+export function isValidGoogleFormUrl(url) {
+  if (!isValidSafeHttpsUrl(url)) return false;
+  try {
+    const parsed = new URL(url.trim());
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    if (host === 'forms.gle') return true;
+    if (host === 'docs.google.com' && parsed.pathname.toLowerCase().includes('/forms')) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates simple email format.
+ */
+export function isValidEmail(email) {
+  if (!email || typeof email !== 'string') return false;
+  const trimmed = email.trim();
+  return /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/.test(trimmed);
+}
+
+/**
+ * Construct safe mailto URI for recruiter email application.
+ * Accepts either a job object or (email, title, company_name) arguments.
+ */
+export function getRecruiterMailtoLink(jobOrEmail, maybeTitle, maybeCompany) {
+  let email = '';
+  let title = 'Open Position';
+  let company = 'Company';
+
+  if (typeof jobOrEmail === 'string') {
+    email = jobOrEmail.trim();
+    if (maybeTitle) title = maybeTitle.trim();
+    if (maybeCompany) company = maybeCompany.trim();
+  } else if (jobOrEmail && typeof jobOrEmail === 'object') {
+    email = jobOrEmail.recruiter_email ? jobOrEmail.recruiter_email.trim() : '';
+    if (jobOrEmail.title) title = jobOrEmail.title.trim();
+    if (jobOrEmail.company_name) company = jobOrEmail.company_name.trim();
+  }
+
+  if (!email) return '';
+  const subject = encodeURIComponent(`Application for ${title} at ${company}`);
+  return `mailto:${email}?subject=${subject}`;
+}
+
+/**
+ * Resolve display and action details based on configured application method.
+ */
+export function getJobApplicationDestination(job) {
+  const method = (job?.application_method || 'INTERNAL').toUpperCase();
+
+  switch (method) {
+    case 'GOOGLE_FORM': {
+      const url = job?.application_url || job?.apply_url;
+      const isMissing = !url || !isValidSafeHttpsUrl(url);
+      const targetUrl = isMissing ? (job?.id ? `/jobs/${job.id}` : '#') : url;
+      return {
+        method: 'GOOGLE_FORM',
+        type: isMissing ? 'internal' : 'link',
+        href: targetUrl,
+        url: targetUrl,
+        buttonText: 'Apply via Google Form',
+        isExternal: !isMissing,
+        isInternal: isMissing,
+        isMailto: false,
+        instructions: job?.application_instructions || '',
+        isMissingTarget: isMissing,
+        helperText: 'Opens the company Google Form in a new tab.',
+      };
+    }
+
+    case 'EMAIL': {
+      const email = job?.recruiter_email;
+      const isMissing = !email || !isValidEmail(email);
+      const mailtoUrl = isMissing ? (job?.id ? `/jobs/${job.id}` : '#') : getRecruiterMailtoLink(job);
+      return {
+        method: 'EMAIL',
+        type: isMissing ? 'internal' : 'mailto',
+        href: mailtoUrl,
+        url: mailtoUrl,
+        buttonText: 'Email Recruiter',
+        isExternal: !isMissing,
+        isInternal: isMissing,
+        isMailto: !isMissing,
+        instructions: job?.application_instructions || '',
+        isMissingTarget: isMissing,
+        helperText: `Sends email directly to ${email || 'recruiter'}.`,
+      };
+    }
+
+    case 'EXTERNAL_URL': {
+      const url = job?.application_url || job?.apply_url;
+      const isMissing = !url || !isValidSafeHttpsUrl(url);
+      const targetUrl = isMissing ? (job?.id ? `/jobs/${job.id}` : '#') : url;
+      return {
+        method: 'EXTERNAL_URL',
+        type: isMissing ? 'internal' : 'link',
+        href: targetUrl,
+        url: targetUrl,
+        buttonText: 'Apply on Company Site',
+        isExternal: !isMissing,
+        isInternal: isMissing,
+        isMailto: false,
+        instructions: job?.application_instructions || '',
+        isMissingTarget: isMissing,
+        helperText: 'Opens the official career page in a new tab.',
+      };
+    }
+
+    case 'INTERNAL':
+    default: {
+      const internalHref = `/jobs/${job?.id || ''}`;
+      return {
+        method: 'INTERNAL',
+        type: 'internal',
+        href: internalHref,
+        url: internalHref,
+        buttonText: 'Apply Now',
+        isExternal: false,
+        isInternal: true,
+        isMailto: false,
+        instructions: job?.application_instructions || '',
+        isMissingTarget: false,
+        helperText: 'Submit directly through CareerPlatform.',
+      };
+    }
+  }
+}

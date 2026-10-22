@@ -40,7 +40,14 @@ import {
 } from 'lucide-react';
 import adminService from '../../services/adminService';
 import { Button, Badge, Modal, Input, Alert } from '@/components/common';
-import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
+import {
+  formatSalary,
+  formatDeadline,
+  isValidSafeHttpsUrl,
+  isValidGoogleFormUrl,
+  isValidEmail,
+  APPLICATION_METHODS,
+} from '@/utils/jobHelpers';
 
 export default function AdminDashboardPage() {
   const location = useLocation();
@@ -114,6 +121,10 @@ export default function AdminDashboardPage() {
     responsibilities: '',
     requirements: '',
     apply_url: '',
+    application_method: 'INTERNAL',
+    application_url: '',
+    recruiter_email: '',
+    application_instructions: '',
     is_active: true,
     is_featured: false,
     no_deadline: true,
@@ -326,6 +337,16 @@ export default function AdminDashboardPage() {
     );
     const hasDeadline = Boolean(job.deadline);
 
+    const resolvedMethod = job.application_method || 'INTERNAL';
+    let defaultUrl = job.application_url || '';
+    let defaultEmail = job.recruiter_email || '';
+    if (!defaultUrl && job.apply_url && (resolvedMethod === 'GOOGLE_FORM' || resolvedMethod === 'EXTERNAL_URL')) {
+      defaultUrl = job.apply_url;
+    }
+    if (!defaultEmail && job.apply_url && resolvedMethod === 'EMAIL') {
+      defaultEmail = job.apply_url.replace(/^mailto:/i, '');
+    }
+
     setJobFormData({
       title: job.title || '',
       company_name: job.company_name || '',
@@ -343,6 +364,10 @@ export default function AdminDashboardPage() {
       responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities.join('\n') : job.responsibilities || '',
       requirements: Array.isArray(job.requirements) ? job.requirements.join('\n') : job.requirements || '',
       apply_url: job.apply_url || '',
+      application_method: resolvedMethod,
+      application_url: defaultUrl,
+      recruiter_email: defaultEmail,
+      application_instructions: job.application_instructions || '',
       is_active: job.is_active ?? true,
       is_featured: job.is_featured ?? false,
       no_deadline: !hasDeadline,
@@ -359,12 +384,64 @@ export default function AdminDashboardPage() {
       return;
     }
 
+    // Validation for application methods
+    if (jobFormData.application_method === 'GOOGLE_FORM') {
+      if (!jobFormData.application_url?.trim()) {
+        setJobActionFeedback({ type: 'error', text: 'Google Form URL is required for the External Google Form method.' });
+        return;
+      }
+      if (!isValidGoogleFormUrl(jobFormData.application_url)) {
+        setJobActionFeedback({
+          type: 'error',
+          text: 'Please enter a valid Google Form URL (e.g. https://forms.gle/... or https://docs.google.com/forms/d/e/.../viewform).',
+        });
+        return;
+      }
+    } else if (jobFormData.application_method === 'EXTERNAL_URL') {
+      if (!jobFormData.application_url?.trim()) {
+        setJobActionFeedback({ type: 'error', text: 'Application URL is required for the External Application Website method.' });
+        return;
+      }
+      if (!isValidSafeHttpsUrl(jobFormData.application_url)) {
+        setJobActionFeedback({
+          type: 'error',
+          text: 'Application URL must start with a secure "https://" address.',
+        });
+        return;
+      }
+    } else if (jobFormData.application_method === 'EMAIL') {
+      if (!jobFormData.recruiter_email?.trim()) {
+        setJobActionFeedback({ type: 'error', text: 'Recruiter email is required for the Recruiter Email method.' });
+        return;
+      }
+      if (!isValidEmail(jobFormData.recruiter_email)) {
+        setJobActionFeedback({
+          type: 'error',
+          text: 'Please enter a valid recruiter email address (e.g. careers@company.com).',
+        });
+        return;
+      }
+    }
+
+    let calculatedApplyUrl = jobFormData.apply_url || '';
+    if (jobFormData.application_method === 'GOOGLE_FORM' || jobFormData.application_method === 'EXTERNAL_URL') {
+      calculatedApplyUrl = (jobFormData.application_url || '').trim();
+    } else if (jobFormData.application_method === 'EMAIL') {
+      calculatedApplyUrl = `mailto:${(jobFormData.recruiter_email || '').trim().toLowerCase()}`;
+    } else if (jobFormData.application_method === 'INTERNAL') {
+      calculatedApplyUrl = '';
+    }
+
     const finalSalary = jobFormData.has_salary ? (jobFormData.stipend_or_salary || '').trim() : '';
     const finalDeadline = (!jobFormData.no_deadline && jobFormData.deadline) ? new Date(jobFormData.deadline).toISOString() : null;
 
     const { has_salary, no_deadline, ...cleanedData } = jobFormData;
     const payload = {
       ...cleanedData,
+      apply_url: calculatedApplyUrl,
+      application_url: jobFormData.application_url ? jobFormData.application_url.trim() : null,
+      recruiter_email: jobFormData.recruiter_email ? jobFormData.recruiter_email.trim().toLowerCase() : null,
+      application_instructions: jobFormData.application_instructions ? jobFormData.application_instructions.trim() : null,
       stipend_or_salary: finalSalary,
       deadline: finalDeadline,
       skills_required: jobFormData.skills_required
@@ -1130,6 +1207,28 @@ export default function AdminDashboardPage() {
                         <td className="px-5 py-4 text-slate-600">
                           <div>{job.job_type}</div>
                           <div className="text-[11px] text-slate-400">{job.work_mode}</div>
+                          <div className="mt-1 flex items-center gap-1">
+                            {job.application_method === 'GOOGLE_FORM' && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                                Google Form
+                              </span>
+                            )}
+                            {job.application_method === 'EMAIL' && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                                Recruiter Email
+                              </span>
+                            )}
+                            {job.application_method === 'EXTERNAL_URL' && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                External URL
+                              </span>
+                            )}
+                            {(!job.application_method || job.application_method === 'INTERNAL') && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-primary/10 text-brand-primary border border-brand-primary/20">
+                                Internal
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-5 py-4 text-slate-700 font-medium">
                           {formatSalary(job.stipend_or_salary) ? (
@@ -2014,17 +2113,165 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* APPLICATION METHOD CONFIGURATION */}
+            <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3.5">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Apply URL</label>
-                <input
-                  type="url"
-                  value={jobFormData.apply_url}
-                  onChange={(e) => setJobFormData({ ...jobFormData, apply_url: e.target.value })}
-                  placeholder="https://company.com/apply"
-                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Send className="w-3.5 h-3.5 text-brand-primary" />
+                  Application Method & Candidate Destination *
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Choose how students submit their application for this opportunity.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Application Method
+                </label>
+                <select
+                  value={jobFormData.application_method}
+                  onChange={(e) =>
+                    setJobFormData({
+                      ...jobFormData,
+                      application_method: e.target.value,
+                    })
+                  }
+                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary font-medium text-slate-800"
+                >
+                  <option value="INTERNAL">Apply on CareerPlatform (Internal Application)</option>
+                  <option value="GOOGLE_FORM">External Google Form</option>
+                  <option value="EMAIL">Recruiter Email</option>
+                  <option value="EXTERNAL_URL">External Application Website</option>
+                </select>
+              </div>
+
+              {/* 1. INTERNAL APPLICATION */}
+              {jobFormData.application_method === 'INTERNAL' && (
+                <div className="p-3 bg-white rounded-xl border border-brand-primary/20 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 text-brand-primary font-semibold text-[11px]">
+                    <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
+                    <span>Internal CareerPlatform Workflow</span>
+                  </div>
+                  <p className="text-slate-600 leading-relaxed text-[11px]">
+                    Candidates apply directly through CareerPlatform using their verified student profile and projects. Applications are tracked in the student pipeline.
+                  </p>
+                </div>
+              )}
+
+              {/* 2. EXTERNAL GOOGLE FORM */}
+              {jobFormData.application_method === 'GOOGLE_FORM' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Google Form URL *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={jobFormData.application_url}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          application_url: e.target.value,
+                          apply_url: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. https://forms.gle/xyz123 or https://docs.google.com/forms/d/e/.../viewform"
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Accepts Google Form share or response URLs (e.g. <code>https://forms.gle/...</code> or <code>https://docs.google.com/forms/...</code>).
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. RECRUITER EMAIL */}
+              {jobFormData.application_method === 'EMAIL' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Recruiter Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={jobFormData.recruiter_email}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          recruiter_email: e.target.value,
+                          apply_url: e.target.value ? `mailto:${e.target.value.trim()}` : '',
+                        })
+                      }
+                      placeholder="e.g. careers@company.com or hiring@acme.com"
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      The Apply button will launch the applicant's default mail client addressed to this recruiter with the job title pre-filled in the subject.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. EXTERNAL APPLICATION WEBSITE */}
+              {jobFormData.application_method === 'EXTERNAL_URL' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Application URL *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={jobFormData.application_url}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          application_url: e.target.value,
+                          apply_url: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. https://company.com/careers/software-engineer"
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Applicants will be directed to this external application portal in a secure new tab.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* APPLICATION INSTRUCTIONS */}
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Application Instructions <span className="font-normal text-slate-400">(Optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={jobFormData.application_instructions}
+                  onChange={(e) =>
+                    setJobFormData({
+                      ...jobFormData,
+                      application_instructions: e.target.value,
+                    })
+                  }
+                  placeholder={
+                    jobFormData.application_method === 'GOOGLE_FORM'
+                      ? "e.g. Submit your resume and academic details through the company's Google Form."
+                      : jobFormData.application_method === 'EMAIL'
+                      ? "e.g. Mention your graduation year and attach your PDF resume."
+                      : jobFormData.application_method === 'EXTERNAL_URL'
+                      ? "e.g. Complete the applicant questionnaire on our company portal."
+                      : "e.g. Ensure your GitHub repo link and demo are included in your portfolio."
+                  }
+                  className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
 
               <div>
                 <div className="flex items-center justify-between mb-1">

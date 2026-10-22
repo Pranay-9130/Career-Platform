@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Search,
   Filter,
@@ -14,12 +15,14 @@ import {
   X,
   RefreshCw,
   CheckCircle2,
+  Mail,
+  FileText,
 } from 'lucide-react';
 import JobCard from '../../components/cards/JobCard';
 import jobService from '../../services/jobService';
 import SEO from '@/components/common/SEO';
 import { getBreadcrumbListSchema } from '@/utils/seoSchemas';
-import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
+import { formatSalary, formatDeadline, getJobApplicationDestination } from '@/utils/jobHelpers';
 
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
@@ -554,42 +557,74 @@ export default function JobsPage() {
                   </div>
                 </div>
               )}
+
+              {/* Application Instructions */}
+              {selectedJob.application_instructions && (
+                <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-amber-950">
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-amber-800 mb-1 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-amber-600" />
+                    Application Instructions
+                  </div>
+                  <p className="whitespace-pre-line leading-relaxed font-medium">
+                    {selectedJob.application_instructions}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}
-            <div className="p-5 border-t border-brand-border bg-slate-50 flex items-center justify-between">
-              {selectedJob.company_website ? (
-                <a
-                  href={selectedJob.company_website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-brand-primary hover:underline inline-flex items-center gap-1 font-medium"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" /> Company Website
-                </a>
-              ) : (
-                <div />
-              )}
+            {(() => {
+              const modalAppDest = getJobApplicationDestination(selectedJob);
+              return (
+                <div className="p-5 border-t border-brand-border bg-slate-50 flex items-center justify-between">
+                  {selectedJob.company_website ? (
+                    <a
+                      href={selectedJob.company_website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-brand-primary hover:underline inline-flex items-center gap-1 font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> Company Website
+                    </a>
+                  ) : (
+                    <div />
+                  )}
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedJob(null)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/50 rounded-lg transition"
-                >
-                  Close
-                </button>
-                <a
-                  href={selectedJob.apply_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-5 py-2 text-xs font-semibold text-white bg-brand-primary hover:bg-brand-primaryDark shadow-sm rounded-lg transition inline-flex items-center gap-1.5"
-                >
-                  Apply Directly
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedJob(null)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/50 rounded-lg transition"
+                    >
+                      Close
+                    </button>
+                    {modalAppDest.isExternal ? (
+                      <a
+                        href={modalAppDest.url}
+                        target={modalAppDest.isMailto ? undefined : '_blank'}
+                        rel={modalAppDest.isMailto ? undefined : 'noopener noreferrer'}
+                        className="px-5 py-2 text-xs font-semibold text-white bg-brand-primary hover:bg-brand-primaryDark shadow-sm rounded-lg transition inline-flex items-center gap-1.5"
+                      >
+                        {modalAppDest.buttonText}
+                        {modalAppDest.isMailto ? (
+                          <Mail className="w-3.5 h-3.5" />
+                        ) : (
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        )}
+                      </a>
+                    ) : (
+                      <Link
+                        to={`/jobs/${selectedJob.id}`}
+                        className="px-5 py-2 text-xs font-semibold text-white bg-brand-primary hover:bg-brand-primaryDark shadow-sm rounded-lg transition inline-flex items-center gap-1.5"
+                      >
+                        {modalAppDest.buttonText}
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
