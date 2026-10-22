@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { authStorage } from './authStorage';
+import { isSessionRejection } from './authErrors';
 
 const getBaseURL = () => {
   let envUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
@@ -15,12 +16,13 @@ const baseURL = getBaseURL();
 const api = axios.create({
   baseURL,
   withCredentials: true,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-const refreshClient = axios.create({ baseURL, withCredentials: true });
+const refreshClient = axios.create({ baseURL, withCredentials: true, timeout: 30000 });
 let refreshPromise = null;
 
 const publicAuthEndpoints = [
@@ -76,8 +78,15 @@ api.interceptors.response.use(
         authStorage.setUser(user);
         error.config.headers.Authorization = `Bearer ${accessToken}`;
         return api.request(error.config);
-      } catch {
-        // Fall through to session cleanup.
+      } catch (refreshError) {
+        // A cold start, timeout, or temporary 5xx must not destroy a valid
+        // local session. Clear it only when the server definitively rejects
+        // the refresh credential.
+        if (isSessionRejection(refreshError)) {
+          authStorage.clear();
+          window.dispatchEvent(new Event('auth:unauthorized'));
+        }
+        return Promise.reject(refreshError);
       }
     }
 

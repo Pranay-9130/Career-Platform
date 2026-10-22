@@ -151,7 +151,7 @@ async def test_admin_templates_crud(client: AsyncClient):
     list_res = await client.get("/api/admin/templates")
     assert list_res.status_code == 200
     templates = list_res.json()
-    assert len(templates) >= 4
+    assert templates == []
 
     # 2. Add custom template
     template_payload = {

@@ -126,7 +126,7 @@ async def register_user(
         )
 
     # Securely hash the password
-    hashed_password = get_password_hash(user_in.password)
+    hashed_password = await run_in_threadpool(get_password_hash, user_in.password)
 
     # Instantiate user model
     new_user = User(
@@ -140,7 +140,14 @@ async def register_user(
     )
 
     db.add(new_user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email address already exists.",
+        )
     await db.refresh(new_user)
 
     # Registration is intentionally independent of transactional email delivery.
@@ -418,23 +425,28 @@ async def login_user(
         )
         candidates = result.scalars().all()
         user = None
+        password_valid = False
         for candidate in candidates:
-            if verify_password(credentials.password, candidate.hashed_password):
+            if await run_in_threadpool(
+                verify_password, credentials.password, candidate.hashed_password
+            ):
                 user = candidate
+                password_valid = True
                 break
-        if not user and candidates:
-            user = candidates[0]
     else:
         # Lookup user record
         result = await db.execute(
             select(User).where(User.email == normalized_email)
         )
         user = result.scalar_one_or_none()
+        password_valid = bool(user) and await run_in_threadpool(
+            verify_password, credentials.password, user.hashed_password
+        )
 
     if (
         not user
         or (using_admin_username and user.role != UserRole.ADMIN)
-        or not verify_password(credentials.password, user.hashed_password)
+        or not password_valid
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -585,7 +597,9 @@ async def google_auth(
         full_name = payload.get("name") or normalized_email.split("@")[0].capitalize()
         user = User(
             email=normalized_email,
-            hashed_password=get_password_hash(secrets.token_urlsafe(32)),
+            hashed_password=await run_in_threadpool(
+                get_password_hash, secrets.token_urlsafe(32)
+            ),
             full_name=full_name.strip(),
             role=UserRole.STUDENT,
             headline="Student Explorer",
@@ -877,7 +891,7 @@ async def reset_password(
         )
 
     # Hash new password securely
-    user.hashed_password = get_password_hash(req.new_password)
+    user.hashed_password = await run_in_threadpool(get_password_hash, req.new_password)
     await db.execute(update(AuthSession).where(
         AuthSession.user_id == user.id, AuthSession.invalidated_at.is_(None),
     ).values(invalidated_at=now_utc))

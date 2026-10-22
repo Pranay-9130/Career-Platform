@@ -95,6 +95,29 @@ def test_production_rejects_default_jwt_secret():
         )
 
 
+def test_production_requires_explicit_postgresql_database(monkeypatch):
+    secure_secret = "a" * 64
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("SYNC_DATABASE_URL", raising=False)
+    with pytest.raises(ValueError, match="DATABASE_URL"):
+        Settings(_env_file=None, ENVIRONMENT="production", JWT_SECRET=secure_secret)
+    with pytest.raises(ValueError, match="PostgreSQL"):
+        Settings(
+            _env_file=None,
+            ENVIRONMENT="production",
+            JWT_SECRET=secure_secret,
+            DATABASE_URL="sqlite+aiosqlite:///production.db",
+        )
+
+    configured = Settings(
+        _env_file=None,
+        ENVIRONMENT="production",
+        JWT_SECRET=secure_secret,
+        DATABASE_URL="postgresql://user:pass@database.example/career_platform",
+    )
+    assert configured.DATABASE_URL.startswith("postgresql+asyncpg://")
+
+
 def test_migrations_derive_the_application_database_url():
     configured = Settings(_env_file=None, DATABASE_URL='postgres://user:pass@database.example/test?sslmode=require')
     assert configured.DATABASE_URL == 'postgresql+asyncpg://user:pass@database.example/test?ssl=require'

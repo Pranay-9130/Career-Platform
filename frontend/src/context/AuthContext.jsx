@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '@/services/authService';
+import { isSessionRejection } from '@/services/authErrors';
 
 const AuthContext = createContext(null);
 
@@ -27,11 +28,16 @@ export function AuthProvider({ children }) {
           setUser(currentUser);
         }
       })
-      .catch(() => {
-        authService.clearAuth();
-        if (active) {
-          setToken(null);
-          setUser(null);
+      .catch((error) => {
+        // Preserve the cached session during temporary network/backend
+        // failures. The API interceptor will retry expired access tokens and
+        // only a definitive authentication rejection should sign the user out.
+        if (isSessionRejection(error)) {
+          authService.clearAuth();
+          if (active) {
+            setToken(null);
+            setUser(null);
+          }
         }
       })
       .finally(() => {

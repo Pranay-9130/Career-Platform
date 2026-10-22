@@ -71,6 +71,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def assemble_database_urls(self):
+        database_url_configured = "DATABASE_URL" in self.model_fields_set
         if self.RENDER_EXTERNAL_URL:
             if "FRONTEND_URL" not in self.model_fields_set:
                 self.FRONTEND_URL = self.RENDER_EXTERNAL_URL.rstrip("/")
@@ -117,6 +118,11 @@ class Settings(BaseSettings):
             len(self.JWT_SECRET) < 32 or self.JWT_SECRET in weak_secrets
         ):
             raise ValueError("JWT_SECRET must be a unique high-entropy secret in production.")
+        if self.ENVIRONMENT.strip().lower() in production_names:
+            if not database_url_configured:
+                raise ValueError("DATABASE_URL must be explicitly configured in production.")
+            if not self.DATABASE_URL.startswith("postgresql+asyncpg://"):
+                raise ValueError("Production DATABASE_URL must use PostgreSQL.")
         return self
 
     # Security & Tokens

@@ -68,16 +68,10 @@ async def client(db_session):
 
 @pytest.mark.asyncio
 async def test_templates_catalogue_endpoint(client):
-    """Public can view ATS template list with metadata."""
+    """Public catalogue excludes internal layouts until an admin publishes one."""
     resp = await client.get("/api/resumes/templates")
     assert resp.status_code == 200
-    templates = resp.json()
-    assert len(templates) >= 4
-    template_ids = [t["id"] for t in templates]
-    assert "classic-tech" in template_ids
-    assert "modern-minimal" in template_ids
-    assert "research-academic" in template_ids
-    assert "compact-dense" in template_ids
+    assert resp.json() == []
 
 
 @pytest.mark.asyncio
