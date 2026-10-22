@@ -68,6 +68,7 @@ def test_allowed_origins_parsing():
     """Verify comma-separated and JSON string formats parse into clean origin lists."""
     # Comma-separated with trailing slashes
     s1 = Settings(
+        _env_file=None,
         ALLOWED_ORIGINS="https://my-app.vercel.app/,https://preview.vercel.app,http://localhost:5173/"
     )
     assert s1.ALLOWED_ORIGINS == [
@@ -78,6 +79,7 @@ def test_allowed_origins_parsing():
 
     # JSON array string
     s2 = Settings(
+        _env_file=None,
         ALLOWED_ORIGINS='["https://careerplatform.vercel.app/", "http://127.0.0.1:5173"]'
     )
     assert s2.ALLOWED_ORIGINS == [

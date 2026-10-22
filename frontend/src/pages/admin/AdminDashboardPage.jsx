@@ -43,6 +43,8 @@ import { Button, Badge, Modal, Input, Alert } from '@/components/common';
 import {
   formatSalary,
   formatDeadline,
+  formatStartDate,
+  formatApplicationWindow,
   isValidSafeHttpsUrl,
   isValidGoogleFormUrl,
   isValidEmail,
@@ -127,6 +129,8 @@ export default function AdminDashboardPage() {
     application_instructions: '',
     is_active: true,
     is_featured: false,
+    immediate_start: true,
+    application_start_date: '',
     no_deadline: true,
     deadline: '',
   };
@@ -336,6 +340,7 @@ export default function AdminDashboardPage() {
       job.stipend_or_salary.toLowerCase() !== 'not disclosed'
     );
     const hasDeadline = Boolean(job.deadline);
+    const hasStartDate = Boolean(job.application_start_date);
 
     const resolvedMethod = job.application_method || 'INTERNAL';
     let defaultUrl = job.application_url || '';
@@ -370,6 +375,8 @@ export default function AdminDashboardPage() {
       application_instructions: job.application_instructions || '',
       is_active: job.is_active ?? true,
       is_featured: job.is_featured ?? false,
+      immediate_start: !hasStartDate,
+      application_start_date: hasStartDate ? job.application_start_date.split('T')[0] : '',
       no_deadline: !hasDeadline,
       deadline: hasDeadline ? job.deadline.split('T')[0] : '',
     });
@@ -423,6 +430,17 @@ export default function AdminDashboardPage() {
       }
     }
 
+    // Validation for application start date vs deadline
+    if (!jobFormData.immediate_start && jobFormData.application_start_date && !jobFormData.no_deadline && jobFormData.deadline) {
+      if (new Date(jobFormData.deadline) < new Date(jobFormData.application_start_date)) {
+        setJobActionFeedback({
+          type: 'error',
+          text: 'Application deadline cannot be earlier than the application start date.',
+        });
+        return;
+      }
+    }
+
     let calculatedApplyUrl = jobFormData.apply_url || '';
     if (jobFormData.application_method === 'GOOGLE_FORM' || jobFormData.application_method === 'EXTERNAL_URL') {
       calculatedApplyUrl = (jobFormData.application_url || '').trim();
@@ -433,9 +451,14 @@ export default function AdminDashboardPage() {
     }
 
     const finalSalary = jobFormData.has_salary ? (jobFormData.stipend_or_salary || '').trim() : '';
-    const finalDeadline = (!jobFormData.no_deadline && jobFormData.deadline) ? new Date(jobFormData.deadline).toISOString() : null;
+    const finalStartDate = (!jobFormData.immediate_start && jobFormData.application_start_date)
+      ? new Date(jobFormData.application_start_date).toISOString()
+      : null;
+    const finalDeadline = (!jobFormData.no_deadline && jobFormData.deadline)
+      ? new Date(jobFormData.deadline).toISOString()
+      : null;
 
-    const { has_salary, no_deadline, ...cleanedData } = jobFormData;
+    const { has_salary, immediate_start, no_deadline, ...cleanedData } = jobFormData;
     const payload = {
       ...cleanedData,
       apply_url: calculatedApplyUrl,
@@ -443,6 +466,7 @@ export default function AdminDashboardPage() {
       recruiter_email: jobFormData.recruiter_email ? jobFormData.recruiter_email.trim().toLowerCase() : null,
       application_instructions: jobFormData.application_instructions ? jobFormData.application_instructions.trim() : null,
       stipend_or_salary: finalSalary,
+      application_start_date: finalStartDate,
       deadline: finalDeadline,
       skills_required: jobFormData.skills_required
         ? jobFormData.skills_required.split(',').map((s) => s.trim()).filter(Boolean)
@@ -1182,6 +1206,7 @@ export default function AdminDashboardPage() {
                       <th className="px-5 py-3.5">Domain</th>
                       <th className="px-5 py-3.5">Type & Mode</th>
                       <th className="px-5 py-3.5">Compensation</th>
+                      <th className="px-5 py-3.5">Application Window</th>
                       <th className="px-5 py-3.5">Status</th>
                       <th className="px-5 py-3.5 text-right">Actions</th>
                     </tr>
@@ -1236,6 +1261,36 @@ export default function AdminDashboardPage() {
                           ) : (
                             <span className="text-slate-400 italic text-[11px]">Not Disclosed</span>
                           )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1 text-[11px]">
+                            <div className="flex items-center gap-1.5 text-slate-700">
+                              <span className="text-[10px] uppercase font-bold text-slate-400">Start:</span>
+                              <span className="font-medium">
+                                {formatStartDate(job.application_start_date).label}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] uppercase font-bold text-slate-400">Expiry:</span>
+                              <span
+                                className={`font-medium ${
+                                  formatDeadline(job.deadline).isExpired ? 'text-rose-600 font-semibold' : 'text-slate-700'
+                                }`}
+                              >
+                                {job.deadline ? formatDeadline(job.deadline).label : 'Rolling'}
+                              </span>
+                            </div>
+                            <div className="pt-0.5">
+                              {(() => {
+                                const windowInfo = formatApplicationWindow(job.application_start_date, job.deadline);
+                                return (
+                                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${windowInfo.badge.colorClass}`}>
+                                    {windowInfo.badge.label}
+                                  </span>
+                                );
+                              })()}
+                            </div>
+                          </div>
                         </td>
                         <td className="px-5 py-4">
                           <span
@@ -2271,11 +2326,68 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Application Start Date */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block font-semibold text-slate-700">Application Deadline</label>
+                  <label className="block font-semibold text-slate-700">Application Start Date</label>
+                  <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-600 select-none">
+                    <input
+                      type="checkbox"
+                      checked={jobFormData.immediate_start}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          immediate_start: e.target.checked,
+                          application_start_date: e.target.checked
+                            ? ''
+                            : (jobFormData.application_start_date || new Date().toISOString().split('T')[0]),
+                        })
+                      }
+                      className="w-3.5 h-3.5 text-brand-primary rounded focus:ring-0"
+                    />
+                    <span>Immediate (Now)</span>
+                  </label>
+                </div>
+                {jobFormData.immediate_start ? (
+                  <div className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-500 flex items-center justify-between">
+                    <span className="italic">Applications open immediately</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setJobFormData({
+                          ...jobFormData,
+                          immediate_start: false,
+                          application_start_date: new Date().toISOString().split('T')[0],
+                        })
+                      }
+                      className="text-brand-primary font-semibold text-[11px] hover:underline"
+                    >
+                      Set Start Date
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="date"
+                      value={jobFormData.application_start_date}
+                      onChange={(e) =>
+                        setJobFormData({
+                          ...jobFormData,
+                          application_start_date: e.target.value,
+                        })
+                      }
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Date when applications open for students</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Application Deadline */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Application Deadline (Expiry)</label>
                   <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-medium text-slate-600 select-none">
                     <input
                       type="checkbox"
@@ -2300,16 +2412,19 @@ export default function AdminDashboardPage() {
                       onClick={() => setJobFormData({ ...jobFormData, no_deadline: false })}
                       className="text-brand-primary font-semibold text-[11px] hover:underline"
                     >
-                      Set Date
+                      Set Expiry Date
                     </button>
                   </div>
                 ) : (
-                  <input
-                    type="date"
-                    value={jobFormData.deadline}
-                    onChange={(e) => setJobFormData({ ...jobFormData, deadline: e.target.value })}
-                    className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                  />
+                  <div>
+                    <input
+                      type="date"
+                      value={jobFormData.deadline}
+                      onChange={(e) => setJobFormData({ ...jobFormData, deadline: e.target.value })}
+                      className="w-full text-xs p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                    />
+                    <p className="text-[10px] text-slate-400 mt-1">Final deadline for submitting applications</p>
+                  </div>
                 )}
               </div>
             </div>

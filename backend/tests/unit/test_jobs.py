@@ -211,3 +211,46 @@ async def test_get_job_detail_and_update(client, db_session):
     # Verify deleted
     resp_after = await client.get(f"/api/jobs/{job.id}")
     assert resp_after.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_job_application_start_date_and_deadline(client):
+    """Test creating and updating job with application_start_date and deadline validation."""
+    app.dependency_overrides[get_current_active_user] = lambda: admin_user
+
+    # 1. Valid application start and deadline
+    payload = {
+        "title": "Cloud Architect Intern",
+        "company_name": "CloudNine",
+        "domain": "Cloud & DevOps",
+        "job_type": "Internship",
+        "work_mode": "Remote",
+        "skills_required": ["AWS", "Terraform"],
+        "apply_url": "https://cloudnine.io/careers",
+        "application_start_date": "2026-11-01T00:00:00Z",
+        "deadline": "2026-11-30T23:59:59Z",
+    }
+    resp = await client.post("/api/jobs", json=payload)
+    assert resp.status_code == 201
+    created_data = resp.json()
+    assert created_data["application_start_date"] is not None
+    assert "2026-11-01" in created_data["application_start_date"]
+    assert "2026-11-30" in created_data["deadline"]
+    job_id = created_data["id"]
+
+    # 2. Update application_start_date
+    update_payload = {
+        "application_start_date": "2026-11-05T00:00:00Z",
+    }
+    resp_update = await client.put(f"/api/jobs/{job_id}", json=update_payload)
+    assert resp_update.status_code == 200
+    assert "2026-11-05" in resp_update.json()["application_start_date"]
+
+    # 3. Reject invalid range: deadline before start date
+    invalid_payload = {
+        "application_start_date": "2026-12-01T00:00:00Z",
+        "deadline": "2026-11-01T00:00:00Z",
+    }
+    resp_invalid = await client.put(f"/api/jobs/{job_id}", json=invalid_payload)
+    assert resp_invalid.status_code == 422
+

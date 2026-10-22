@@ -71,6 +71,7 @@ class JobBase(BaseModel):
     application_instructions: Optional[str] = Field(default=None, max_length=5000)
     is_active: bool = True
     is_featured: bool = False
+    application_start_date: Optional[datetime] = None
     deadline: Optional[datetime] = None
 
     @field_validator("application_method", mode="before")
@@ -98,6 +99,10 @@ class JobBase(BaseModel):
         elif method == "INTERNAL":
             if not self.apply_url:
                 self.apply_url = ""
+
+        if self.application_start_date and self.deadline:
+            if self.deadline < self.application_start_date:
+                raise ValueError("Application deadline cannot be earlier than the application start date.")
         return self
 
 class JobCreate(JobBase):
@@ -125,6 +130,7 @@ class JobUpdate(BaseModel):
     application_instructions: Optional[str] = None
     is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
+    application_start_date: Optional[datetime] = None
     deadline: Optional[datetime] = None
 
     @field_validator("application_method", mode="before")
@@ -152,6 +158,9 @@ class JobUpdate(BaseModel):
             if self.recruiter_email is not None:
                 self.recruiter_email = validate_recruiter_email(self.recruiter_email)
                 self.apply_url = f"mailto:{self.recruiter_email}"
+        if self.application_start_date is not None and self.deadline is not None:
+            if self.deadline < self.application_start_date:
+                raise ValueError("Application deadline cannot be earlier than the application start date.")
         return self
 
 class JobBookmarkToggleResponse(BaseModel):

@@ -149,3 +149,55 @@ test('getJobApplicationDestination correctly formats destination for each applic
   assert.equal(misconfiguredDest.isInternal, true);
   assert.equal(misconfiguredDest.url, '/jobs/106');
 });
+
+test('formatStartDate and formatApplicationWindow correctly handle immediate, upcoming, and rolling dates', async () => {
+  const { formatStartDate, formatDeadline, formatApplicationWindow } = await import(
+    '../src/utils/jobHelpers.js'
+  );
+
+  // 1. Immediate start date (null/undefined)
+  const immediate = formatStartDate(null);
+  assert.equal(immediate.hasStartDate, false);
+  assert.equal(immediate.isUpcoming, false);
+  assert.equal(immediate.label, 'Immediate');
+
+  // 2. Future start date (Upcoming)
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 10);
+  const futureIso = futureDate.toISOString();
+  const upcomingStart = formatStartDate(futureIso);
+  assert.equal(upcomingStart.hasStartDate, true);
+  assert.equal(upcomingStart.isUpcoming, true);
+  assert.ok(upcomingStart.text.startsWith('Starts:'));
+
+  // 3. Past start date
+  const pastDate = new Date();
+  pastDate.setDate(pastDate.getDate() - 10);
+  const pastIso = pastDate.toISOString();
+  const pastStart = formatStartDate(pastIso);
+  assert.equal(pastStart.hasStartDate, true);
+  assert.equal(pastStart.isUpcoming, false);
+  assert.ok(pastStart.text.startsWith('Started:'));
+
+  // 4. Application window: Upcoming job
+  const upcomingWindow = formatApplicationWindow(futureIso, null);
+  assert.equal(upcomingWindow.isUpcoming, true);
+  assert.equal(upcomingWindow.isOpen, false);
+  assert.ok(upcomingWindow.badge.label.startsWith('Opens'));
+
+  // 5. Application window: Open with rolling expiry
+  const rollingWindow = formatApplicationWindow(pastIso, null);
+  assert.equal(rollingWindow.isOpen, true);
+  assert.equal(rollingWindow.isUpcoming, false);
+  assert.equal(rollingWindow.isExpired, false);
+  assert.equal(rollingWindow.badge.label, 'Open (Rolling)');
+
+  // 6. Application window: Closed / Expired
+  const expiredDeadline = new Date();
+  expiredDeadline.setDate(expiredDeadline.getDate() - 2);
+  const expiredWindow = formatApplicationWindow(pastIso, expiredDeadline.toISOString());
+  assert.equal(expiredWindow.isExpired, true);
+  assert.equal(expiredWindow.isOpen, false);
+  assert.ok(expiredWindow.badge.label.startsWith('Closed'));
+});
+

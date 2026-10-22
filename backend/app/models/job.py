@@ -29,6 +29,7 @@ class Job(BaseUUIDModel):
     application_instructions = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, index=True, nullable=False)
     is_featured = Column(Boolean, default=False, index=True, nullable=False)
+    application_start_date = Column(DateTime(timezone=True), nullable=True)
     deadline = Column(DateTime(timezone=True), nullable=True)
 
     def __repr__(self) -> str:

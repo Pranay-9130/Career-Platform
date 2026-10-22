@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Building2, MapPin, DollarSign, Calendar, Bookmark, ArrowRight, Briefcase } from 'lucide-react';
 import { Card, Badge, Button } from '@/components/common';
 
-import { formatSalary, formatDeadline } from '@/utils/jobHelpers';
+import { formatSalary, formatDeadline, formatApplicationWindow } from '@/utils/jobHelpers';
 
 export default function JobCard({
   id = '1',
@@ -23,6 +23,8 @@ export default function JobCard({
   stipend_or_salary = '',
   skills,
   skills_required = [],
+  application_start_date,
+  applicationStartDate,
   deadline,
   apply_url,
   is_featured = false,
@@ -37,7 +39,8 @@ export default function JobCard({
   const displayType = jobType || job_type;
   const displayMode = workMode || work_mode;
   const formattedSalary = formatSalary(salary || stipend_or_salary);
-  const deadlineInfo = formatDeadline(deadline);
+  const windowInfo = formatApplicationWindow(application_start_date || applicationStartDate, deadline);
+  const deadlineInfo = windowInfo.deadline;
   const displaySkills = skills || skills_required || [];
   const [saved, setSaved] = useState(initialSaved);
 
@@ -110,16 +113,23 @@ export default function JobCard({
           )}
         </div>
 
-        {/* Location & Deadline */}
+        {/* Location & Application Window */}
         <div className="flex flex-wrap items-center gap-4 text-xs text-brand-muted mb-4">
           <span className="flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5 text-slate-400" />
             {location}
           </span>
-          <span className={`flex items-center gap-1 ${deadlineInfo.isExpired ? 'text-rose-600 font-semibold' : ''}`}>
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            {deadlineInfo.text}
-          </span>
+          {windowInfo.isUpcoming ? (
+            <span className="flex items-center gap-1 text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+              <Calendar className="w-3.5 h-3.5 text-amber-600" />
+              {windowInfo.start.text}
+            </span>
+          ) : (
+            <span className={`flex items-center gap-1 ${deadlineInfo.isExpired ? 'text-rose-600 font-semibold' : ''}`}>
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              {deadlineInfo.text}
+            </span>
+          )}
         </div>
 
         {/* Skills Required */}

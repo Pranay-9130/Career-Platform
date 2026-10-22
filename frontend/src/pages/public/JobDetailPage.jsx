@@ -26,7 +26,13 @@ import { useAuth } from '../../context/AuthContext';
 import { Breadcrumbs } from '@/components/common';
 import SEO from '@/components/common/SEO';
 import { getJobPostingSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
-import { formatSalary, formatDeadline, getJobApplicationDestination } from '@/utils/jobHelpers';
+import {
+  formatSalary,
+  formatDeadline,
+  formatStartDate,
+  formatApplicationWindow,
+  getJobApplicationDestination,
+} from '@/utils/jobHelpers';
 
 export default function JobDetailPage() {
   const { id } = useParams();
@@ -124,7 +130,9 @@ export default function JobDetailPage() {
   }
 
   const formattedSalary = formatSalary(job.stipend_or_salary);
-  const deadlineInfo = formatDeadline(job.deadline);
+  const windowInfo = formatApplicationWindow(job.application_start_date, job.deadline);
+  const deadlineInfo = windowInfo.deadline;
+  const startInfo = windowInfo.start;
   const appDest = getJobApplicationDestination(job);
 
   return (
@@ -213,10 +221,29 @@ export default function JobDetailPage() {
                       </span>
                     </>
                   )}
+                  {startInfo.hasStartDate && (
+                    <>
+                      <span>•</span>
+                      <span
+                        className={`flex items-center gap-1 ${
+                          windowInfo.isUpcoming
+                            ? 'text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200'
+                            : 'text-slate-500'
+                        }`}
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        {startInfo.text}
+                      </span>
+                    </>
+                  )}
                   <span>•</span>
                   <span className={`flex items-center gap-1 ${deadlineInfo.isExpired ? 'text-rose-600 font-semibold' : 'text-slate-500'}`}>
                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     {deadlineInfo.text}
+                  </span>
+                  <span>•</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${windowInfo.badge.colorClass}`}>
+                    {windowInfo.badge.label}
                   </span>
                 </div>
               </div>

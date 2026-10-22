@@ -30,6 +30,53 @@ export function formatSalary(salary) {
 }
 
 /**
+ * Format job start date. Returns status and label.
+ */
+export function formatStartDate(startDate) {
+  if (!startDate) {
+    return {
+      hasStartDate: false,
+      isUpcoming: false,
+      text: 'Immediate',
+      label: 'Immediate',
+      date: null,
+    };
+  }
+
+  const d = new Date(startDate);
+  if (isNaN(d.getTime())) {
+    return {
+      hasStartDate: false,
+      isUpcoming: false,
+      text: String(startDate),
+      label: String(startDate),
+      date: null,
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startDay = new Date(d);
+  startDay.setHours(0, 0, 0, 0);
+
+  const isUpcoming = startDay > today;
+  const formattedDate = d.toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  return {
+    hasStartDate: true,
+    isUpcoming,
+    date: d,
+    text: isUpcoming ? `Starts: ${formattedDate}` : `Started: ${formattedDate}`,
+    label: formattedDate,
+  };
+}
+
+/**
  * Format job deadline. Returns status and label.
  */
 export function formatDeadline(deadline) {
@@ -39,6 +86,7 @@ export function formatDeadline(deadline) {
       isExpired: false,
       text: 'Rolling / No expiry',
       label: 'Rolling basis',
+      date: null,
     };
   }
 
@@ -49,6 +97,7 @@ export function formatDeadline(deadline) {
       isExpired: false,
       text: String(deadline),
       label: String(deadline),
+      date: null,
     };
   }
 
@@ -69,6 +118,49 @@ export function formatDeadline(deadline) {
     date: d,
     text: isExpired ? `Expired (${formattedDate})` : `Deadline: ${formattedDate}`,
     label: formattedDate,
+  };
+}
+
+/**
+ * Format complete application window (Start Date -> Deadline / Expiry).
+ */
+export function formatApplicationWindow(startDate, deadline) {
+  const startInfo = formatStartDate(startDate);
+  const deadlineInfo = formatDeadline(deadline);
+
+  const isUpcoming = startInfo.isUpcoming;
+  const isExpired = deadlineInfo.isExpired;
+  const isOpen = !isUpcoming && !isExpired;
+
+  let badge = {
+    label: 'Open (Rolling)',
+    colorClass: 'bg-blue-50 text-blue-700 border-blue-200',
+  };
+
+  if (isUpcoming) {
+    badge = {
+      label: `Opens ${startInfo.label}`,
+      colorClass: 'bg-amber-50 text-amber-700 border-amber-200',
+    };
+  } else if (isExpired) {
+    badge = {
+      label: `Closed (${deadlineInfo.label})`,
+      colorClass: 'bg-rose-50 text-rose-700 border-rose-200',
+    };
+  } else if (deadlineInfo.hasDeadline) {
+    badge = {
+      label: `Closes ${deadlineInfo.label}`,
+      colorClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    };
+  }
+
+  return {
+    start: startInfo,
+    deadline: deadlineInfo,
+    isUpcoming,
+    isExpired,
+    isOpen,
+    badge,
   };
 }
 

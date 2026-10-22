@@ -332,6 +332,7 @@ async def create_job(payload: JobCreate, db: AsyncSession = Depends(get_db)):
         application_instructions=payload.application_instructions,
         is_active=payload.is_active,
         is_featured=payload.is_featured,
+        application_start_date=payload.application_start_date,
         deadline=payload.deadline,
     )
     db.add(new_job)
