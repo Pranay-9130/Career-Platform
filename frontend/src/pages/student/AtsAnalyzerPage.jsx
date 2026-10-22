@@ -253,7 +253,11 @@ export default function AtsAnalyzerPage() {
               <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{noticeMessage}</span>
             </div>
-            <button onClick={() => setNoticeMessage('')} className="text-emerald-600 hover:text-emerald-800 font-bold text-xs">
+            <button
+              type="button"
+              onClick={() => setNoticeMessage('')}
+              className="text-emerald-600 hover:text-emerald-800 font-bold text-xs"
+            >
               Dismiss
             </button>
           </div>

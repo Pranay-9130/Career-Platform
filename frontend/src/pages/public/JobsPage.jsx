@@ -150,7 +150,9 @@ export default function JobsPage() {
                 />
                 {search && (
                   <button
+                    type="button"
                     onClick={() => setSearch('')}
+                    aria-label="Clear search"
                     className="p-1 mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
                   >
                     <X className="w-4 h-4" />

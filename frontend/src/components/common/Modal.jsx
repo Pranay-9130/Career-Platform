@@ -12,31 +12,58 @@ export default function Modal({
   className = '',
 }) {
   const closeButtonRef = useRef(null);
+  const modalSurfaceRef = useRef(null);
+  const previouslyFocusedRef = useRef(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
+
+  // Always keep the latest onClose callback available to event listeners
+  // without triggering effect cleanup/re-run on parent re-renders.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) return undefined;
 
+    // Remember the element that had focus before the modal was opened
+    previouslyFocusedRef.current = document.activeElement;
+
     const previousOverflow = document.body.style.overflow;
-    const previouslyFocused = document.activeElement;
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current?.();
       }
     };
 
-    document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', handleKeyDown);
-    closeButtonRef.current?.focus();
+
+    // On initial mount/open, direct initial focus to the modal surface
+    // only if focus is not already inside the modal (e.g. via autoFocus).
+    // NEVER steal focus from user-interactive inputs during typing!
+    const frameId = requestAnimationFrame(() => {
+      if (
+        modalSurfaceRef.current &&
+        !modalSurfaceRef.current.contains(document.activeElement)
+      ) {
+        modalSurfaceRef.current.focus();
+      }
+    });
 
     return () => {
+      cancelAnimationFrame(frameId);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
-      if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
-        previouslyFocused.focus();
+
+      // Return focus to the originating trigger element when modal closes
+      const prev = previouslyFocusedRef.current;
+      if (prev instanceof HTMLElement && prev.isConnected) {
+        prev.focus();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -53,19 +80,27 @@ export default function Modal({
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
       className="fixed inset-0 z-50 overflow-y-auto flex items-start sm:items-center justify-center p-4 sm:p-6"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onCloseRef.current?.();
+        }
+      }}
     >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
+        onClick={() => onCloseRef.current?.()}
         aria-hidden="true"
       />
 
       {/* Modal Surface */}
       <div
-        className={`relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-card border border-brand-border shadow-modal p-4 sm:p-6 my-auto z-10 transition-all transform animate-in fade-in zoom-in-95 duration-150 ${
+        ref={modalSurfaceRef}
+        tabIndex={-1}
+        className={`relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto bg-white rounded-card border border-brand-border shadow-modal p-4 sm:p-6 my-auto z-10 transition-all transform animate-in fade-in zoom-in-95 duration-150 outline-none ${
           sizeStyles[size] || sizeStyles.md
         } ${className}`}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-brand-border">
@@ -82,7 +117,7 @@ export default function Modal({
           <button
             ref={closeButtonRef}
             type="button"
-            onClick={onClose}
+            onClick={() => onCloseRef.current?.()}
             aria-label="Close modal"
             className="text-slate-400 hover:text-brand-text p-1.5 rounded-lg hover:bg-slate-100 transition-colors -mr-1.5 -mt-1.5"
           >

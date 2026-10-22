@@ -440,7 +440,9 @@ export default function ApplicationsPage() {
                 {editingApp ? 'Edit Tracked Application' : 'Track New Application'}
               </h2>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
+                aria-label="Close modal"
                 className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 <X className="w-4 h-4" />

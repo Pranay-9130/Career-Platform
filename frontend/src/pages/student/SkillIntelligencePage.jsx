@@ -597,7 +597,12 @@ export default function SkillIntelligencePage() {
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{notice}</span>
           </div>
-          <button onClick={() => setNotice('')} className="text-emerald-600 hover:text-emerald-900">
+          <button
+            type="button"
+            onClick={() => setNotice('')}
+            aria-label="Dismiss notice"
+            className="text-emerald-600 hover:text-emerald-900"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
