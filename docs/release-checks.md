@@ -42,7 +42,7 @@ The frontend login and registration screens use email and password authenticatio
 Run the read-only check from `backend`:
 
 ```sh
-py scripts/check_deployment.py --frontend https://YOUR-SITE.vercel.app --backend https://YOUR-BACKEND.onrender.com
+py scripts/check_deployment.py --frontend https://aspirepath.vercel.app --backend https://careerplatform-api.onrender.com
 ```
 
 Then in a browser on the real frontend:

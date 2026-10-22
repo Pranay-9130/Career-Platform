@@ -134,8 +134,8 @@ Under the **Environment** tab of your Render service, configure the following:
 | `DATABASE_URL` | Yes | `postgresql+asyncpg://user:pass@host/db?ssl=require` | Async connection string from Neon/Render |
 | `SYNC_DATABASE_URL` | Yes | `postgresql://user:pass@host/db?sslmode=require` | Sync connection string for Alembic |
 | `JWT_SECRET` | Yes | *(Random 64-character hex string)* | Generate with `openssl rand -hex 32` |
-| `ALLOWED_ORIGINS` | Yes | `https://<your-project>.vercel.app,http://localhost:5173` | Comma-separated list of allowed frontend origins |
-| `FRONTEND_URL` | Yes | `https://<your-project>.vercel.app` | Base frontend URL for reset links and SEO tags |
+| `ALLOWED_ORIGINS` | Yes | `https://aspirepath.vercel.app,http://localhost:5173` | Comma-separated list of allowed frontend origins |
+| `FRONTEND_URL` | Yes | `https://aspirepath.vercel.app` | Base frontend URL for reset links and SEO tags |
 | `EMAIL_PROVIDER` | Yes | `smtp` *(or resend, sendgrid, console)* | Password-reset, notification, and optional-verification provider |
 | `EMAIL_FROM` | Yes | `noreply@yourdomain.com` *(or verified sender)* | Outbound email from address |
 | `SMTP_HOST` | If SMTP | `smtp.gmail.com` *(or Brevo/SES/Mailgun)* | SMTP host server |

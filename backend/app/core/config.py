@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "https://aspirepath.vercel.app",
     ]
     FRONTEND_URL: str = Field(
         default="http://localhost:5173",
@@ -78,6 +79,10 @@ class Settings(BaseSettings):
             self.ALLOWED_ORIGINS = list(dict.fromkeys([
                 *self.ALLOWED_ORIGINS, self.RENDER_EXTERNAL_URL.rstrip("/"),
             ]))
+        if "FRONTEND_URL" in self.model_fields_set and self.FRONTEND_URL:
+            frontend_clean = self.FRONTEND_URL.rstrip("/")
+            if frontend_clean not in self.ALLOWED_ORIGINS:
+                self.ALLOWED_ORIGINS = list(dict.fromkeys([*self.ALLOWED_ORIGINS, frontend_clean]))
         url = self.DATABASE_URL
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)

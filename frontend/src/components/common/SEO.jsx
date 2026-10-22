@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const BASE_URL = "https://studentcareer.dev";
+const BASE_URL = "https://aspirepath.vercel.app";
 const DEFAULT_TITLE = "AspirePath — Your Journey. Your Skills. Your Future.";
 const DEFAULT_DESCRIPTION =
   "Discover student projects, showcase your work, build an ATS-compliant resume, analyze match scores with Gemini AI, and find verified tech opportunities.";

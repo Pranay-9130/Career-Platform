@@ -3,12 +3,25 @@ import { authStorage } from './authStorage';
 import { isSessionRejection } from './authErrors';
 
 const getBaseURL = () => {
-  let envUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
-  if (!envUrl) return '/api';
-  if (!envUrl.startsWith('http://') && !envUrl.startsWith('https://') && !envUrl.startsWith('/')) {
-    envUrl = `https://${envUrl}`;
+  const envUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '');
+
+  // 1. Explicitly configured for relative proxy or left unset
+  if (!envUrl || envUrl === '/api') return '/api';
+
+  // 2. Production browser context (such as Vercel or custom domain):
+  // When running in the browser on a remote host, always use the same-origin '/api'
+  // proxy provided by vercel.json. This bypasses browser cross-origin CORS preflights
+  // and guarantees First-Party cookie handling for HttpOnly refresh tokens.
+  if (typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    return '/api';
   }
-  return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+
+  // 3. Fallback for custom or direct backend URLs during development
+  let resolved = envUrl;
+  if (!resolved.startsWith('http://') && !resolved.startsWith('https://') && !resolved.startsWith('/')) {
+    resolved = `https://${resolved}`;
+  }
+  return resolved.endsWith('/api') ? resolved : `${resolved}/api`;
 };
 
 const baseURL = getBaseURL();

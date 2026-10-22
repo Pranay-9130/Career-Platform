@@ -76,3 +76,4 @@ scratch/
 temp/
 *.zip
 *.log
+backup_*.json

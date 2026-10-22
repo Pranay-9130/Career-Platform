@@ -2,7 +2,7 @@
  * Schema.org JSON-LD Structured Data Generators for Student Career Platform
  */
 
-const BASE_URL = "https://studentcareer.dev";
+const BASE_URL = "https://aspirepath.vercel.app";
 
 export function getWebsiteSchema() {
   return {
@@ -32,9 +32,9 @@ export function getOrganizationSchema() {
     "logo": `${BASE_URL}/logo.png`,
     "description": "Connecting university students and self-taught developers with impactful project showcases and hiring tech companies.",
     "sameAs": [
-      "https://github.com/studentcareer",
-      "https://twitter.com/studentcareer",
-      "https://linkedin.com/company/studentcareer"
+      "https://github.com/aspirepath",
+      "https://twitter.com/aspirepath",
+      "https://linkedin.com/company/aspirepath"
     ]
   };
 }

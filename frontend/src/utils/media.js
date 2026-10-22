@@ -20,7 +20,7 @@ export function resolveMediaUrl(url) {
   // Relative API paths starting with /api/
   if (trimmed.startsWith('/api/')) {
     const rawEnv = import.meta.env.VITE_API_BASE_URL?.trim();
-    if (rawEnv) {
+    if (rawEnv && rawEnv !== '/api') {
       let base = rawEnv.replace(/\/+$/, '');
       if (!base.startsWith('http://') && !base.startsWith('https://')) {
         base = `https://${base}`;
@@ -28,10 +28,7 @@ export function resolveMediaUrl(url) {
       base = base.replace(/\/api$/, '');
       return `${base}${trimmed}`;
     }
-    // Fallback for Vercel production deployment
-    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-      return `https://careerplatform-api.onrender.com${trimmed}`;
-    }
+    // Same-origin relative path works with Vercel and local dev proxies
     return trimmed;
   }
 
