@@ -616,30 +616,34 @@ async def test_create_project_requires_github_or_zip_when_submitted(client, db_s
         "problem_statement": "Ensuring source code is present for student projects.",
         "features": ["Source code enforcement"],
         "status": "Submitted",
-        # No github_url and no zip_storage_key:
-        "live_demo_url": "https://optional-demo.vercel.app",
+        # Neither github_url, zip_storage_key, nor live_demo_url:
     }
 
-    # 1. Neither GitHub nor ZIP -> Rejected with 400
+    # 1. No deliverable provided -> Rejected with 400
     fail_resp = await client.post("/api/projects", json=base_payload, headers=headers)
     assert fail_resp.status_code == 400
-    assert "source code repository" in fail_resp.json()["detail"].lower()
+    assert "deliverable" in fail_resp.json()["detail"].lower()
 
-    # 2. Provide GitHub URL only (live_demo_url omitted) -> Accepted with 201
+    # 2. Provide Live Demo URL only -> Accepted with 201
+    demo_payload = dict(base_payload)
+    demo_payload["title"] = "Live Demo Only Project"
+    demo_payload["live_demo_url"] = "https://my-awesome-app.vercel.app"
+    ok_demo_resp = await client.post("/api/projects", json=demo_payload, headers=headers)
+    assert ok_demo_resp.status_code == 201
+    assert ok_demo_resp.json()["live_demo_url"] == "https://my-awesome-app.vercel.app"
+
+    # 3. Provide GitHub URL only -> Accepted with 201
     github_payload = dict(base_payload)
     github_payload["title"] = "GitHub Source Project"
     github_payload["github_url"] = "https://github.com/student/my-project"
-    github_payload.pop("live_demo_url", None)
     ok_resp = await client.post("/api/projects", json=github_payload, headers=headers)
     assert ok_resp.status_code == 201
     assert ok_resp.json()["github_url"] == "https://github.com/student/my-project"
-    assert ok_resp.json()["live_demo_url"] is None
 
-    # 3. Provide ZIP key only (github_url omitted) -> Accepted with 201
+    # 4. Provide ZIP key only -> Accepted with 201
     zip_payload = dict(base_payload)
     zip_payload["title"] = "ZIP Archive Project"
     zip_payload["zip_storage_key"] = "test-archive-key.zip"
-    zip_payload.pop("live_demo_url", None)
     ok_zip_resp = await client.post("/api/projects", json=zip_payload, headers=headers)
     assert ok_zip_resp.status_code == 201
 

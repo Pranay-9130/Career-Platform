@@ -23,11 +23,17 @@ import { getBreadcrumbListSchema } from '@/utils/seoSchemas';
 const QUICK_DOMAINS = [
   'All',
   'Web Development',
-  'AI / Machine Learning',
+  'Java Project',
+  'Python Project',
+  'Data Science Project',
+  'AI Project',
+  'Machine Learning Project',
+  'Ethical Hacking Project',
   'Mobile Development',
   'Cloud & DevOps',
+  'Cybersecurity',
   'Data Engineering',
-  'Cyber Security',
+  'Blockchain & Web3',
 ];
 
 const SORT_OPTIONS = [

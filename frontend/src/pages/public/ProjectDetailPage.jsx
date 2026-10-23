@@ -51,6 +51,50 @@ import { resolveMediaUrl } from '@/utils/media';
 function ProjectHeroCanvas({ project }) {
   const getDomainTheme = (domain) => {
     const d = (domain || '').toLowerCase();
+    if (d.includes('java')) {
+      return {
+        gradient: 'from-slate-950 via-amber-950/80 to-slate-900',
+        glow: 'bg-amber-500/25',
+        border: 'border-amber-500/30',
+        badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+        accent: 'text-amber-400',
+        icon: Code2,
+        label: 'Java Enterprise Architecture',
+      };
+    }
+    if (d.includes('python')) {
+      return {
+        gradient: 'from-slate-950 via-blue-950/80 to-slate-900',
+        glow: 'bg-yellow-500/20',
+        border: 'border-yellow-500/30',
+        badge: 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30',
+        accent: 'text-yellow-400',
+        icon: Code2,
+        label: 'Python Systems & Engineering',
+      };
+    }
+    if (d.includes('data science') || d.includes('analytics')) {
+      return {
+        gradient: 'from-slate-950 via-teal-950/80 to-slate-900',
+        glow: 'bg-teal-500/25',
+        border: 'border-teal-500/30',
+        badge: 'bg-teal-500/15 text-teal-300 border-teal-500/30',
+        accent: 'text-teal-400',
+        icon: Cpu,
+        label: 'Data Science & Predictive Analytics',
+      };
+    }
+    if (d.includes('ethical') || d.includes('hack')) {
+      return {
+        gradient: 'from-slate-950 via-emerald-950/90 to-slate-900',
+        glow: 'bg-emerald-500/30',
+        border: 'border-emerald-500/40',
+        badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        accent: 'text-emerald-400',
+        icon: Shield,
+        label: 'Ethical Hacking & Cyber Defense',
+      };
+    }
     if (d.includes('ai') || d.includes('machine') || d.includes('data')) {
       return {
         gradient: 'from-slate-950 via-purple-950/80 to-slate-900',

@@ -26,6 +26,16 @@ import {
   Eye,
   Check,
   X,
+  Maximize2,
+  Terminal,
+  Shield,
+  BarChart3,
+  Smartphone,
+  Server,
+  HelpCircle,
+  FolderArchive,
+  Play,
+  Cpu,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { projectService } from '@/services/projectService';
@@ -36,13 +46,21 @@ const STORAGE_KEY = 'student_project_draft';
 
 const DOMAIN_OPTIONS = [
   'Web Development',
-  'AI / Machine Learning',
-  'Mobile Development',
+  'Java Project',
+  'Python Project',
+  'Data Science Project',
+  'AI Project',
+  'Machine Learning Project',
+  'Ethical Hacking Project',
+  'Full Stack Development',
+  'Mobile App Development',
   'Cloud & DevOps',
-  'Data Engineering',
   'Cybersecurity',
+  'Data Engineering',
   'Blockchain & Web3',
   'IoT & Embedded Systems',
+  'Software Systems (C / C++ / Go)',
+  'Game Development',
 ];
 
 const DIFFICULTY_OPTIONS = ['Beginner', 'Intermediate', 'Advanced'];
@@ -56,16 +74,31 @@ const DURATION_OPTIONS = [
 ];
 
 const POPULAR_TECH = [
+  // Web & Full Stack
   'React',
   'Next.js',
   'TypeScript',
   'Tailwind CSS',
   'Node.js',
   'Express',
+  // Java
+  'Java',
+  'Spring Boot',
+  'Hibernate',
+  // Python & AI / Data Science
   'Python',
   'FastAPI',
   'Django',
   'PyTorch',
+  'TensorFlow',
+  'Pandas',
+  'Scikit-Learn',
+  // Cybersecurity & Ethical Hacking
+  'Kali Linux',
+  'Wireshark',
+  'Nmap',
+  'Metasploit',
+  // Databases & Cloud / DevOps
   'PostgreSQL',
   'MongoDB',
   'Docker',
@@ -76,40 +109,95 @@ const POPULAR_TECH = [
 
 const PRESET_COVERS = [
   {
-    name: 'Web Engineering',
-    category: 'Web Development',
-    url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
-    description: 'Clean modern code workspace & IDE syntax',
+    name: 'Java Enterprise Architecture',
+    category: 'Java Project',
+    domainTag: 'Java Project',
+    url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80',
+    description: 'Clean IDE workspace, Java Spring architecture & backend APIs',
   },
   {
-    name: 'Full Stack & Git',
+    name: 'Python Systems & Automation',
+    category: 'Python Project',
+    domainTag: 'Python Project',
+    url: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=1200&q=80',
+    description: 'Python scripts, data processing algorithms & automation pipelines',
+  },
+  {
+    name: 'Data Science & Visual Analytics',
+    category: 'Data Science Project',
+    domainTag: 'Data Science Project',
+    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
+    description: 'Predictive charts, data dashboards & statistical intelligence',
+  },
+  {
+    name: 'AI & Neural Intelligence',
+    category: 'AI Project',
+    domainTag: 'AI Project',
+    url: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80',
+    description: 'Glowing neural synapses, LLM cortex & cognitive models',
+  },
+  {
+    name: 'Machine Learning Deep Tensors',
+    category: 'Machine Learning Project',
+    domainTag: 'Machine Learning Project',
+    url: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80',
+    description: 'Deep neural tensor nodes, training loss & model weights',
+  },
+  {
+    name: 'Ethical Hacking & Matrix Terminal',
+    category: 'Ethical Hacking Project',
+    domainTag: 'Ethical Hacking Project',
+    url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+    description: 'Penetration testing matrix, vulnerability scans & exploit terminal',
+  },
+  {
+    name: 'Cybersecurity & Shield Defense',
+    category: 'Cybersecurity',
+    domainTag: 'Cybersecurity',
+    url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80',
+    description: 'Cryptographic security shield, hardware keys & SOC defense',
+  },
+  {
+    name: 'Modern Web Engineering',
+    category: 'Web Development',
+    domainTag: 'Web Development',
+    url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
+    description: 'High-contrast IDE syntax, React UI & dark developer setup',
+  },
+  {
+    name: 'Full Stack & Git Workflow',
     category: 'Full Stack',
+    domainTag: 'Full Stack Development',
     url: 'https://images.unsplash.com/photo-1618401471353-b98aedd04e11?auto=format&fit=crop&w=1200&q=80',
     description: 'GitHub engineering workflow & branch commits',
   },
   {
-    name: 'AI & Data Science',
-    category: 'AI & Machine Learning',
-    url: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80',
-    description: 'Neural network and AI deep learning models',
-  },
-  {
-    name: 'Cloud & Infrastructure',
-    category: 'Cloud Computing',
-    url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-    description: 'Distributed cloud network & DevOps pipelines',
-  },
-  {
     name: 'Mobile App Experience',
     category: 'Mobile App',
+    domainTag: 'Mobile App Development',
     url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1200&q=80',
     description: 'Smartphone screens & responsive mobile design',
   },
   {
-    name: 'Cybersecurity & Systems',
-    category: 'Cybersecurity',
-    url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-    description: 'Cyber matrix terminal, security & protocols',
+    name: 'Cloud Infrastructure & DevOps',
+    category: 'Cloud Computing',
+    domainTag: 'Cloud & DevOps',
+    url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
+    description: 'Distributed cloud network & DevOps pipelines',
+  },
+  {
+    name: 'Blockchain & Web3 Ledger',
+    category: 'Blockchain & Web3',
+    domainTag: 'Blockchain & Web3',
+    url: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1200&q=80',
+    description: 'Decentralized cryptographic ledger & smart contract architecture',
+  },
+  {
+    name: 'IoT & Embedded Robotics',
+    category: 'IoT & Embedded Systems',
+    domainTag: 'IoT & Embedded Systems',
+    url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+    description: 'Microcontroller circuits, sensor telemetry & hardware engineering',
   },
 ];
 
@@ -165,6 +253,8 @@ export default function ProjectSubmissionPage() {
   const [submitError, setSubmitError] = useState(null);
   const [successData, setSuccessData] = useState(null);
   const [previewTab, setPreviewTab] = useState('summary');
+  const [selectedCoverCategory, setSelectedCoverCategory] = useState('All');
+  const [previewScreenshotModal, setPreviewScreenshotModal] = useState(null);
   const [isUploadingZip, setIsUploadingZip] = useState(false);
   const [zipUploadError, setZipUploadError] = useState(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -503,10 +593,60 @@ export default function ProjectSubmissionPage() {
 
   const isStep5Valid = useMemo(() => {
     return Boolean(
+      (formData.live_demo_url && formData.live_demo_url.trim().length > 0) ||
       (formData.github_url && formData.github_url.trim().length > 0) ||
       (formData.zip_storage_key && formData.zip_storage_key.trim().length > 0)
     );
-  }, [formData.github_url, formData.zip_storage_key]);
+  }, [formData.live_demo_url, formData.github_url, formData.zip_storage_key]);
+
+  const deliverablesCount = useMemo(() => {
+    let count = 0;
+    if (formData.live_demo_url && formData.live_demo_url.trim()) count++;
+    if (formData.github_url && formData.github_url.trim()) count++;
+    if (formData.zip_storage_key && formData.zip_storage_key.trim()) count++;
+    return count;
+  }, [formData.live_demo_url, formData.github_url, formData.zip_storage_key]);
+
+  const filteredPresets = useMemo(() => {
+    if (selectedCoverCategory === 'All') return PRESET_COVERS;
+    if (selectedCoverCategory === 'Matching Domain') {
+      const match = PRESET_COVERS.filter((p) => p.domainTag === formData.domain);
+      return match.length > 0 ? match : PRESET_COVERS;
+    }
+    if (selectedCoverCategory === 'Java & Python') {
+      return PRESET_COVERS.filter((p) => p.category.includes('Java') || p.category.includes('Python'));
+    }
+    if (selectedCoverCategory === 'AI & Data Science') {
+      return PRESET_COVERS.filter(
+        (p) =>
+          p.category.includes('AI') ||
+          p.category.includes('Machine') ||
+          p.category.includes('Data')
+      );
+    }
+    if (selectedCoverCategory === 'Security') {
+      return PRESET_COVERS.filter(
+        (p) => p.category.includes('Ethical') || p.category.includes('Cyber')
+      );
+    }
+    if (selectedCoverCategory === 'Web & Mobile') {
+      return PRESET_COVERS.filter(
+        (p) =>
+          p.category.includes('Web') ||
+          p.category.includes('Full') ||
+          p.category.includes('Mobile')
+      );
+    }
+    if (selectedCoverCategory === 'Cloud & IoT') {
+      return PRESET_COVERS.filter(
+        (p) =>
+          p.category.includes('Cloud') ||
+          p.category.includes('Blockchain') ||
+          p.category.includes('IoT')
+      );
+    }
+    return PRESET_COVERS;
+  }, [selectedCoverCategory, formData.domain]);
 
   const canAdvance = () => {
     if (currentStep === 1) return isStep1Valid;
@@ -555,7 +695,7 @@ export default function ProjectSubmissionPage() {
       if (!isStep4Valid) {
         alert('Please provide a mandatory project cover banner image before submitting.');
       } else if (!isStep5Valid) {
-        alert('Please provide either a GitHub Repository URL OR upload a ZIP source code archive. At least one source code option is mandatory (live demo links are optional).');
+        alert('Please provide at least one project deliverable: a Live Production Demo URL, a GitHub Repository URL, or an uploaded source ZIP archive.');
       } else {
         alert('Please complete all required fields across the steps before submitting.');
       }
@@ -1212,16 +1352,49 @@ export default function ProjectSubmissionPage() {
 
                   {/* Preset Cover Selector */}
                   <div className="mt-5 pt-4 border-t border-slate-200/80">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
-                        Or Select a Curated Domain Cover Preset
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                          Curated High-Resolution Domain Covers
+                        </span>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Professional tech wallpapers tailored to your project domain. Click any to select.
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-brand-primary bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 self-start sm:self-auto">
+                        {filteredPresets.length} Presets Available
                       </span>
-                      <span className="text-[11px] text-slate-400">1-click high-resolution banner</span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {PRESET_COVERS.map((preset) => {
+                    {/* Filter categories for presets */}
+                    <div className="flex flex-wrap gap-1.5 mb-3.5">
+                      {[
+                        'All',
+                        'Matching Domain',
+                        'Java & Python',
+                        'AI & Data Science',
+                        'Security',
+                        'Web & Mobile',
+                        'Cloud & IoT',
+                      ].map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setSelectedCoverCategory(cat)}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                            selectedCoverCategory === cat
+                              ? 'bg-brand-primary text-white shadow-xs'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {filteredPresets.map((preset) => {
                         const isSelected = formData.cover_image_url === preset.url;
                         return (
                           <button
@@ -1230,30 +1403,35 @@ export default function ProjectSubmissionPage() {
                             onClick={() => updateField('cover_image_url', preset.url)}
                             className={`group relative rounded-xl overflow-hidden border-2 text-left transition-all p-1.5 flex flex-col justify-between ${
                               isSelected
-                                ? 'border-brand-primary ring-2 ring-brand-primary/20 bg-blue-50/50 shadow-xs'
-                                : 'border-slate-200 hover:border-brand-primary/50 bg-white hover:bg-slate-50'
+                                ? 'border-brand-primary ring-2 ring-brand-primary/20 bg-blue-50/50 shadow-md'
+                                : 'border-slate-200 hover:border-brand-primary/50 bg-white hover:bg-slate-50 hover:shadow-xs'
                             }`}
                           >
-                            <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden bg-slate-100 mb-1.5">
+                            <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden bg-slate-900 mb-1.5">
                               <img
                                 src={preset.url}
                                 alt={preset.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                loading="lazy"
                               />
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-80" />
                               {isSelected && (
-                                <div className="absolute inset-0 bg-brand-primary/30 backdrop-blur-[1px] flex items-center justify-center">
-                                  <div className="w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-md">
-                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <div className="absolute inset-0 bg-brand-primary/35 backdrop-blur-[1px] flex items-center justify-center">
+                                  <div className="w-7 h-7 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-lg ring-2 ring-white">
+                                    <Check className="w-4 h-4 stroke-[3]" />
                                   </div>
                                 </div>
                               )}
+                              <span className="absolute bottom-1 left-1.5 text-[9px] font-semibold text-white/90 bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-xs">
+                                {preset.category}
+                              </span>
                             </div>
                             <div className="px-1">
-                              <span className="text-[11px] font-bold text-slate-800 block truncate">
+                              <span className="text-[11px] font-bold text-slate-800 block truncate group-hover:text-brand-primary transition-colors">
                                 {preset.name}
                               </span>
                               <span className="text-[10px] text-slate-500 block truncate">
-                                {preset.category}
+                                {preset.description}
                               </span>
                             </div>
                           </button>
@@ -1263,11 +1441,84 @@ export default function ProjectSubmissionPage() {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    Additional Screenshots (1-5 images)
-                  </label>
+                {/* Additional Screenshots Section with Visual Guide */}
+                <div className="pt-4 border-t border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                        Project Screenshots & UI Blueprints (1-5 images)
+                      </label>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        High-quality visual evidence of your project execution, user interface, or terminal output.
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                      {formData.screenshots.length} / 5 slots used
+                    </span>
+                  </div>
 
+                  {/* Screenshots Clarification Guide Card */}
+                  <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/70 via-indigo-50/40 to-slate-50 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                        <HelpCircle className="w-3.5 h-3.5" />
+                      </div>
+                      <h4 className="font-display font-bold text-xs text-brand-text">
+                        Screenshot Guide: What Should You Upload?
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                      <div className="bg-white/90 border border-slate-200/80 rounded-xl p-2.5 space-y-1 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 font-mono text-[10px] flex items-center justify-center">1</span>
+                          Hero / Main View
+                        </span>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          Primary homepage, main application dashboard, or initial user entry screen.
+                        </p>
+                      </div>
+
+                      <div className="bg-white/90 border border-slate-200/80 rounded-xl p-2.5 space-y-1 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-700 font-mono text-[10px] flex items-center justify-center">2</span>
+                          Core Feature Flow
+                        </span>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          Action state: dynamic search, user checkout, algorithm calculation, or AI prompt response.
+                        </p>
+                      </div>
+
+                      <div className="bg-white/90 border border-slate-200/80 rounded-xl p-2.5 space-y-1 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 font-mono text-[10px] flex items-center justify-center">3</span>
+                          Data & Analytics
+                        </span>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          Charts, database tables, analytics metrics, visual reports, or summary graphs.
+                        </p>
+                      </div>
+
+                      <div className="bg-white/90 border border-slate-200/80 rounded-xl p-2.5 space-y-1 shadow-2xs">
+                        <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-700 font-mono text-[10px] flex items-center justify-center">4</span>
+                          Terminal / CLI / API
+                        </span>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          For Java, Python & Ethical Hacking: terminal CLI runs, Swagger API docs, or scan results.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-blue-200/50 flex items-start gap-2 text-[11px] text-slate-600">
+                      <Terminal className="w-3.5 h-3.5 text-brand-primary shrink-0 mt-0.5" />
+                      <span>
+                        <strong className="text-slate-800">No Web Interface?</strong> That's completely fine! For Python scripts, Java microservices, Machine Learning models, and Ethical Hacking tools, capture terminal CLI execution logs, Swagger / Postman API responses, or system architecture diagrams.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Screenshots Upload Dropzone */}
                   <input
                     id="screenshotImageInput"
                     type="file"
@@ -1279,59 +1530,107 @@ export default function ProjectSubmissionPage() {
                   />
                   <label
                     htmlFor="screenshotImageInput"
-                    className={`flex items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 text-xs font-semibold transition-colors ${
+                    className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
                       formData.screenshots.length >= 5
                         ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'border-slate-300 bg-slate-50 text-slate-700 hover:border-brand-primary hover:text-brand-primary cursor-pointer'
+                        : 'border-slate-300 bg-slate-50/70 text-slate-700 hover:border-brand-primary hover:bg-blue-50/20 cursor-pointer shadow-2xs'
                     }`}
                   >
-                    {isUploadingScreenshots ? <Spinner size="sm" /> : <ImageIcon className="w-4 h-4" />}
-                    {isUploadingScreenshots
-                      ? 'Uploading screenshots...'
-                      : `Choose images (${5 - formData.screenshots.length} remaining, 5 MB each)`}
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center">
+                      {isUploadingScreenshots ? <Spinner size="sm" /> : <ImageIcon className="w-5 h-5" />}
+                    </div>
+                    <div className="text-xs font-bold text-slate-800">
+                      {isUploadingScreenshots
+                        ? 'Uploading screenshots to platform...'
+                        : formData.screenshots.length >= 5
+                        ? 'Maximum 5 screenshots uploaded'
+                        : `Click to select or drag screenshots (${5 - formData.screenshots.length} slots remaining)`}
+                    </div>
+                    <p className="text-[11px] text-slate-400 max-w-sm">
+                      PNG, JPEG, WebP, or GIF up to 5 MB each. You can select multiple files simultaneously.
+                    </p>
                   </label>
 
+                  {/* Uploaded Screenshots Grid with Zoom & Slot Badges */}
                   {formData.screenshots.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                      {formData.screenshots.map((s, idx) => (
-                        <div
-                          key={idx}
-                          className="relative rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 p-2.5 flex items-start gap-3"
-                        >
-                          <div className="w-16 h-16 rounded-xl bg-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-                            <img
-                              src={resolveMediaUrl(s.image_url)}
-                              alt={s.caption}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.src = 'https://placehold.co/100x100?text=Preview';
-                              }}
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <input
-                              type="text"
-                              aria-label={`Caption for screenshot ${idx + 1}`}
-                              value={s.caption || ''}
-                              placeholder={`Screenshot ${idx + 1}`}
-                              onChange={(event) => setFormData((prev) => ({
-                                ...prev,
-                                screenshots: prev.screenshots.map((item, itemIndex) =>
-                                  itemIndex === idx ? { ...item, caption: event.target.value } : item
-                                ),
-                              }))}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveScreenshot(idx)}
-                            className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-4">
+                      {formData.screenshots.map((s, idx) => {
+                        const slotLabels = [
+                          'Slot 1 • Hero / Primary View',
+                          'Slot 2 • Core Feature / Workflow',
+                          'Slot 3 • Analytics / Output / Results',
+                          'Slot 4 • Backend / API / Architecture',
+                          'Slot 5 • Mobile View or Test Proof',
+                        ];
+                        const placeholderSuggestions = [
+                          'e.g. Main application dashboard',
+                          'e.g. Core algorithm execution / prompt response',
+                          'e.g. Metrics dashboard, charts or terminal output',
+                          'e.g. Interactive Swagger API docs / Database architecture',
+                          'e.g. Mobile responsive view or automated test report',
+                        ];
+
+                        return (
+                          <div
+                            key={idx}
+                            className="relative rounded-2xl border border-slate-200/90 overflow-hidden bg-white p-3 shadow-xs space-y-2.5 transition-shadow hover:shadow-md"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-brand-primary bg-blue-50 px-2 py-0.5 rounded border border-blue-200/80">
+                                {slotLabels[idx] || `Screenshot ${idx + 1}`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveScreenshot(idx)}
+                                className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                                title="Remove screenshot"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-slate-900 group">
+                              <img
+                                src={resolveMediaUrl(s.image_url)}
+                                alt={s.caption || `Screenshot ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = 'https://placehold.co/400x225?text=Preview';
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPreviewScreenshotModal(s.image_url)}
+                                className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-[2px]"
+                              >
+                                <Maximize2 className="w-4 h-4" />
+                                <span>Preview Fullscreen</span>
+                              </button>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                Caption / Description
+                              </label>
+                              <input
+                                type="text"
+                                aria-label={`Caption for screenshot ${idx + 1}`}
+                                value={s.caption || ''}
+                                placeholder={placeholderSuggestions[idx] || `Describe what this screenshot displays...`}
+                                onChange={(event) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    screenshots: prev.screenshots.map((item, itemIndex) =>
+                                      itemIndex === idx ? { ...item, caption: event.target.value } : item
+                                    ),
+                                  }))
+                                }
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-primary focus:bg-white transition-all font-medium"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1339,118 +1638,188 @@ export default function ProjectSubmissionPage() {
             </div>
           )}
 
-          {/* STEP 5: Repository & Links */}
+          {/* STEP 5: Repository, Live Demos & ZIP Source */}
           {currentStep === 5 && (
             <div className="space-y-6">
               <div className="border-b border-brand-border pb-4">
-                <h2 className="font-display font-bold text-xl text-brand-text flex items-center gap-2">
-                  <LinkIcon className="w-5 h-5 text-brand-primary" />
-                  Step 5: Code Repository, Demos & ZIP Source
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display font-bold text-xl text-brand-text flex items-center gap-2">
+                    <LinkIcon className="w-5 h-5 text-brand-primary" />
+                    Step 5: Code Repository, Live Demos & ZIP Source
+                  </h2>
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                      deliverablesCount > 0
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    {deliverablesCount > 0
+                      ? `${deliverablesCount} of 3 Attached`
+                      : '0 of 3 Attached'}
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Connect your GitHub repo or attach an encrypted source ZIP package (at least one is required). Live demo and video links are optional.
+                  Connect your project with any deliverable: a Live Production Demo, a GitHub repo, OR an uploaded ZIP archive (at least one is required).
                 </p>
               </div>
 
-              {/* Requirement Alert Banner */}
+              {/* Requirement Status Indicator Banner */}
               <div
                 className={`p-4 rounded-2xl border text-xs flex items-start gap-3 transition-colors ${
                   isStep5Valid
-                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
-                    : 'bg-amber-50/80 border-amber-200 text-amber-900'
+                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                    : 'bg-amber-50/90 border-amber-200 text-amber-950'
                 }`}
               >
                 {isStep5Valid ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 )}
                 <div>
-                  <strong className="block font-semibold">
+                  <strong className="block text-sm font-bold">
                     {isStep5Valid
-                      ? 'Source Code Requirement Met'
-                      : 'Source Code is Mandatory (GitHub Repo OR Uploaded ZIP)'}
+                      ? `Deliverable Requirement Satisfied (${deliverablesCount} Provided)`
+                      : 'At Least 1 Project Deliverable Required to Submit'}
                   </strong>
-                  <p className="mt-0.5 text-[11px] leading-relaxed opacity-90">
-                    To maintain reviewer credibility, you must provide <strong>either a public GitHub Repository URL OR upload a ZIP source archive</strong> (at least one is required). The live production demo link is <strong>optional</strong>.
+                  <p className="mt-0.5 text-xs leading-relaxed opacity-90">
+                    {isStep5Valid
+                      ? 'You have attached deliverables for your project submission. You can advance to the final review, or attach additional links/files below for extra recruiter score!'
+                      : 'To submit your project, please provide at least ONE of: a Live Production Demo URL, a GitHub Repository URL, OR upload a source ZIP archive.'}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                      <Github className="w-3.5 h-3.5" />
-                      <span>GitHub Repository URL</span>
-                    </label>
-                    {formData.github_url?.trim() ? (
-                      <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Repo Linked
+                {/* Deliverable Card 1: Live Production Demo URL */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs hover:border-brand-primary/40 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center shadow-xs">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-bold text-xs text-slate-800">
+                          Live Production Demo URL
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          Vercel, Netlify, Render, Streamlit, Hugging Face, or hosted cloud deployment
+                        </p>
+                      </div>
+                    </div>
+
+                    {formData.live_demo_url?.trim() ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 self-start sm:self-auto">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Live Demo Connected
                       </span>
                     ) : (
-                      <span className="text-[11px] text-slate-400">
-                        {formData.zip_storage_key ? '(Optional — ZIP archive attached)' : '* Required if no ZIP uploaded'}
+                      <span className="text-[10px] font-medium text-slate-400 self-start sm:self-auto">
+                        Optional (if GitHub or ZIP provided)
                       </span>
                     )}
                   </div>
-                  <Input
-                    placeholder="https://github.com/username/project-repo"
-                    value={formData.github_url}
-                    onChange={(e) => updateField('github_url', e.target.value)}
-                  />
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Globe className="w-3.5 h-3.5" />
-                        <span>Live Production Demo URL</span>
-                      </label>
-                      <span className="text-[11px] text-slate-400 font-medium">(Optional)</span>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="https://my-app.vercel.app or https://share.streamlit.io/..."
+                        value={formData.live_demo_url}
+                        onChange={(e) => updateField('live_demo_url', e.target.value)}
+                      />
                     </div>
-                    <Input
-                      placeholder="https://my-app.vercel.app"
-                      value={formData.live_demo_url}
-                      onChange={(e) => updateField('live_demo_url', e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Video className="w-3.5 h-3.5" />
-                        <span>Walkthrough / Loom Video URL</span>
-                      </label>
-                      <span className="text-[11px] text-slate-400 font-medium">(Optional)</span>
-                    </div>
-                    <Input
-                      placeholder="https://youtu.be/... or Loom link"
-                      value={formData.video_demo_url}
-                      onChange={(e) => updateField('video_demo_url', e.target.value)}
-                    />
+                    {formData.live_demo_url?.trim() && (
+                      <a
+                        href={formData.live_demo_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 rounded-xl text-xs font-semibold text-brand-primary bg-blue-50 hover:bg-blue-100 border border-brand-primary/20 flex items-center gap-1 shrink-0 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Test Link</span>
+                      </a>
+                    )}
                   </div>
                 </div>
 
-                {/* ZIP Package Upload Area */}
-                <div className="pt-2 border-t border-slate-100 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                      <UploadCloud className="w-3.5 h-3.5 text-brand-primary" />
-                      <span>Project Source Archive (ZIP)</span>
-                    </label>
+                {/* Deliverable Card 2: GitHub Repository URL */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs hover:border-brand-primary/40 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
                     <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-xs">
+                        <Github className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-bold text-xs text-slate-800">
+                          GitHub / Git Repository URL
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          Public repository for code reviews, star ranking, and commit history
+                        </p>
+                      </div>
+                    </div>
+
+                    {formData.github_url?.trim() ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 self-start sm:self-auto">
+                        <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Repo Linked
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-medium text-slate-400 self-start sm:self-auto">
+                        Optional (if Live Demo or ZIP provided)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="https://github.com/username/project-repo"
+                        value={formData.github_url}
+                        onChange={(e) => updateField('github_url', e.target.value)}
+                      />
+                    </div>
+                    {formData.github_url?.trim() && (
+                      <a
+                        href={formData.github_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 flex items-center gap-1 shrink-0 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open Repo</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deliverable Card 3: Direct Project Source ZIP Archive */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs hover:border-brand-primary/40 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shadow-xs">
+                        <FolderArchive className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-bold text-xs text-slate-800">
+                          Project Source Archive (ZIP)
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          Directly upload complete source code package (max 50 MB, automated security scan)
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
                       {formData.zip_storage_key ? (
-                        <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                           <Check className="w-3.5 h-3.5 stroke-[2.5]" /> ZIP Attached
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-400">
-                          {formData.github_url?.trim() ? '(Optional — GitHub linked)' : '* Required if no GitHub URL'}
+                        <span className="text-[10px] font-medium text-slate-400">
+                          Optional (if Live Demo or GitHub provided)
                         </span>
                       )}
-                      <span className="text-[11px] text-slate-400 font-mono">Max 50 MB</span>
+                      <span className="text-[10px] text-slate-400 font-mono">Max 50 MB</span>
                     </div>
                   </div>
 
@@ -1464,11 +1833,13 @@ export default function ProjectSubmissionPage() {
                     </Alert>
                   )}
 
-                  <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${
-                    isUploadingZip
-                      ? 'border-brand-primary bg-blue-50/40 cursor-wait'
-                      : 'border-slate-300 hover:border-brand-primary bg-slate-50/60'
-                  }`}>
+                  <div
+                    className={`border-2 border-dashed rounded-2xl p-5 text-center transition-colors ${
+                      isUploadingZip
+                        ? 'border-brand-primary bg-blue-50/40 cursor-wait'
+                        : 'border-slate-300 hover:border-brand-primary bg-slate-50/60'
+                    }`}
+                  >
                     <input
                       type="file"
                       id="zipFileInput"
@@ -1493,10 +1864,10 @@ export default function ProjectSubmissionPage() {
                         </div>
                       ) : (
                         <>
-                          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-brand-primary mx-auto flex items-center justify-center">
-                            <UploadCloud className="w-6 h-6" />
+                          <div className="w-10 h-10 rounded-2xl bg-blue-50 text-brand-primary mx-auto flex items-center justify-center">
+                            <UploadCloud className="w-5 h-5" />
                           </div>
-                          <div className="text-xs font-bold text-slate-700">
+                          <div className="text-xs font-bold text-slate-800">
                             {formData.zip_filename ? (
                               <span className="text-brand-primary font-mono">{formData.zip_filename}</span>
                             ) : (
@@ -1504,10 +1875,7 @@ export default function ProjectSubmissionPage() {
                             )}
                           </div>
                           <p className="text-[11px] text-slate-500 max-w-md mx-auto">
-                            Strict safety enforcement: files with binary executables (<code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.exe</code>, <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.dll</code>), path traversals, or leaked secrets (<code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.env</code>, keys) are automatically rejected.
-                          </p>
-                          <p className="text-[11px] text-slate-500 max-w-md mx-auto">
-                            Generated folders such as <code className="font-mono">node_modules</code>, <code className="font-mono">.git</code>, <code className="font-mono">dist</code>, and <code className="font-mono">build</code> are removed automatically.
+                            Strict safety: binary executables (<code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.exe</code>, <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.dll</code>), path traversals, and leaked secrets (<code className="bg-slate-200 px-1 py-0.5 rounded font-mono">.env</code>) are rejected. Generated folders like <code className="font-mono">node_modules</code> and <code className="font-mono">dist</code> are pruned.
                           </p>
                         </>
                       )}
@@ -1542,6 +1910,49 @@ export default function ProjectSubmissionPage() {
                       </button>
                     </div>
                   )}
+                </div>
+
+                {/* Deliverable Card 4: Video Demo (Optional Bonus) */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-4 space-y-3 shadow-2xs hover:border-brand-primary/40 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-xs">
+                        <Video className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-display font-bold text-xs text-slate-800">
+                          Walkthrough Video Demo (Optional Bonus)
+                        </h4>
+                        <p className="text-[10px] text-slate-400">
+                          YouTube, Loom, or Google Drive screen demonstration walkthrough
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-medium text-slate-400 self-start sm:self-auto">
+                      Optional
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="https://youtu.be/... or https://www.loom.com/share/..."
+                        value={formData.video_demo_url}
+                        onChange={(e) => updateField('video_demo_url', e.target.value)}
+                      />
+                    </div>
+                    {formData.video_demo_url?.trim() && (
+                      <a
+                        href={formData.video_demo_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 shrink-0 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open Video</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -2098,6 +2509,35 @@ export default function ProjectSubmissionPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Fullscreen Screenshot Preview Modal */}
+      {previewScreenshotModal && (
+        <Modal
+          isOpen={Boolean(previewScreenshotModal)}
+          onClose={() => setPreviewScreenshotModal(null)}
+          title="Screenshot Fullscreen Preview"
+          size="xl"
+        >
+          <div className="p-2 space-y-3">
+            <div className="rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center max-h-[75vh]">
+              <img
+                src={resolveMediaUrl(previewScreenshotModal)}
+                alt="Enlarged screenshot preview"
+                className="w-full h-auto max-h-[75vh] object-contain"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPreviewScreenshotModal(null)}
+              >
+                Close Preview
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
