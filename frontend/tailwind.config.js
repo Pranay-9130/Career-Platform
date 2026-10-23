@@ -8,7 +8,7 @@ export default {
     extend: {
       colors: {
         brand: {
-          primary: '#3B82F6',
+          primary: '#2563EB',
           light: '#60A5FA',
           veryLight: '#EFF6FF',
           bg: '#F8FBFF',
@@ -16,10 +16,10 @@ export default {
           cyan: '#06B6D4',
           border: '#DBEAFE',
           text: '#0F172A',
-          muted: '#64748B',
-          success: '#22C55E',
-          warning: '#F59E0B',
-          error: '#EF4444',
+          muted: '#475569',
+          success: '#16A34A',
+          warning: '#D97706',
+          error: '#DC2626',
         },
       },
       fontFamily: {

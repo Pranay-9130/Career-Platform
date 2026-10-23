@@ -243,11 +243,17 @@ export default function StudentLayout() {
             to="/dashboard"
             className="flex items-center gap-2 group min-w-0"
           >
-            <img
-              src="/logo.png"
-              alt="AspirePath"
-              className="h-8 w-auto object-contain transition-transform group-hover:scale-[1.02]"
-            />
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
+                src="/logo.png"
+                alt="AspirePath"
+                width="120"
+                height="32"
+                decoding="async"
+                className="h-8 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+              />
+            </picture>
             <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase px-1.5 py-0.5 rounded bg-slate-100 shrink-0">
               {workspaceLabel}
             </span>
@@ -312,11 +318,17 @@ export default function StudentLayout() {
                 onClick={() => setMobileSidebarOpen(false)}
                 className="flex items-center gap-2 group min-w-0"
               >
-                <img
-                  src="/logo.png"
-                  alt="AspirePath"
-                  className="h-7 w-auto object-contain"
-                />
+                <picture>
+                  <source srcSet="/logo.webp" type="image/webp" />
+                  <img
+                    src="/logo.png"
+                    alt="AspirePath"
+                    width="105"
+                    height="28"
+                    decoding="async"
+                    className="h-7 w-auto object-contain"
+                  />
+                </picture>
                 <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase px-1.5 py-0.5 rounded bg-slate-100">
                   {workspaceLabel}
                 </span>

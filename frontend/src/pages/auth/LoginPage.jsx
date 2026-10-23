@@ -126,11 +126,17 @@ export default function LoginPage() {
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center">
           <Link to="/" className="inline-block mb-3 transition-transform hover:scale-105">
-            <img
-              src="/logo.png"
-              alt="AspirePath"
-              className="h-11 w-auto object-contain mx-auto"
-            />
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
+                src="/logo.png"
+                alt="AspirePath"
+                width="165"
+                height="44"
+                decoding="async"
+                className="h-11 w-auto object-contain mx-auto"
+              />
+            </picture>
           </Link>
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold mb-4 shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-brand-primary" />

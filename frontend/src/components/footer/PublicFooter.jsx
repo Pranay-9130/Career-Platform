@@ -13,11 +13,18 @@ export default function PublicFooter() {
           {/* Brand Column (Span 2) */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="inline-flex items-center gap-2 group">
-              <img
-                src="/logo.png"
-                alt="AspirePath"
-                className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
-              />
+              <picture>
+                <source srcSet="/logo.webp" type="image/webp" />
+                <img
+                  src="/logo.png"
+                  alt="AspirePath"
+                  width="150"
+                  height="40"
+                  loading="lazy"
+                  decoding="async"
+                  className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+                />
+              </picture>
             </Link>
 
             <p className="text-sm font-medium text-brand-primary italic">
@@ -63,7 +70,7 @@ export default function PublicFooter() {
 
           {/* Platform Column */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-brand-text uppercase tracking-wider">Platform</h4>
+            <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">Platform</h3>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link to="/projects" className="text-brand-muted hover:text-brand-primary transition-colors">
@@ -95,7 +102,7 @@ export default function PublicFooter() {
 
           {/* Resources Column */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-brand-text uppercase tracking-wider">Resources</h4>
+            <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">Resources</h3>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link to="/design-system" className="text-brand-muted hover:text-brand-primary transition-colors flex items-center gap-1.5">
@@ -123,7 +130,7 @@ export default function PublicFooter() {
 
           {/* Company & Legal */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-brand-text uppercase tracking-wider">Company & Legal</h4>
+            <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">Company & Legal</h3>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link to="/about" className="text-brand-muted hover:text-brand-primary transition-colors">
@@ -136,12 +143,12 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <span className="text-slate-400 cursor-not-allowed">
+                <span className="text-slate-500 cursor-not-allowed">
                   Privacy Policy
                 </span>
               </li>
               <li>
-                <span className="text-slate-400 cursor-not-allowed">
+                <span className="text-slate-500 cursor-not-allowed">
                   Terms of Service
                 </span>
               </li>

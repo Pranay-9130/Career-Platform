@@ -10,8 +10,8 @@ import { ErrorBoundary } from './components/common';
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout';
-import StudentLayout from './layouts/StudentLayout';
-import AdminLayout from './layouts/AdminLayout';
+const StudentLayout = lazy(() => import('./layouts/StudentLayout'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
 // Lazy Loaded Public Pages
 const HomePage = lazy(() => import('./pages/public/HomePage'));

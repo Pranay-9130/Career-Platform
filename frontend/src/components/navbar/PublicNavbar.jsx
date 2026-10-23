@@ -97,11 +97,17 @@ export default function PublicNavbar() {
           to="/"
           className="flex items-center gap-2 group shrink-0"
         >
-          <img
-            src="/logo.png"
-            alt="AspirePath"
-            className="h-9 w-auto object-contain transition-transform group-hover:scale-[1.02]"
-          />
+          <picture>
+            <source srcSet="/logo.webp" type="image/webp" />
+            <img
+              src="/logo.png"
+              alt="AspirePath"
+              width="135"
+              height="36"
+              decoding="async"
+              className="h-9 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+            />
+          </picture>
         </Link>
 
         {/* Desktop Navigation Links */}
@@ -331,7 +337,7 @@ export default function PublicNavbar() {
         >
           {/* Section: Explore Platform */}
           <div>
-            <div className="px-3 pb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <div className="px-3 pb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               <Compass className="w-3.5 h-3.5 text-brand-primary" />
               <span>Explore Platform</span>
             </div>
@@ -362,7 +368,7 @@ export default function PublicNavbar() {
           {isAuthenticated ? (
             <div className="pt-3 border-t border-slate-100">
               <div className="px-3 pb-2 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   My Workspace
                 </span>
                 <span className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">

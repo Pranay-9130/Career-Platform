@@ -62,6 +62,8 @@ export default function JobCard({
                 <img
                   src={displayLogo}
                   alt={displayCompany}
+                  width="40"
+                  height="40"
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-contain p-1 rounded-xl"

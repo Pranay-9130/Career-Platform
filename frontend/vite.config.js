@@ -20,15 +20,19 @@ export default defineConfig({
     },
   },
   build: {
+    target: 'es2020',
+    cssMinify: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-icons': ['lucide-react'],
           'vendor-http': ['axios'],
         },
       },
     },
+  },
+  esbuild: {
+    legalComments: 'none',
   },
 });

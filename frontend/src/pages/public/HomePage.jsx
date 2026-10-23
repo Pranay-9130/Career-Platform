@@ -56,7 +56,7 @@ export default function HomePage() {
           setProjectsError(null);
         }
       } catch (err) {
-        console.error('Error fetching public projects:', err);
+        console.warn('Unable to load live project showcases:', err?.message || err);
         if (isMounted) {
           setProjectsError('Unable to load live project showcases. Please check back shortly.');
         }
@@ -73,7 +73,7 @@ export default function HomePage() {
           setJobsError(null);
         }
       } catch (err) {
-        console.error('Error fetching public jobs:', err);
+        console.warn('Unable to load live job opportunities:', err?.message || err);
         if (isMounted) {
           setJobsError('Unable to load current job opportunities. Please visit the jobs board directly.');
         }
@@ -415,7 +415,7 @@ export default function HomePage() {
         ) : projects.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-3xl border border-brand-border space-y-3">
             <FolderGit2 className="w-10 h-10 text-slate-300 mx-auto" />
-            <h4 className="text-sm font-bold text-brand-text">No Published Showcases Yet</h4>
+            <h3 className="text-sm font-bold text-brand-text">No Published Showcases Yet</h3>
             <p className="text-xs text-brand-muted max-w-md mx-auto">
               Student showcases appear here as they are published and approved by our review team. You can submit your own project or browse the blueprints catalogue.
             </p>
@@ -477,7 +477,7 @@ export default function HomePage() {
         ) : jobs.length === 0 ? (
           <div className="p-12 text-center bg-white rounded-3xl border border-brand-border space-y-3">
             <Briefcase className="w-10 h-10 text-slate-300 mx-auto" />
-            <h4 className="text-sm font-bold text-brand-text">No Open Postings Right Now</h4>
+            <h3 className="text-sm font-bold text-brand-text">No Open Postings Right Now</h3>
             <p className="text-xs text-brand-muted max-w-md mx-auto">
               We are constantly reviewing and verifying legitimate entry-level and internship listings. New opportunities appear as verified hiring partners post them.
             </p>
