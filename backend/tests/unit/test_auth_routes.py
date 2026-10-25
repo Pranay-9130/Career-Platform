@@ -264,6 +264,53 @@ async def test_login_nonexistent_email_rejected(client):
 
 
 @pytest.mark.asyncio
+async def test_google_sign_in_registers_and_reuses_verified_student(
+    client, db_session, monkeypatch
+):
+    from app.api.routes import auth
+
+    monkeypatch.setattr(settings, "GOOGLE_CLIENT_ID", "test-google-client")
+    payload = {
+        "sub": "google-sub-123",
+        "email": "Google.User@gmail.com",
+        "email_verified": True,
+        "name": "Google User",
+    }
+
+    def verify_token(credential, request, audience):
+        assert credential == "test-google-credential"
+        assert audience == "test-google-client"
+        return payload
+
+    monkeypatch.setattr(auth.google_id_token, "verify_oauth2_token", verify_token)
+    response = await client.post(
+        "/api/auth/google", json={"credential": "test-google-credential"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "google.user@gmail.com"
+    assert response.json()["user"]["role"] == "STUDENT"
+    user = (
+        await db_session.execute(
+            select(User).where(User.google_sub == "google-sub-123")
+        )
+    ).scalar_one()
+    assert user.is_verified is True
+    assert user.hashed_password != "test-google-credential"
+
+    repeated_response = await client.post(
+        "/api/auth/google", json={"credential": "test-google-credential"}
+    )
+    assert repeated_response.status_code == 200
+    users = (
+        await db_session.execute(
+            select(User).where(User.email == "google.user@gmail.com")
+        )
+    ).scalars().all()
+    assert len(users) == 1
+
+
+@pytest.mark.asyncio
 async def test_login_deactivated_account_rejected(client, db_session):
     """Deactivated accounts receive HTTP 400 Bad Request."""
     reg_response = await client.post(

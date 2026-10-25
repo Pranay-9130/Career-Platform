@@ -29,6 +29,7 @@ engine = create_engine('postgresql+psycopg://'); \
 print('PostgreSQL migration driver check OK:', engine.dialect.driver, psycopg.__version__); \
 engine.dispose()"
 COPY backend/ ./
+RUN python scripts/validate_migrations.py
 COPY --from=frontend-build /frontend/dist /app/frontend-dist
 RUN useradd --create-home --uid 1000 appuser && chown -R appuser:appuser /app
 USER appuser

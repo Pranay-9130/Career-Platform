@@ -35,7 +35,8 @@ def do_run_migrations(connection) -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = settings.SYNC_DATABASE_URL
+    url = config.get_main_option("sqlalchemy.url") or settings.SYNC_DATABASE_URL
+    configuration["sqlalchemy.url"] = url
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

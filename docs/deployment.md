@@ -111,18 +111,17 @@ Deploy in this exact sequence to ensure all dependencies and cross-service URLs 
    - **Name:** `careerplatform-api` (or preferred name)
    - **Region:** Choose closest to your audience (e.g., `Frankfurt` or `Oregon`)
    - **Branch:** `main`
-   - **Root Directory:** `backend`
-   - **Runtime:** `Python 3`
-   - **Build Command:**
-     ```bash
-     pip install -r requirements.txt && alembic upgrade head
-     ```
-   - **Start Command:**
-     ```bash
-     uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
-     ```
+   - **Runtime:** Docker, using the repository's root `Dockerfile`
+   - **Build:** The Docker build validates the packaged Alembic graph before producing the image.
+   - **Start:** The container checks the database's recorded Alembic revision, runs
+     `alembic upgrade head`, and starts the API only after migrations succeed.
    - **Plan:** `Free`
    - **Health Check Path:** `/api/health` (or `/health`)
+
+If startup reports a database revision that is absent from the packaged migration
+history, stop and restore the original migration file from the deployment or
+source-control history. Do not edit `alembic_version`, stamp the database, or
+reset the PostgreSQL database to bypass the check.
 
 ### 4.2. Render Environment Variables Matrix
 Under the **Environment** tab of your Render service, configure the following:

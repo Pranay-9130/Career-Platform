@@ -15,10 +15,12 @@ depends_on = None
 
 
 def upgrade() -> None:
-    with op.batch_alter_table("jobs") as batch_op:
-        batch_op.add_column(
-            sa.Column("application_start_date", sa.DateTime(timezone=True), nullable=True)
-        )
+    columns = {column["name"] for column in sa.inspect(op.get_bind()).get_columns("jobs")}
+    if "application_start_date" not in columns:
+        with op.batch_alter_table("jobs") as batch_op:
+            batch_op.add_column(
+                sa.Column("application_start_date", sa.DateTime(timezone=True), nullable=True)
+            )
 
 
 def downgrade() -> None:
