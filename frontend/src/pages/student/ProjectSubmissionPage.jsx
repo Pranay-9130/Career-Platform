@@ -41,6 +41,11 @@ import { useAuth } from '@/context/AuthContext';
 import { projectService } from '@/services/projectService';
 import { Button, Input, Textarea, Select, Badge, Card, Alert, Modal, Spinner } from '@/components/common';
 import { resolveMediaUrl } from '@/utils/media';
+import {
+  hasMinimumProjectScreenshots,
+  MINIMUM_PROJECT_SCREENSHOTS,
+  shouldReplaceCoverWithScreenshot,
+} from '@/utils/projectSubmission';
 
 const STORAGE_KEY = 'student_project_draft';
 
@@ -62,6 +67,7 @@ const DOMAIN_OPTIONS = [
   'Software Systems (C / C++ / Go)',
   'Game Development',
 ];
+const PRESET_COVER_URLS = new Set(PRESET_COVERS.map(({ url }) => url));
 
 const DIFFICULTY_OPTIONS = ['Beginner', 'Intermediate', 'Advanced'];
 
@@ -432,12 +438,6 @@ export default function ProjectSubmissionPage() {
   const handleScreenshotUpload = async (event) => {
     const files = Array.from(event.target.files || []);
     if (!files.length) return;
-    const remaining = 5 - formData.screenshots.length;
-    if (remaining <= 0 || files.length > remaining) {
-      setImageUploadError(`You can add up to 5 screenshots. ${remaining} slot${remaining === 1 ? '' : 's'} remaining.`);
-      event.target.value = '';
-      return;
-    }
     const validationError = files.map(validateImageFile).find(Boolean);
     if (validationError) {
       setImageUploadError(validationError);
@@ -450,11 +450,20 @@ export default function ProjectSubmissionPage() {
       const uploaded = await Promise.all(files.map((file) => projectService.uploadProjectImage(file)));
       setFormData((prev) => ({
         ...prev,
-        screenshots: [...prev.screenshots, ...uploaded.map((result, index) => ({
-          image_url: result.image_url,
-          caption: files[index].name.replace(/\.[^.]+$/, ''),
-          order_index: prev.screenshots.length + index,
-        }))],
+        screenshots: [
+          ...prev.screenshots,
+          ...uploaded.map((result, index) => ({
+            image_url: result.image_url,
+            caption: files[index].name.replace(/\.[^.]+$/, ''),
+            order_index: prev.screenshots.length + index,
+          })),
+        ],
+        cover_image_url: shouldReplaceCoverWithScreenshot(
+          prev.cover_image_url,
+          PRESET_COVER_URLS,
+        )
+          ? uploaded[0]?.image_url || prev.cover_image_url
+          : prev.cover_image_url,
       }));
     } catch (err) {
       setImageUploadError(err.response?.data?.detail || 'Screenshot upload failed. Please try again.');
@@ -465,10 +474,20 @@ export default function ProjectSubmissionPage() {
   };
 
   const handleRemoveScreenshot = (idx) => {
-    setFormData((prev) => ({
-      ...prev,
-      screenshots: prev.screenshots.filter((_, i) => i !== idx),
-    }));
+    setFormData((prev) => {
+      const removedScreenshot = prev.screenshots[idx];
+      const screenshots = prev.screenshots
+        .filter((_, i) => i !== idx)
+        .map((screenshot, index) => ({ ...screenshot, order_index: index }));
+      return {
+        ...prev,
+        screenshots,
+        cover_image_url:
+          prev.cover_image_url === removedScreenshot?.image_url
+            ? screenshots[0]?.image_url || ''
+            : prev.cover_image_url,
+      };
+    });
   };
 
   // Step 5: ZIP File Validation and Upload
@@ -588,8 +607,11 @@ export default function ProjectSubmissionPage() {
   }, [formData.tech_stack]);
 
   const isStep4Valid = useMemo(() => {
-    return Boolean(formData.cover_image_url && formData.cover_image_url.trim().length > 0);
-  }, [formData.cover_image_url]);
+    return (
+      Boolean(formData.cover_image_url && formData.cover_image_url.trim().length > 0) &&
+      hasMinimumProjectScreenshots(formData.screenshots)
+    );
+  }, [formData.cover_image_url, formData.screenshots.length]);
 
   const isStep5Valid = useMemo(() => {
     return Boolean(
@@ -692,8 +714,10 @@ export default function ProjectSubmissionPage() {
 
   const handleSubmitFinal = async () => {
     if (!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid || !isStep5Valid) {
-      if (!isStep4Valid) {
+      if (!formData.cover_image_url?.trim()) {
         alert('Please provide a mandatory project cover banner image before submitting.');
+      } else if (!hasMinimumProjectScreenshots(formData.screenshots)) {
+        alert(`Please upload at least ${MINIMUM_PROJECT_SCREENSHOTS} project screenshots before submitting.`);
       } else if (!isStep5Valid) {
         alert('Please provide at least one project deliverable: a Live Production Demo URL, a GitHub Repository URL, or an uploaded source ZIP archive.');
       } else {
@@ -883,8 +907,8 @@ export default function ProjectSubmissionPage() {
                     key={step.number}
                     type="button"
                     onClick={() => {
-                      // Allow jumping backward anytime, or forward if validated
-                      if (step.number < currentStep || canAdvance()) {
+                      // Keep contributor entry available without bypassing submission validation.
+                      if (step.number < currentStep || step.number === 6 || canAdvance()) {
                         setCurrentStep(step.number);
                       }
                     }}
@@ -1446,14 +1470,20 @@ export default function ProjectSubmissionPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
-                        Project Screenshots & UI Blueprints (1-5 images)
+                        Project Screenshots & UI Blueprints (minimum {MINIMUM_PROJECT_SCREENSHOTS})
                       </label>
                       <p className="text-[11px] text-slate-500 mt-0.5">
                         High-quality visual evidence of your project execution, user interface, or terminal output.
                       </p>
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
-                      {formData.screenshots.length} / 5 slots used
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                        hasMinimumProjectScreenshots(formData.screenshots)
+                          ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                          : 'text-amber-800 bg-amber-50 border-amber-200'
+                      }`}
+                    >
+                      {formData.screenshots.length} uploaded · {MINIMUM_PROJECT_SCREENSHOTS} required
                     </span>
                   </div>
 
@@ -1525,16 +1555,12 @@ export default function ProjectSubmissionPage() {
                     accept="image/png,image/jpeg,image/webp,image/gif"
                     multiple
                     className="hidden"
-                    disabled={isUploadingScreenshots || formData.screenshots.length >= 5}
+                    disabled={isUploadingScreenshots}
                     onChange={handleScreenshotUpload}
                   />
                   <label
                     htmlFor="screenshotImageInput"
-                    className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
-                      formData.screenshots.length >= 5
-                        ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                        : 'border-slate-300 bg-slate-50/70 text-slate-700 hover:border-brand-primary hover:bg-blue-50/20 cursor-pointer shadow-2xs'
-                    }`}
+                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-6 text-center text-slate-700 transition-all hover:border-brand-primary hover:bg-blue-50/20 cursor-pointer shadow-2xs"
                   >
                     <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center">
                       {isUploadingScreenshots ? <Spinner size="sm" /> : <ImageIcon className="w-5 h-5" />}
@@ -1542,14 +1568,18 @@ export default function ProjectSubmissionPage() {
                     <div className="text-xs font-bold text-slate-800">
                       {isUploadingScreenshots
                         ? 'Uploading screenshots to platform...'
-                        : formData.screenshots.length >= 5
-                        ? 'Maximum 5 screenshots uploaded'
-                        : `Click to select or drag screenshots (${5 - formData.screenshots.length} slots remaining)`}
+                        : 'Click to select or drag screenshots (no five-image limit)'}
                     </div>
                     <p className="text-[11px] text-slate-400 max-w-sm">
-                      PNG, JPEG, WebP, or GIF up to 5 MB each. You can select multiple files simultaneously.
+                      PNG, JPEG, WebP, or GIF up to 5 MB each. Upload at least {MINIMUM_PROJECT_SCREENSHOTS} screenshots to submit; you can select multiple files at once.
                     </p>
                   </label>
+                  {!hasMinimumProjectScreenshots(formData.screenshots) && (
+                    <p className="text-xs font-medium text-amber-800" role="status">
+                      Upload {MINIMUM_PROJECT_SCREENSHOTS - formData.screenshots.length} more screenshot
+                      {MINIMUM_PROJECT_SCREENSHOTS - formData.screenshots.length === 1 ? '' : 's'} to continue.
+                    </p>
+                  )}
 
                   {/* Uploaded Screenshots Grid with Zoom & Slot Badges */}
                   {formData.screenshots.length > 0 && (
@@ -1595,9 +1625,13 @@ export default function ProjectSubmissionPage() {
                                 alt={s.caption || `Screenshot ${idx + 1}`}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  e.target.src = 'https://placehold.co/400x225?text=Preview';
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
                                 }}
                               />
+                              <div className="hidden absolute inset-0 flex items-center justify-center px-4 text-center text-xs text-slate-300">
+                                Screenshot preview unavailable
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => setPreviewScreenshotModal(s.image_url)}
@@ -1967,12 +2001,12 @@ export default function ProjectSubmissionPage() {
                   Step 6: Contributors & Pre-Submission Review
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">
-                  Credit co-authors and inspect your project card before submitting for review or saving as draft.
+                  Credit co-authors and inspect your project card before submitting for review or saving as draft. You can open this step anytime from the step navigation.
                 </p>
               </div>
 
               {/* Contributors Input */}
-              <div className="space-y-3">
+              <div className="space-y-3 rounded-2xl border border-brand-border bg-slate-50/50 p-4 sm:p-5">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Co-Authors & Contributors (Optional)
                 </label>
@@ -2209,7 +2243,7 @@ export default function ProjectSubmissionPage() {
                   type="button"
                   variant="primary"
                   size="md"
-                  disabled={!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid || isSubmitting}
+                  disabled={!isStep1Valid || !isStep2Valid || !isStep3Valid || !isStep4Valid || !isStep5Valid || isSubmitting}
                   onClick={handleSubmitFinal}
                   rightIcon={Send}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20"
@@ -2431,9 +2465,13 @@ export default function ProjectSubmissionPage() {
                             alt={s.caption}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.target.src = 'https://placehold.co/400x250?text=Preview';
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
                           />
+                          <div className="hidden h-full flex items-center justify-center px-4 text-center text-xs text-slate-500">
+                            Screenshot preview unavailable
+                          </div>
                         </div>
                         {s.caption && (
                           <div className="p-3 text-xs text-slate-700 font-semibold bg-white border-t border-slate-200">

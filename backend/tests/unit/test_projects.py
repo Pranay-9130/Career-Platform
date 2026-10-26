@@ -443,7 +443,12 @@ async def test_create_project_and_slug_collision(client, db_session):
         "prerequisites": "Linear algebra, Python fundamentals",
         "expected_outcome": "Working simulator with exportable circuit diagrams",
         "screenshots": [
-            {"image_url": "https://img.test/quantum1.png", "caption": "Bloch sphere", "order_index": 0}
+            {
+                "image_url": f"https://img.test/quantum{index + 1}.png",
+                "caption": f"Screenshot {index + 1}",
+                "order_index": index,
+            }
+            for index in range(7)
         ],
         "contributors": [
             {"name": "Alice Quantum", "role": "Co-Author", "github_username": "aliceq"}
@@ -459,10 +464,16 @@ async def test_create_project_and_slug_collision(client, db_session):
     assert created_data["title"] == "Quantum Algorithm Simulator"
     assert created_data["slug"] == "quantum-algorithm-simulator"
     assert created_data["status"] == "Submitted"
-    assert len(created_data["screenshots"]) == 1
-    assert created_data["screenshots"][0]["caption"] == "Bloch sphere"
+    assert len(created_data["screenshots"]) == 7
+    assert created_data["screenshots"][0]["caption"] == "Screenshot 1"
+    assert created_data["screenshots"][-1]["order_index"] == 6
     assert len(created_data["contributors"]) == 1
     assert created_data["contributors"][0]["name"] == "Alice Quantum"
+
+    detail_resp = await client.get(f"/api/projects/{created_data['slug']}", headers=headers)
+    assert detail_resp.status_code == 200
+    assert len(detail_resp.json()["screenshots"]) == 7
+    assert detail_resp.json()["screenshots"][-1]["order_index"] == 6
 
     # Now create another project with identical title to test slug collision resolution
     create_dup_resp = await client.post("/api/projects", json=payload, headers=headers)
@@ -646,7 +657,5 @@ async def test_create_project_requires_github_or_zip_when_submitted(client, db_s
     zip_payload["zip_storage_key"] = "test-archive-key.zip"
     ok_zip_resp = await client.post("/api/projects", json=zip_payload, headers=headers)
     assert ok_zip_resp.status_code == 201
-
-
 
 
