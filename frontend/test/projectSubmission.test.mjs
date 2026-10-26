@@ -32,3 +32,23 @@ test('uploaded screenshots replace preset covers without overwriting custom or l
   assert.equal(shouldReplaceCoverWithScreenshot('https://example.com/custom.jpg', presetCoverUrls), false);
   assert.equal(shouldReplaceCoverWithScreenshot('legacy-cover-key', presetCoverUrls), false);
 });
+
+test('project cover image validation requires a valid cover image and minimum screenshots', () => {
+  const isStep4Valid = (coverUrl, screenshots) =>
+    Boolean(coverUrl && coverUrl.trim().length > 0) &&
+    hasMinimumProjectScreenshots(screenshots);
+
+  const sampleScreenshots = [{ image_url: 's1' }, { image_url: 's2' }, { image_url: 's3' }];
+
+  // Without cover image, step 4 is invalid even with enough screenshots
+  assert.equal(isStep4Valid('', sampleScreenshots), false);
+  assert.equal(isStep4Valid('   ', sampleScreenshots), false);
+  assert.equal(isStep4Valid(null, sampleScreenshots), false);
+
+  // With custom uploaded cover image and screenshots, step 4 is valid
+  assert.equal(isStep4Valid('https://storage.example.com/cover.png', sampleScreenshots), true);
+
+  // With custom cover image but insufficient screenshots, step 4 is invalid
+  assert.equal(isStep4Valid('https://storage.example.com/cover.png', [{ image_url: 's1' }]), false);
+});
+

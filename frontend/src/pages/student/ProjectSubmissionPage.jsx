@@ -44,7 +44,6 @@ import { resolveMediaUrl } from '@/utils/media';
 import {
   hasMinimumProjectScreenshots,
   MINIMUM_PROJECT_SCREENSHOTS,
-  shouldReplaceCoverWithScreenshot,
 } from '@/utils/projectSubmission';
 
 const STORAGE_KEY = 'student_project_draft';
@@ -111,100 +110,7 @@ const POPULAR_TECH = [
   'GraphQL',
 ];
 
-const PRESET_COVERS = [
-  {
-    name: 'Java Enterprise Architecture',
-    category: 'Java Project',
-    domainTag: 'Java Project',
-    url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80',
-    description: 'Clean IDE workspace, Java Spring architecture & backend APIs',
-  },
-  {
-    name: 'Python Systems & Automation',
-    category: 'Python Project',
-    domainTag: 'Python Project',
-    url: 'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=1200&q=80',
-    description: 'Python scripts, data processing algorithms & automation pipelines',
-  },
-  {
-    name: 'Data Science & Visual Analytics',
-    category: 'Data Science Project',
-    domainTag: 'Data Science Project',
-    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80',
-    description: 'Predictive charts, data dashboards & statistical intelligence',
-  },
-  {
-    name: 'AI & Neural Intelligence',
-    category: 'AI Project',
-    domainTag: 'AI Project',
-    url: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80',
-    description: 'Glowing neural synapses, LLM cortex & cognitive models',
-  },
-  {
-    name: 'Machine Learning Deep Tensors',
-    category: 'Machine Learning Project',
-    domainTag: 'Machine Learning Project',
-    url: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80',
-    description: 'Deep neural tensor nodes, training loss & model weights',
-  },
-  {
-    name: 'Ethical Hacking & Matrix Terminal',
-    category: 'Ethical Hacking Project',
-    domainTag: 'Ethical Hacking Project',
-    url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
-    description: 'Penetration testing matrix, vulnerability scans & exploit terminal',
-  },
-  {
-    name: 'Cybersecurity & Shield Defense',
-    category: 'Cybersecurity',
-    domainTag: 'Cybersecurity',
-    url: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80',
-    description: 'Cryptographic security shield, hardware keys & SOC defense',
-  },
-  {
-    name: 'Modern Web Engineering',
-    category: 'Web Development',
-    domainTag: 'Web Development',
-    url: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80',
-    description: 'High-contrast IDE syntax, React UI & dark developer setup',
-  },
-  {
-    name: 'Full Stack & Git Workflow',
-    category: 'Full Stack',
-    domainTag: 'Full Stack Development',
-    url: 'https://images.unsplash.com/photo-1618401471353-b98aedd04e11?auto=format&fit=crop&w=1200&q=80',
-    description: 'GitHub engineering workflow & branch commits',
-  },
-  {
-    name: 'Mobile App Experience',
-    category: 'Mobile App',
-    domainTag: 'Mobile App Development',
-    url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1200&q=80',
-    description: 'Smartphone screens & responsive mobile design',
-  },
-  {
-    name: 'Cloud Infrastructure & DevOps',
-    category: 'Cloud Computing',
-    domainTag: 'Cloud & DevOps',
-    url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80',
-    description: 'Distributed cloud network & DevOps pipelines',
-  },
-  {
-    name: 'Blockchain & Web3 Ledger',
-    category: 'Blockchain & Web3',
-    domainTag: 'Blockchain & Web3',
-    url: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=1200&q=80',
-    description: 'Decentralized cryptographic ledger & smart contract architecture',
-  },
-  {
-    name: 'IoT & Embedded Robotics',
-    category: 'IoT & Embedded Systems',
-    domainTag: 'IoT & Embedded Systems',
-    url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
-    description: 'Microcontroller circuits, sensor telemetry & hardware engineering',
-  },
-];
-const PRESET_COVER_URLS = new Set(PRESET_COVERS.map(({ url }) => url));
+
 
 const INITIAL_FORM_STATE = {
   title: '',
@@ -258,7 +164,6 @@ export default function ProjectSubmissionPage() {
   const [submitError, setSubmitError] = useState(null);
   const [successData, setSuccessData] = useState(null);
   const [previewTab, setPreviewTab] = useState('summary');
-  const [selectedCoverCategory, setSelectedCoverCategory] = useState('All');
   const [previewScreenshotModal, setPreviewScreenshotModal] = useState(null);
   const [isUploadingZip, setIsUploadingZip] = useState(false);
   const [zipUploadError, setZipUploadError] = useState(null);
@@ -457,12 +362,6 @@ export default function ProjectSubmissionPage() {
             order_index: prev.screenshots.length + index,
           })),
         ],
-        cover_image_url: shouldReplaceCoverWithScreenshot(
-          prev.cover_image_url,
-          PRESET_COVER_URLS,
-        )
-          ? uploaded[0]?.image_url || prev.cover_image_url
-          : prev.cover_image_url,
       }));
     } catch (err) {
       setImageUploadError(err.response?.data?.detail || 'Screenshot upload failed. Please try again.');
@@ -474,17 +373,12 @@ export default function ProjectSubmissionPage() {
 
   const handleRemoveScreenshot = (idx) => {
     setFormData((prev) => {
-      const removedScreenshot = prev.screenshots[idx];
       const screenshots = prev.screenshots
         .filter((_, i) => i !== idx)
         .map((screenshot, index) => ({ ...screenshot, order_index: index }));
       return {
         ...prev,
         screenshots,
-        cover_image_url:
-          prev.cover_image_url === removedScreenshot?.image_url
-            ? screenshots[0]?.image_url || ''
-            : prev.cover_image_url,
       };
     });
   };
@@ -628,46 +522,7 @@ export default function ProjectSubmissionPage() {
     return count;
   }, [formData.live_demo_url, formData.github_url, formData.zip_storage_key]);
 
-  const filteredPresets = useMemo(() => {
-    if (selectedCoverCategory === 'All') return PRESET_COVERS;
-    if (selectedCoverCategory === 'Matching Domain') {
-      const match = PRESET_COVERS.filter((p) => p.domainTag === formData.domain);
-      return match.length > 0 ? match : PRESET_COVERS;
-    }
-    if (selectedCoverCategory === 'Java & Python') {
-      return PRESET_COVERS.filter((p) => p.category.includes('Java') || p.category.includes('Python'));
-    }
-    if (selectedCoverCategory === 'AI & Data Science') {
-      return PRESET_COVERS.filter(
-        (p) =>
-          p.category.includes('AI') ||
-          p.category.includes('Machine') ||
-          p.category.includes('Data')
-      );
-    }
-    if (selectedCoverCategory === 'Security') {
-      return PRESET_COVERS.filter(
-        (p) => p.category.includes('Ethical') || p.category.includes('Cyber')
-      );
-    }
-    if (selectedCoverCategory === 'Web & Mobile') {
-      return PRESET_COVERS.filter(
-        (p) =>
-          p.category.includes('Web') ||
-          p.category.includes('Full') ||
-          p.category.includes('Mobile')
-      );
-    }
-    if (selectedCoverCategory === 'Cloud & IoT') {
-      return PRESET_COVERS.filter(
-        (p) =>
-          p.category.includes('Cloud') ||
-          p.category.includes('Blockchain') ||
-          p.category.includes('IoT')
-      );
-    }
-    return PRESET_COVERS;
-  }, [selectedCoverCategory, formData.domain]);
+
 
   const canAdvance = () => {
     if (currentStep === 1) return isStep1Valid;
@@ -1368,100 +1223,10 @@ export default function ProjectSubmissionPage() {
                     <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                       <span>
-                        A cover banner is mandatory for student submissions. Upload an image above or choose from our curated presets below.
+                        A cover banner is mandatory for student submissions. Upload an image above to proceed.
                       </span>
                     </div>
                   )}
-
-                  {/* Preset Cover Selector */}
-                  <div className="mt-5 pt-4 border-t border-slate-200/80">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
-                          Curated High-Resolution Domain Covers
-                        </span>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Professional tech wallpapers tailored to your project domain. Click any to select.
-                        </p>
-                      </div>
-                      <span className="text-[11px] font-semibold text-brand-primary bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 self-start sm:self-auto">
-                        {filteredPresets.length} Presets Available
-                      </span>
-                    </div>
-
-                    {/* Filter categories for presets */}
-                    <div className="flex flex-wrap gap-1.5 mb-3.5">
-                      {[
-                        'All',
-                        'Matching Domain',
-                        'Java & Python',
-                        'AI & Data Science',
-                        'Security',
-                        'Web & Mobile',
-                        'Cloud & IoT',
-                      ].map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => setSelectedCoverCategory(cat)}
-                          className={`text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all ${
-                            selectedCoverCategory === cat
-                              ? 'bg-brand-primary text-white shadow-xs'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {filteredPresets.map((preset) => {
-                        const isSelected = formData.cover_image_url === preset.url;
-                        return (
-                          <button
-                            key={preset.name}
-                            type="button"
-                            onClick={() => updateField('cover_image_url', preset.url)}
-                            className={`group relative rounded-xl overflow-hidden border-2 text-left transition-all p-1.5 flex flex-col justify-between ${
-                              isSelected
-                                ? 'border-brand-primary ring-2 ring-brand-primary/20 bg-blue-50/50 shadow-md'
-                                : 'border-slate-200 hover:border-brand-primary/50 bg-white hover:bg-slate-50 hover:shadow-xs'
-                            }`}
-                          >
-                            <div className="relative aspect-[16/9] w-full rounded-lg overflow-hidden bg-slate-900 mb-1.5">
-                              <img
-                                src={preset.url}
-                                alt={preset.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                loading="lazy"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-80" />
-                              {isSelected && (
-                                <div className="absolute inset-0 bg-brand-primary/35 backdrop-blur-[1px] flex items-center justify-center">
-                                  <div className="w-7 h-7 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-lg ring-2 ring-white">
-                                    <Check className="w-4 h-4 stroke-[3]" />
-                                  </div>
-                                </div>
-                              )}
-                              <span className="absolute bottom-1 left-1.5 text-[9px] font-semibold text-white/90 bg-black/50 px-1.5 py-0.5 rounded backdrop-blur-xs">
-                                {preset.category}
-                              </span>
-                            </div>
-                            <div className="px-1">
-                              <span className="text-[11px] font-bold text-slate-800 block truncate group-hover:text-brand-primary transition-colors">
-                                {preset.name}
-                              </span>
-                              <span className="text-[10px] text-slate-500 block truncate">
-                                {preset.description}
-                              </span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Additional Screenshots Section with Visual Guide */}

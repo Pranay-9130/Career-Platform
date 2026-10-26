@@ -42,7 +42,12 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
+
+  const handleLogout = () => {
+    logout();
+    setHasExistingSession(false);
+  };
 
   // Real-time password strength calculation
   const calculatePasswordStrength = (pwd) => {
@@ -138,7 +143,6 @@ export default function RegisterPage() {
         err.response?.data?.message ||
         'Registration failed. Please check your information and try again.';
       setErrorMessage(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -179,7 +183,7 @@ export default function RegisterPage() {
 
         {/* Register Card */}
         <Card className="p-8 shadow-card border-brand-border bg-white/95 backdrop-blur-sm">
-          {isAuthenticated && (
+          {hasExistingSession && isAuthenticated && !isSubmitting && (
             <div className="mb-6 p-4 rounded-2xl bg-brand-veryLight border border-brand-border text-xs text-brand-text space-y-2.5">
               <div className="flex items-center gap-2 font-semibold text-brand-primary">
                 <CheckCircle2 className="w-4 h-4" />
@@ -192,7 +196,7 @@ export default function RegisterPage() {
                 <Button size="sm" variant="primary" onClick={() => navigate(getDashboardPath(user), { replace: true })}>
                   Continue to Dashboard
                 </Button>
-                <Button size="sm" variant="outline" onClick={logout} leftIcon={LogOut}>
+                <Button size="sm" variant="outline" onClick={handleLogout} leftIcon={LogOut}>
                   Sign Out to Register New Account
                 </Button>
               </div>

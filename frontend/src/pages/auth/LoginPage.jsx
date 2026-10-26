@@ -30,6 +30,13 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
+  const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
+
+  const handleLogout = () => {
+    logout();
+    setHasExistingSession(false);
+  };
+
   const getRequestedPath = () => {
     const from = location.state?.from;
     const statePath = getInternalPath(from);
@@ -111,7 +118,6 @@ export default function LoginPage() {
         err.response?.data?.message ||
         'Unable to log in. Please check your credentials and try again.';
       setErrorMessage(message);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -152,7 +158,7 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <Card className="p-8 shadow-card border-brand-border bg-white/95 backdrop-blur-sm">
-          {isAuthenticated && (
+          {hasExistingSession && isAuthenticated && !isSubmitting && (
             <div className="mb-6 p-4 rounded-2xl bg-brand-veryLight border border-brand-border text-xs text-brand-text space-y-2.5">
               <div className="flex items-center gap-2 font-semibold text-brand-primary">
                 <CheckCircle2 className="w-4 h-4" />
@@ -165,7 +171,7 @@ export default function LoginPage() {
                 <Button size="sm" variant="primary" onClick={() => navigate(redirectPath, { replace: true })}>
                   Continue to {redirectPath.includes('admin') ? 'Admin Dashboard' : redirectPath.includes('projects') ? 'Project' : 'Dashboard'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={logout} leftIcon={LogOut}>
+                <Button size="sm" variant="outline" onClick={handleLogout} leftIcon={LogOut}>
                   Sign Out / Switch Account
                 </Button>
               </div>
