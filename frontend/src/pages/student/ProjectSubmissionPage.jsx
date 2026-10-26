@@ -67,8 +67,6 @@ const DOMAIN_OPTIONS = [
   'Software Systems (C / C++ / Go)',
   'Game Development',
 ];
-const PRESET_COVER_URLS = new Set(PRESET_COVERS.map(({ url }) => url));
-
 const DIFFICULTY_OPTIONS = ['Beginner', 'Intermediate', 'Advanced'];
 
 const DURATION_OPTIONS = [
@@ -206,6 +204,7 @@ const PRESET_COVERS = [
     description: 'Microcontroller circuits, sensor telemetry & hardware engineering',
   },
 ];
+const PRESET_COVER_URLS = new Set(PRESET_COVERS.map(({ url }) => url));
 
 const INITIAL_FORM_STATE = {
   title: '',
