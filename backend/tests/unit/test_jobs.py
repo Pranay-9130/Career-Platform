@@ -77,6 +77,22 @@ async def test_list_jobs_empty(client):
 
 
 @pytest.mark.asyncio
+async def test_homepage_job_request_uses_supported_sort_without_facets(client):
+    """The homepage preview avoids unused facets and accepts its production query."""
+    resp = await client.get("/api/jobs?limit=3&sort=newest&include_facets=false")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["facets"] == {
+        "domains": [],
+        "job_types": [],
+        "work_modes": [],
+        "experience_levels": [],
+    }
+
+
+@pytest.mark.asyncio
 async def test_create_job_authorization(client):
     """Students cannot create jobs (403), but admins can create new jobs (201)."""
     # 1. Student attempt
@@ -253,4 +269,3 @@ async def test_job_application_start_date_and_deadline(client):
     }
     resp_invalid = await client.put(f"/api/jobs/{job_id}", json=invalid_payload)
     assert resp_invalid.status_code == 422
-

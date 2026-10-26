@@ -92,6 +92,7 @@ async def list_jobs(
     sort: str = Query("newest", pattern="^(newest|title|company)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=50),
+    include_facets: bool = Query(True, description="Include filter facets in the response"),
     db: AsyncSession = Depends(get_db),
     current_user: Optional[User] = Depends(get_optional_current_user),
 ):
@@ -154,7 +155,12 @@ async def list_jobs(
     jobs = result.scalars().all()
 
     total_pages = math.ceil(total_count / limit) if total_count > 0 else 1
-    facets = await _compute_job_facets(db)
+    facets = await _compute_job_facets(db) if include_facets else JobFacets(
+        domains=[],
+        job_types=[],
+        work_modes=[],
+        experience_levels=[],
+    )
 
     # Check bookmarks for authenticated user
     bookmarked_job_ids = set()

@@ -46,10 +46,8 @@ export default function HomePage() {
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchPublicData() {
-      // 1. Fetch real public projects
+    async function fetchProjects() {
       try {
-        setProjectsLoading(true);
         const pRes = await projectService.getProjects({ limit: 3, sort: 'stars' });
         if (isMounted) {
           setProjects(pRes?.items || []);
@@ -63,11 +61,15 @@ export default function HomePage() {
       } finally {
         if (isMounted) setProjectsLoading(false);
       }
+    }
 
-      // 2. Fetch real public jobs / internships
+    async function fetchJobs() {
       try {
-        setJobsLoading(true);
-        const jRes = await jobService.getJobs({ limit: 3, sort: 'recent' });
+        const jRes = await jobService.getJobs({
+          limit: 3,
+          sort: 'newest',
+          include_facets: false,
+        });
         if (isMounted) {
           setJobs(jRes?.items || []);
           setJobsError(null);
@@ -82,7 +84,8 @@ export default function HomePage() {
       }
     }
 
-    fetchPublicData();
+    fetchProjects();
+    fetchJobs();
 
     return () => {
       isMounted = false;

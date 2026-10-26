@@ -3,7 +3,7 @@ import api from './api';
 export const jobService = {
   /**
    * Fetch jobs discovery catalog with filters, search, sorting, and pagination.
-   * @param {Object} params - { search, domain, job_type, work_mode, experience_level, featured_only, sort, page, limit }
+   * @param {Object} params - { search, domain, job_type, work_mode, experience_level, featured_only, sort, page, limit, include_facets }
    */
   async getJobs(params = {}) {
     const cleanedParams = {};
