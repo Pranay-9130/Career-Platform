@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ProjectBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=200)
     domain: str = Field(..., max_length=100)
-    short_description: str = Field(..., min_length=10, max_length=300)
+    short_description: Optional[str] = Field(default="", max_length=3000)
     difficulty: str = Field(default="Intermediate", max_length=30)
     estimated_duration: Optional[str] = Field(default="2-3 weeks", max_length=50)
     tech_stack: List[str] = Field(default_factory=list)
@@ -92,7 +92,7 @@ class ProjectCreate(ProjectBase):
 class ProjectUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=3, max_length=200)
     domain: Optional[str] = None
-    short_description: Optional[str] = Field(None, min_length=10, max_length=300)
+    short_description: Optional[str] = Field(None, max_length=3000)
     difficulty: Optional[str] = None
     estimated_duration: Optional[str] = None
     tech_stack: Optional[List[str]] = None

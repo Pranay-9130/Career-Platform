@@ -659,3 +659,53 @@ async def test_create_project_requires_github_or_zip_when_submitted(client, db_s
     assert ok_zip_resp.status_code == 201
 
 
+@pytest.mark.asyncio
+async def test_project_descriptions_of_variable_word_lengths_accepted(client, db_session):
+    """
+    Verifies that descriptions of 0, 50, 100, and 299 words are accepted
+    and not rejected due to length or optionality.
+    """
+    student, _, _, _ = await seed_test_data(db_session)
+    login_resp = await client.post(
+        "/api/auth/login",
+        json={"email": student.email, "password": "DevPassword123!"},
+    )
+    headers = {"Authorization": f"Bearer {login_resp.json()['access_token']}"}
+
+    def generate_words(count: int) -> str:
+        return " ".join([f"word{i}" for i in range(1, count + 1)])
+
+    # Test word lengths: 0, 50, 100, 299 words
+    for word_count in [0, 50, 100, 299]:
+        desc_text = generate_words(word_count)
+        payload = {
+            "title": f"Project With {word_count} Words Description",
+            "domain": "Web Development",
+            "short_description": desc_text,
+            "problem_statement": "Valid problem statement describing the challenge.",
+            "features": ["Core Feature 1"],
+            "tech_stack": ["React", "FastAPI"],
+            "cover_image_url": "https://storage.example.com/cover.png",
+            "github_url": "https://github.com/example/test",
+            "status": "Draft",
+        }
+        resp = await client.post("/api/projects", json=payload, headers=headers)
+        assert resp.status_code == 201, f"Failed for {word_count} words: {resp.text}"
+        data = resp.json()
+        assert data["short_description"] == desc_text
+
+    # Also test completely omitting short_description
+    omitted_payload = {
+        "title": "Project With Omitted Description",
+        "domain": "Cloud & DevOps",
+        "problem_statement": "Valid problem statement describing the challenge.",
+        "features": ["DevOps Pipeline"],
+        "tech_stack": ["Docker"],
+        "status": "Draft",
+    }
+    omitted_resp = await client.post("/api/projects", json=omitted_payload, headers=headers)
+    assert omitted_resp.status_code == 201
+    assert omitted_resp.json()["short_description"] == ""
+
+
+

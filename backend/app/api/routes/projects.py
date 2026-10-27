@@ -940,7 +940,7 @@ async def create_project(
         title=payload.title,
         slug=candidate_slug,
         domain=payload.domain,
-        short_description=payload.short_description,
+        short_description=payload.short_description or "",
         problem_statement=payload.problem_statement,
         objectives=payload.objectives,
         features=payload.features,

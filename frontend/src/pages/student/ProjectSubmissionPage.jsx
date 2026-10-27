@@ -44,6 +44,9 @@ import { resolveMediaUrl } from '@/utils/media';
 import {
   hasMinimumProjectScreenshots,
   MINIMUM_PROJECT_SCREENSHOTS,
+  validateFeatureInput,
+  isStep1BasicInfoValid,
+  isStep2ProblemAndFeaturesValid,
 } from '@/utils/projectSubmission';
 
 const STORAGE_KEY = 'student_project_draft';
@@ -152,6 +155,7 @@ export default function ProjectSubmissionPage() {
 
   // Field input states for dynamic lists
   const [featureInput, setFeatureInput] = useState('');
+  const [featureError, setFeatureError] = useState(null);
   const [customTechInput, setCustomTechInput] = useState('');
   const [contributorNameInput, setContributorNameInput] = useState('');
   const [contributorRoleInput, setContributorRoleInput] = useState('');
@@ -267,14 +271,17 @@ export default function ProjectSubmissionPage() {
 
   // Step 2: Feature list helpers
   const handleAddFeature = () => {
-    if (!featureInput.trim()) return;
-    if (!formData.features.includes(featureInput.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        features: [...prev.features, featureInput.trim()],
-      }));
+    const result = validateFeatureInput(featureInput, formData.features);
+    if (!result.isValid) {
+      setFeatureError(result.error);
+      return;
     }
+    setFormData((prev) => ({
+      ...prev,
+      features: [...prev.features, result.feature],
+    }));
     setFeatureInput('');
+    setFeatureError(null);
   };
 
   const handleRemoveFeature = (idx) => {
@@ -282,6 +289,7 @@ export default function ProjectSubmissionPage() {
       ...prev,
       features: prev.features.filter((_, i) => i !== idx),
     }));
+    setFeatureError(null);
   };
 
   // Step 3: Tech stack helpers
@@ -481,18 +489,11 @@ export default function ProjectSubmissionPage() {
 
   // Step validation rules
   const isStep1Valid = useMemo(() => {
-    return (
-      formData.title.trim().length >= 3 &&
-      formData.short_description.trim().length >= 10 &&
-      Boolean(formData.domain)
-    );
-  }, [formData.title, formData.short_description, formData.domain]);
+    return isStep1BasicInfoValid(formData);
+  }, [formData.title, formData.domain]);
 
   const isStep2Valid = useMemo(() => {
-    return (
-      formData.problem_statement.trim().length >= 10 &&
-      formData.features.length >= 1
-    );
+    return isStep2ProblemAndFeaturesValid(formData);
   }, [formData.problem_statement, formData.features]);
 
   const isStep3Valid = useMemo(() => {
@@ -522,8 +523,6 @@ export default function ProjectSubmissionPage() {
     return count;
   }, [formData.live_demo_url, formData.github_url, formData.zip_storage_key]);
 
-
-
   const canAdvance = () => {
     if (currentStep === 1) return isStep1Valid;
     if (currentStep === 2) return isStep2Valid;
@@ -532,6 +531,33 @@ export default function ProjectSubmissionPage() {
     if (currentStep === 5) return isStep5Valid;
     return true;
   };
+
+  const handleNextStep = () => {
+    if (currentStep === 2) {
+      if (featureInput.trim()) {
+        setFeatureError('Please click "Add Feature" to add your feature to the list first.');
+        return;
+      }
+      if (formData.features.length === 0) {
+        setFeatureError(
+          'Enter each feature and click Add Feature to add it to your list. You must add at least one feature before continuing.'
+        );
+        return;
+      }
+    }
+    if (canAdvance()) {
+      setCurrentStep((prev) => Math.min(6, prev + 1));
+    }
+  };
+
+  const isNextDisabled = useMemo(() => {
+    if (currentStep === 2) {
+      // If user typed text in the input without adding, keep Next Step clickable to display the inline guidance
+      if (featureInput.trim()) return false;
+      return !isStep2Valid;
+    }
+    return !canAdvance();
+  }, [currentStep, featureInput, isStep2Valid, canAdvance]);
 
   // Final submission handlers
   const handleSaveDraft = async () => {
@@ -761,6 +787,18 @@ export default function ProjectSubmissionPage() {
                     key={step.number}
                     type="button"
                     onClick={() => {
+                      if (currentStep === 2 && step.number > 2) {
+                        if (featureInput.trim()) {
+                          setFeatureError('Please click "Add Feature" to add your feature to the list first.');
+                          return;
+                        }
+                        if (formData.features.length === 0) {
+                          setFeatureError(
+                            'Enter each feature and click Add Feature to add it to your list. You must add at least one feature before continuing.'
+                          );
+                          return;
+                        }
+                      }
                       // Keep contributor entry available without bypassing submission validation.
                       if (step.number < currentStep || step.number === 6 || canAdvance()) {
                         setCurrentStep(step.number);
@@ -892,19 +930,15 @@ export default function ProjectSubmissionPage() {
                 <div>
                   <div className="flex justify-between items-center mb-1.5">
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Short Description / Elevator Pitch <span className="text-red-500">*</span>
+                      Short Description / Elevator Pitch (Optional)
                     </label>
-                    <span className="text-[11px] text-slate-400">
-                      {formData.short_description.length} / 300
-                    </span>
                   </div>
                   <Textarea
                     rows={3}
-                    placeholder="Provide a succinct summary of what your project achieves and who benefits from it (10-300 characters)."
+                    placeholder="Provide an optional summary of what your project achieves and who benefits from it."
                     value={formData.short_description}
                     onChange={(e) => updateField('short_description', e.target.value)}
-                    maxLength={300}
-                    required
+                    maxLength={3000}
                   />
                 </div>
               </div>
@@ -951,61 +985,75 @@ export default function ProjectSubmissionPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Key Features List <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="e.g. JWT-based authentication with role-based authorization"
-                      value={featureInput}
-                      onChange={(e) => setFeatureInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddFeature();
-                        }
-                      }}
-                    />
+                  <p className="text-xs text-slate-500 mb-2">
+                    Enter each feature and click Add Feature to add it to your list. You must add at least one feature before continuing.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="e.g., JWT authentication, role-based access control"
+                        value={featureInput}
+                        onChange={(e) => {
+                          setFeatureInput(e.target.value);
+                          if (featureError) setFeatureError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddFeature();
+                          }
+                        }}
+                      />
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handleAddFeature}
                       leftIcon={Plus}
-                      className="shrink-0"
+                      className="shrink-0 w-full sm:w-auto"
                     >
                       Add Feature
                     </Button>
                   </div>
 
-                  {formData.features.length > 0 ? (
+                  {featureError && (
+                    <div
+                      className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2 animate-fade-in"
+                      role="alert"
+                    >
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                      <span>{featureError}</span>
+                    </div>
+                  )}
+
+                  {formData.features.length > 0 && (
                     <div className="mt-3 space-y-2">
                       {formData.features.map((feat, idx) => (
                         <div
                           key={idx}
                           className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800"
                         >
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-full bg-blue-100 text-brand-primary flex items-center justify-center font-bold text-[10px]">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="w-5 h-5 rounded-full bg-blue-100 text-brand-primary flex items-center justify-center font-bold text-[10px] shrink-0">
                               {idx + 1}
                             </span>
-                            <span>{feat}</span>
+                            <span className="break-words">{feat}</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => handleRemoveFeature(idx)}
-                            className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1 shrink-0"
                             title="Remove feature"
+                            aria-label={`Remove feature: ${feat}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2 flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      Add at least 1 key feature to advance.
-                    </p>
                   )}
                 </div>
               </div>
@@ -1996,8 +2044,8 @@ export default function ProjectSubmissionPage() {
                   type="button"
                   variant="primary"
                   size="md"
-                  disabled={!canAdvance()}
-                  onClick={() => setCurrentStep((prev) => Math.min(6, prev + 1))}
+                  disabled={isNextDisabled}
+                  onClick={handleNextStep}
                   rightIcon={ArrowRight}
                 >
                   Next Step

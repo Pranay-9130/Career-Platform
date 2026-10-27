@@ -17,7 +17,7 @@ class Project(BaseUUIDModel):
     )
     title = Column(String(200), nullable=False)
     slug = Column(String(250), unique=True, index=True, nullable=False)
-    short_description = Column(String(300), nullable=False)
+    short_description = Column(Text, nullable=False, default="")
     problem_statement = Column(Text, nullable=False, default="")
     objectives = Column(Text, nullable=True)
     features = Column(JSON, default=list, nullable=False)
