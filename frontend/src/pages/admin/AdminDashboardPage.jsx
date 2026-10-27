@@ -2194,7 +2194,7 @@ export default function AdminDashboardPage() {
                   }
                   className="w-full text-xs p-2.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary font-medium text-slate-800"
                 >
-                  <option value="INTERNAL">Apply on CareerPlatform (Internal Application)</option>
+                  <option value="INTERNAL">Apply on AspirePath (Internal Application)</option>
                   <option value="GOOGLE_FORM">External Google Form</option>
                   <option value="EMAIL">Recruiter Email</option>
                   <option value="EXTERNAL_URL">External Application Website</option>
@@ -2206,10 +2206,10 @@ export default function AdminDashboardPage() {
                 <div className="p-3 bg-white rounded-xl border border-brand-primary/20 text-xs space-y-1.5">
                   <div className="flex items-center gap-2 text-brand-primary font-semibold text-[11px]">
                     <Sparkles className="w-4 h-4 text-brand-primary shrink-0" />
-                    <span>Internal CareerPlatform Workflow</span>
+                    <span>Internal AspirePath Workflow</span>
                   </div>
                   <p className="text-slate-600 leading-relaxed text-[11px]">
-                    Candidates apply directly through CareerPlatform using their verified student profile and projects. Applications are tracked in the student pipeline.
+                    Candidates apply directly through AspirePath using their verified student profile and projects. Applications are tracked in the student pipeline.
                   </p>
                 </div>
               )}

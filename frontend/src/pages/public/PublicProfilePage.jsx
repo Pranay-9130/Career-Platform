@@ -61,7 +61,7 @@ export default function PublicProfilePage() {
     const url = window.location.href;
     if (navigator.share) {
       navigator.share({
-        title: `${profile?.full_name || 'Student'} — CareerPlatform Portfolio`,
+        title: `${profile?.full_name || 'Student'} — AspirePath Portfolio`,
         url: url,
       }).catch(() => {});
     } else {

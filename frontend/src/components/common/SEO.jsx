@@ -16,7 +16,11 @@ export default function SEO({
 }) {
   useEffect(() => {
     // 1. Title
-    const formattedTitle = title ? `${title} | AspirePath` : DEFAULT_TITLE;
+    const formattedTitle = title
+      ? title.includes("AspirePath")
+        ? title
+        : `${title} | AspirePath`
+      : DEFAULT_TITLE;
     document.title = formattedTitle;
 
     // Helper to set/update meta tag

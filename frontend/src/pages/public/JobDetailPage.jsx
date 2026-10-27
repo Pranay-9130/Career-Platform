@@ -256,7 +256,7 @@ export default function JobDetailPage() {
                 trackedSuccess ? (
                   <div className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl shadow-xs">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    Applied on CareerPlatform!
+                    Applied on AspirePath!
                   </div>
                 ) : (
                   <button
@@ -266,7 +266,7 @@ export default function JobDetailPage() {
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white bg-brand-primary hover:bg-brand-primaryDark shadow-sm rounded-xl transition text-center disabled:opacity-60"
                   >
                     <Send className="w-4 h-4" />
-                    {tracking ? 'Submitting Application...' : 'Apply on CareerPlatform'}
+                    {tracking ? 'Submitting Application...' : 'Apply on AspirePath'}
                   </button>
                 )
               ) : appDest.method === 'EMAIL' ? (

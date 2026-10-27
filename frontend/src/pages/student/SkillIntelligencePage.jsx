@@ -463,7 +463,7 @@ export default function SkillIntelligencePage() {
       setChatMessages([
         {
           role: 'assistant',
-          content: `Hello! I am your CareerPlatform AI Mentor. I have your progress as an aspiring **${activeRoleTitle}** loaded (${gapData?.coverage_percentage ?? 0}% competency coverage, ${confirmedSkills.length} confirmed skills).\n\nHow can I help accelerate your learning, guide your project choices, or prepare for technical interviews today?`,
+          content: `Hello! I am your AspirePath AI Mentor. I have your progress as an aspiring **${activeRoleTitle}** loaded (${gapData?.coverage_percentage ?? 0}% competency coverage, ${confirmedSkills.length} confirmed skills).\n\nHow can I help accelerate your learning, guide your project choices, or prepare for technical interviews today?`,
           source: 'Platform AI Coach',
         },
       ]);
@@ -586,7 +586,7 @@ export default function SkillIntelligencePage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-16">
       <SEO
-        title="Skill Intelligence & Personalized Roadmap | CareerPlatform"
+        title="Skill Intelligence & Personalized Roadmap | AspirePath"
         description="Target role competency analysis, resume skill extraction, and personalized engineering learning roadmap."
       />
 

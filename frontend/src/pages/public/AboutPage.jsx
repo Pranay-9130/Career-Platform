@@ -239,8 +239,8 @@ export default function AboutPage() {
   return (
     <div className="py-12 sm:py-16 space-y-24 sm:space-y-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <SEO
-        title="About CareerPlatform | Mission, Architecture & Features"
-        description="CareerPlatform is a student-focused career development platform that brings resume building, ATS analysis, skill intelligence, learning roadmaps, practical projects, and opportunity discovery into one connected experience."
+        title="About AspirePath | Mission, Architecture & Features"
+        description="AspirePath is a student-focused career development platform that brings resume building, ATS analysis, skill intelligence, learning roadmaps, practical projects, and opportunity discovery into one connected experience."
         canonical="/about"
         schema={[
           getOrganizationSchema(),
@@ -257,7 +257,7 @@ export default function AboutPage() {
       <section className="text-center max-w-4xl mx-auto space-y-6">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-veryLight border border-brand-border text-brand-primary text-xs font-semibold uppercase tracking-wider mb-2">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>About CareerPlatform</span>
+          <span>About AspirePath</span>
         </div>
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold text-brand-text tracking-tight leading-[1.15]">
           A Unified Platform for{' '}
@@ -266,7 +266,7 @@ export default function AboutPage() {
           </span>
         </h1>
         <p className="text-base sm:text-lg text-brand-muted leading-relaxed max-w-3xl mx-auto">
-          CareerPlatform is a student-focused career development platform designed to help learners prepare for internships and job opportunities. It brings resume building, ATS analysis, skill-gap discovery, personalized learning, practical projects, and opportunity discovery into one connected experience.
+          AspirePath is a student-focused career development platform designed to help learners prepare for internships and job opportunities. It brings resume building, ATS analysis, skill-gap discovery, personalized learning, practical projects, and opportunity discovery into one connected experience.
         </p>
       </section>
 
@@ -307,7 +307,7 @@ export default function AboutPage() {
             Core Platform Modules
           </h2>
           <p className="mt-2 text-sm text-brand-muted">
-            Explore every major feature implemented in CareerPlatform and how each serves your career preparation.
+            Explore every major feature implemented in AspirePath and how each serves your career preparation.
           </p>
         </div>
 
@@ -422,7 +422,7 @@ export default function AboutPage() {
             Why a Connected Workflow Matters
           </h2>
           <p className="mt-2 text-sm text-brand-muted">
-            Most career tools exist in silos. CareerPlatform brings the entire process together.
+            Most career tools exist in silos. AspirePath brings the entire process together.
           </p>
         </div>
 

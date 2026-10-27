@@ -167,10 +167,10 @@ export function formatApplicationWindow(startDate, deadline) {
 export const APPLICATION_METHODS = [
   {
     value: 'INTERNAL',
-    label: 'Apply on CareerPlatform (Internal Application)',
+    label: 'Apply on AspirePath (Internal Application)',
     shortLabel: 'Internal Application',
-    description: 'Students apply directly through CareerPlatform with their student workspace and projects.',
-    helpText: 'Students apply directly through CareerPlatform with their student workspace and projects.',
+    description: 'Students apply directly through AspirePath with their student workspace and projects.',
+    helpText: 'Students apply directly through AspirePath with their student workspace and projects.',
   },
   {
     value: 'GOOGLE_FORM',
@@ -343,7 +343,7 @@ export function getJobApplicationDestination(job) {
         isMailto: false,
         instructions: job?.application_instructions || '',
         isMissingTarget: false,
-        helperText: 'Submit directly through CareerPlatform.',
+        helperText: 'Submit directly through AspirePath.',
       };
     }
   }

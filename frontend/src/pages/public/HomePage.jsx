@@ -95,7 +95,7 @@ export default function HomePage() {
   return (
     <div className="space-y-24 sm:space-y-32 pb-24 overflow-hidden">
       <SEO
-        title="CareerPlatform | Build Your Skills. Build Your Future."
+        title="AspirePath | Build Your Skills. Build Your Future."
         description="Discover your skill gaps, build ATS-ready resumes, learn through practical projects, and prepare for internships and jobs—all in one student career development platform."
         canonical="/"
         schema={[getWebsiteSchema(), getOrganizationSchema()]}
@@ -174,7 +174,7 @@ export default function HomePage() {
             Everything You Need for Career Readiness
           </h2>
           <p className="mt-3 text-sm sm:text-base text-brand-muted">
-            CareerPlatform unifies the key stages of technical preparation into one cohesive experience.
+            AspirePath unifies the key stages of technical preparation into one cohesive experience.
           </p>
         </div>
 
@@ -327,7 +327,7 @@ export default function HomePage() {
               Structured Pathway
             </Badge>
             <h2 className="text-3xl font-display font-bold text-brand-text">
-              How CareerPlatform Works
+              How AspirePath Works
             </h2>
             <p className="mt-2 text-sm text-brand-muted">
               Four deliberate steps designed to build tangible engineering evidence without guessing what recruiters expect.
@@ -391,7 +391,7 @@ export default function HomePage() {
               Practical Projects
             </h2>
             <p className="mt-2 text-sm text-brand-muted max-w-xl">
-              Real projects published by students on CareerPlatform with architecture guidelines and tech stacks.
+              Real projects published by students on AspirePath with architecture guidelines and tech stacks.
             </p>
           </div>
 
@@ -515,7 +515,7 @@ export default function HomePage() {
                 Personalized Career Guidance Powered by Real Data
               </h2>
               <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
-                Unlike generic AI chatbots, the CareerPlatform AI Mentor is grounded in your authenticated student data: your confirmed competencies, target career track, and verified project records.
+                Unlike generic AI chatbots, the AspirePath AI Mentor is grounded in your authenticated student data: your confirmed competencies, target career track, and verified project records.
               </p>
               <ul className="space-y-2 text-xs text-blue-100">
                 <li className="flex items-center gap-2">
@@ -551,7 +551,7 @@ export default function HomePage() {
                 </div>
               </div>
               <p className="text-[11px] text-blue-200/80 italic pt-1">
-                * Recommendations depend on your selected role and confirmed skills. CareerPlatform never guarantees employment.
+                * Recommendations depend on your selected role and confirmed skills. AspirePath never guarantees employment.
               </p>
             </div>
           </div>
@@ -564,7 +564,7 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <Badge variant="cyan" size="sm" className="mb-2">
-            Why CareerPlatform
+            Why AspirePath
           </Badge>
           <h2 className="text-3xl font-display font-bold text-brand-text">
             Built on Honest Principles
