@@ -10,6 +10,9 @@ import {
   AlertCircle,
   Building,
   Sparkles,
+  Linkedin,
+  Instagram,
+  Share2,
 } from 'lucide-react';
 import {
   Button,
@@ -158,11 +161,43 @@ export default function ContactPage() {
             <h3 className="font-display font-bold text-base text-brand-text">Direct Email</h3>
             <p className="mt-1 text-xs text-brand-muted">For urgent questions or partnership inquiries:</p>
             <a
-              href="mailto:support@aspirepath.com"
+              href="mailto:aspirepath.team@gmail.com"
               className="mt-2 inline-block text-xs font-semibold text-brand-primary hover:underline"
             >
-              support@aspirepath.com
+              aspirepath.team@gmail.com
             </a>
+          </Card>
+
+          <Card className="p-6">
+            <div className="w-10 h-10 rounded-xl bg-brand-veryLight text-brand-primary flex items-center justify-center mb-3">
+              <Share2 className="w-5 h-5" />
+            </div>
+            <h3 className="font-display font-bold text-base text-brand-text">Official Social Media</h3>
+            <p className="mt-1 text-xs text-brand-muted mb-3">
+              Connect with AspirePath on our official platforms:
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="https://www.linkedin.com/company/144061165/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="LinkedIn"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-brand-border text-xs font-semibold text-slate-700 hover:text-brand-primary hover:bg-brand-veryLight hover:border-brand-primary/30 transition-colors"
+              >
+                <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+                <span>LinkedIn</span>
+              </a>
+              <a
+                href="https://www.instagram.com/aspirepath.official/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-brand-border text-xs font-semibold text-slate-700 hover:text-brand-primary hover:bg-brand-veryLight hover:border-brand-primary/30 transition-colors"
+              >
+                <Instagram className="w-4 h-4 text-[#E4405F]" />
+                <span>Instagram</span>
+              </a>
+            </div>
           </Card>
 
           <Card className="p-6">

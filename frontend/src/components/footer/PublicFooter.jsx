@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Github, Linkedin, Twitter, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Github, Linkedin, Instagram, Mail, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -39,16 +39,7 @@ export default function PublicFooter() {
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub"
-                className="w-8 h-8 rounded-lg bg-slate-50 border border-brand-border flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-brand-veryLight transition-colors"
-              >
-                <Github className="w-4 h-4" />
-              </a>
-              <a
-                href="https://linkedin.com"
+                href="https://www.linkedin.com/company/144061165/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
@@ -57,13 +48,33 @@ export default function PublicFooter() {
                 <Linkedin className="w-4 h-4" />
               </a>
               <a
-                href="https://twitter.com"
+                href="https://www.instagram.com/aspirepath.official/"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="Twitter / X"
+                aria-label="Instagram"
                 className="w-8 h-8 rounded-lg bg-slate-50 border border-brand-border flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-brand-veryLight transition-colors"
               >
-                <Twitter className="w-4 h-4" />
+                <Instagram className="w-4 h-4" />
+              </a>
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub"
+                className="w-8 h-8 rounded-lg bg-slate-50 border border-brand-border flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-brand-veryLight transition-colors"
+              >
+                <Github className="w-4 h-4" />
+              </a>
+            </div>
+
+            {/* Official Contact Email */}
+            <div className="pt-1">
+              <a
+                href="mailto:aspirepath.team@gmail.com"
+                className="inline-flex items-center gap-2 text-xs text-brand-muted hover:text-brand-primary transition-colors font-medium group"
+              >
+                <Mail className="w-3.5 h-3.5 text-brand-primary group-hover:scale-110 transition-transform" />
+                <span>aspirepath.team@gmail.com</span>
               </a>
             </div>
           </div>
