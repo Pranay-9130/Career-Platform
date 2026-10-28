@@ -161,7 +161,7 @@ export default function PublicFooter() {
       <div className="border-t border-brand-border bg-slate-50/50 py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-brand-muted">
           <div>
-            © {currentYear} Student Career Platform. Built for students worldwide.
+            © {currentYear} AspirePath. Built for students worldwide.
           </div>
 
           <div className="flex items-center gap-2">

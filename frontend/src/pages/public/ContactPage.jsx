@@ -158,10 +158,10 @@ export default function ContactPage() {
             <h3 className="font-display font-bold text-base text-brand-text">Direct Email</h3>
             <p className="mt-1 text-xs text-brand-muted">For urgent questions or partnership inquiries:</p>
             <a
-              href="mailto:support@careerplatform.com"
+              href="mailto:support@aspirepath.com"
               className="mt-2 inline-block text-xs font-semibold text-brand-primary hover:underline"
             >
-              support@careerplatform.com
+              support@aspirepath.com
             </a>
           </Card>
 

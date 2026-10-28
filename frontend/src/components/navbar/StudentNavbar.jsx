@@ -78,7 +78,7 @@ export default function StudentNavbar({ onToggleSidebar }) {
   };
 
   const displayName = user?.full_name || 'Student';
-  const displayEmail = user?.email || 'student@careerplatform.com';
+  const displayEmail = user?.email || 'student@aspirepath.com';
   const displayHeadline = user?.headline || 'Computer Science Student';
 
   return (

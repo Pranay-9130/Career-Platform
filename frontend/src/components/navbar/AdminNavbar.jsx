@@ -48,7 +48,7 @@ export default function AdminNavbar({ onToggleSidebar }) {
   const currentLabel = pageLabels[location.pathname] || 'Administration';
 
   const displayName = user?.full_name || 'Admin User';
-  const displayEmail = user?.email || 'admin@careerplatform.com';
+  const displayEmail = user?.email || 'admin@aspirepath.com';
 
   return (
     <header className="h-16 bg-white border-b border-brand-border flex items-center justify-between px-4 sm:px-8 z-30 sticky top-0 transition-all">
