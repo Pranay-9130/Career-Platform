@@ -178,7 +178,7 @@ export default function ContactPage() {
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <a
-                href="https://www.linkedin.com/company/aspirepath-career-platform/?viewAsMember=true"
+                href="https://www.linkedin.com/company/aspirepath-career-platform/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"
