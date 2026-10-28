@@ -39,7 +39,7 @@ export default function PublicFooter() {
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="https://www.linkedin.com/company/144061165/"
+                href="https://www.linkedin.com/company/aspirepath-career-platform/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="LinkedIn"

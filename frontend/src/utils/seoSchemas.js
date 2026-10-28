@@ -32,7 +32,7 @@ export function getOrganizationSchema() {
     "logo": `${BASE_URL}/logo.png`,
     "description": "Connecting university students and self-taught developers with impactful project showcases and hiring tech companies.",
     "sameAs": [
-      "https://www.linkedin.com/company/144061165/",
+      "https://www.linkedin.com/company/aspirepath-career-platform/",
       "https://www.instagram.com/aspirepath.official/"
     ]
   };
