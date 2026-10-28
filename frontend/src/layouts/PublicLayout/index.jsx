@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { PublicNavbar } from '@/components/navbar';
 import { PublicFooter } from '@/components/footer';
+import PageLoadingFallback from '@/components/common/PageLoadingFallback';
 
 export default function PublicLayout() {
   return (
@@ -19,7 +20,9 @@ export default function PublicLayout() {
 
       {/* Main Routed Page Area */}
       <main id="main-content" tabIndex="-1" className="flex-1 outline-none">
-        <Outlet />
+        <Suspense fallback={<PageLoadingFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Primary Public Footer */}

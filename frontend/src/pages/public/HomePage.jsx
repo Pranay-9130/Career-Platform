@@ -21,7 +21,7 @@ import {
   Search,
   Lock,
 } from 'lucide-react';
-import { Button, Card, Badge } from '@/components/common';
+import { Button, Card, Badge, Skeleton } from '@/components/common';
 import { ProjectCard, JobCard } from '@/components/cards';
 import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/common/SEO';
@@ -404,9 +404,21 @@ export default function HomePage() {
 
         {/* Dynamic Project Grid / Honest Empty State */}
         {projectsLoading ? (
-          <div className="p-12 text-center bg-white rounded-3xl border border-brand-border">
-            <RefreshCw className="w-6 h-6 text-brand-primary animate-spin mx-auto mb-2" />
-            <p className="text-xs text-brand-muted">Loading published project showcases...</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" aria-label="Loading project showcases">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-brand-border p-5 space-y-4 shadow-xs">
+                <Skeleton className="h-44 w-full rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-3/4 rounded-md" />
+                  <Skeleton className="h-3.5 w-full rounded-md" />
+                  <Skeleton className="h-3.5 w-2/3 rounded-md" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : projectsError ? (
           <div className="p-8 text-center bg-white rounded-3xl border border-brand-border">
@@ -466,9 +478,26 @@ export default function HomePage() {
 
         {/* Dynamic Jobs Grid / Honest Empty State */}
         {jobsLoading ? (
-          <div className="p-12 text-center bg-white rounded-3xl border border-brand-border">
-            <RefreshCw className="w-6 h-6 text-brand-primary animate-spin mx-auto mb-2" />
-            <p className="text-xs text-brand-muted">Loading current opportunities...</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" aria-label="Loading opportunities">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border border-brand-border p-5 space-y-4 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <Skeleton className="h-4 w-1/2 rounded-md" />
+                    <Skeleton className="h-3 w-1/3 rounded-md" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3.5 w-full rounded-md" />
+                  <Skeleton className="h-3.5 w-4/5 rounded-md" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : jobsError ? (
           <div className="p-8 text-center bg-white rounded-3xl border border-brand-border">

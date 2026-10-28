@@ -13,8 +13,10 @@ import PublicLayout from './layouts/PublicLayout';
 const StudentLayout = lazy(() => import('./layouts/StudentLayout'));
 const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
 
-// Lazy Loaded Public Pages
-const HomePage = lazy(() => import('./pages/public/HomePage'));
+// Eagerly loaded entry page for instant initial rendering
+import HomePage from './pages/public/HomePage';
+
+// Lazy Loaded Secondary Public Pages
 const AboutPage = lazy(() => import('./pages/public/AboutPage'));
 const ProjectsPage = lazy(() => import('./pages/public/ProjectsPage'));
 const ProjectDetailPage = lazy(() => import('./pages/public/ProjectDetailPage'));
