@@ -76,6 +76,106 @@ async def test_owasp_security_headers_on_all_responses(client):
 
 
 @pytest.mark.asyncio
+async def test_template_pdf_download_and_preview_security_headers(client, db_session):
+    """
+    Verify template PDF download endpoint returns HTTP 200, serves valid PDF,
+    removes X-Frame-Options without MutableHeaders.pop AttributeError,
+    and sets CSP frame-ancestors * while preserving other security headers.
+    """
+    from app.models.stored_archive import StoredArchive
+    import uuid
+
+    test_user = User(
+        id=uuid.uuid4(),
+        email=f"archive_admin_{uuid.uuid4().hex[:6]}@example.com",
+        hashed_password="hash",
+        full_name="Archive Admin",
+        role=UserRole.ADMIN,
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add(test_user)
+
+    valid_pdf_bytes = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF"
+    test_key = f"tpl_{uuid.uuid4().hex}_clean_resume.pdf"
+
+    archive = StoredArchive(
+        storage_key=test_key,
+        owner_id=test_user.id,
+        content=valid_pdf_bytes,
+    )
+    db_session.add(archive)
+    await db_session.commit()
+
+    # 1. Preview request (inline)
+    preview_resp = await client.get(f"/api/resumes/templates/file/{test_key}")
+    assert preview_resp.status_code == 200
+    assert preview_resp.content.startswith(b"%PDF-")
+    assert preview_resp.headers.get("Content-Type") == "application/pdf"
+    assert "X-Frame-Options" not in preview_resp.headers
+    assert preview_resp.headers.get("Content-Security-Policy") == "frame-ancestors *"
+    assert preview_resp.headers.get("X-Content-Type-Options") == "nosniff"
+    assert "inline" in preview_resp.headers.get("Content-Disposition", "")
+
+    # 2. Download request (attachment with download=1)
+    download_resp = await client.get(f"/api/resumes/templates/file/{test_key}?download=1")
+    assert download_resp.status_code == 200
+    assert download_resp.content.startswith(b"%PDF-")
+    assert download_resp.headers.get("Content-Type") == "application/pdf"
+    assert "X-Frame-Options" not in download_resp.headers
+    assert download_resp.headers.get("Content-Security-Policy") == "frame-ancestors *"
+    assert "attachment" in download_resp.headers.get("Content-Disposition", "")
+
+
+@pytest.mark.asyncio
+async def test_security_headers_middleware_mutable_headers_compatibility():
+    """
+    Directly verify SecurityHeadersMiddleware does not use MutableHeaders.pop()
+    and correctly modifies headers using dictionary operations.
+    """
+    from starlette.requests import Request
+    from starlette.responses import Response
+    from app.core.middleware import SecurityHeadersMiddleware
+
+    middleware = SecurityHeadersMiddleware(app=None)
+
+    # 1. Template route should remove X-Frame-Options
+    scope_template = {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/resumes/templates/file/sample.pdf",
+        "headers": [],
+    }
+    req_template = Request(scope_template)
+
+    async def call_next_template(request):
+        resp = Response("pdf-data", media_type="application/pdf")
+        resp.headers["X-Frame-Options"] = "DENY"
+        return resp
+
+    resp_template = await middleware.dispatch(req_template, call_next_template)
+    assert "X-Frame-Options" not in resp_template.headers
+    assert resp_template.headers["Content-Security-Policy"] == "frame-ancestors *"
+    assert resp_template.headers["X-Content-Type-Options"] == "nosniff"
+
+    # 2. Standard route should enforce X-Frame-Options: DENY
+    scope_standard = {
+        "type": "http",
+        "method": "GET",
+        "path": "/api/jobs",
+        "headers": [],
+    }
+    req_standard = Request(scope_standard)
+
+    async def call_next_standard(request):
+        return Response("json-data", media_type="application/json")
+
+    resp_standard = await middleware.dispatch(req_standard, call_next_standard)
+    assert resp_standard.headers["X-Frame-Options"] == "DENY"
+    assert resp_standard.headers["X-Content-Type-Options"] == "nosniff"
+
+
+@pytest.mark.asyncio
 async def test_sliding_window_rate_limiter_unit_logic():
     """
     Direct unit test of SlidingWindowRateLimiter enforcing max requests

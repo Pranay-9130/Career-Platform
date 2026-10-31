@@ -22,7 +22,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # Template preview files can be embedded in candidate previews
         path = request.url.path
         if "/templates/file/" in path:
-            response.headers.pop("X-Frame-Options", None)
+            if "X-Frame-Options" in response.headers:
+                del response.headers["X-Frame-Options"]
             response.headers["Content-Security-Policy"] = "frame-ancestors *"
         else:
             response.headers["X-Frame-Options"] = "DENY"

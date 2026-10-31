@@ -56,7 +56,8 @@ export default function TemplatesPage() {
       try {
         setPreviewLoading(true);
         setPreviewError(false);
-        const endpoint = previewTemplate.download_url;
+        const rawEndpoint = previewTemplate.download_url || '';
+        const endpoint = rawEndpoint.startsWith('/api/') ? rawEndpoint.slice(4) : rawEndpoint;
         const response = await api.get(endpoint, {
           responseType: 'blob',
         });
@@ -131,7 +132,8 @@ export default function TemplatesPage() {
     if (template.download_url && template.download_url.trim()) {
       try {
         setDownloadingId(template.id);
-        const endpoint = template.download_url;
+        const rawEndpoint = template.download_url || '';
+        const endpoint = rawEndpoint.startsWith('/api/') ? rawEndpoint.slice(4) : rawEndpoint;
         const response = await api.get(
           endpoint.includes('?') ? `${endpoint}&download=1` : `${endpoint}?download=1`,
           { responseType: 'blob' }
