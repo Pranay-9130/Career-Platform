@@ -19,9 +19,11 @@ import {
   Mail,
   FileText,
   Send,
+  GraduationCap,
 } from 'lucide-react';
 import jobService from '../../services/jobService';
 import applicationService from '../../services/applicationService';
+import userService from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 import { Breadcrumbs } from '@/components/common';
 import SEO from '@/components/common/SEO';
@@ -32,6 +34,7 @@ import {
   formatStartDate,
   formatApplicationWindow,
   getJobApplicationDestination,
+  checkProfileEligibilityMatch,
 } from '@/utils/jobHelpers';
 
 export default function JobDetailPage() {
@@ -42,11 +45,29 @@ export default function JobDetailPage() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   // Application Tracking state
   const [tracking, setTracking] = useState(false);
   const [trackedSuccess, setTrackedSuccess] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    async function loadProfile() {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+      try {
+        const data = await userService.getProfile();
+        setProfile(data);
+      } catch (err) {
+        // Fall back gracefully if profile endpoint fails or is unauthorized
+        setProfile(null);
+      }
+    }
+    loadProfile();
+  }, [user]);
 
   useEffect(() => {
     async function loadJob() {
@@ -57,6 +78,10 @@ export default function JobDetailPage() {
         setJob(data);
       } catch (err) {
         console.error('Failed to load job details:', err);
+        if (err.response?.status === 401) {
+          navigate('/login', { state: { from: `/jobs/${id}` }, replace: true });
+          return;
+        }
         setError('The requested job opportunity was not found or is no longer active.');
       } finally {
         setLoading(false);
@@ -134,6 +159,7 @@ export default function JobDetailPage() {
   const deadlineInfo = windowInfo.deadline;
   const startInfo = windowInfo.start;
   const appDest = getJobApplicationDestination(job);
+  const matchIndicator = checkProfileEligibilityMatch(job, profile);
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-10 px-4 sm:px-6 lg:px-8">
@@ -380,6 +406,72 @@ export default function JobDetailPage() {
                 </p>
               </div>
             )}
+
+            {/* Job Eligibility */}
+            <div className="bg-white rounded-3xl border border-brand-border shadow-card p-6 sm:p-8 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
+                <h2 className="text-base font-bold font-display text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-brand-primary" />
+                  Job Eligibility
+                </h2>
+                {matchIndicator && (
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 self-start sm:self-auto ${
+                      matchIndicator.status === 'match'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : matchIndicator.status === 'mismatch'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        matchIndicator.status === 'match'
+                          ? 'bg-emerald-500'
+                          : matchIndicator.status === 'mismatch'
+                          ? 'bg-amber-500'
+                          : 'bg-slate-400'
+                      }`}
+                    />
+                    {matchIndicator.label}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-xs font-semibold text-slate-500 mb-1">Graduation Batches</div>
+                  <div className="text-sm font-bold text-slate-800">
+                    {job.eligible_batches && job.eligible_batches.length > 0
+                      ? job.eligible_batches.join(', ')
+                      : 'Not Specified'}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-xs font-semibold text-slate-500 mb-1">Candidate Type</div>
+                  <div className="text-sm font-bold text-slate-800">
+                    {job.candidate_type || 'Not Specified'}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-xs font-semibold text-slate-500 mb-1">Eligible Qualifications</div>
+                  <div className="text-sm font-bold text-slate-800">
+                    {job.eligible_qualifications && job.eligible_qualifications.length > 0
+                      ? job.eligible_qualifications.join(', ')
+                      : 'Not Specified'}
+                  </div>
+                </div>
+              </div>
+
+              {matchIndicator && matchIndicator.details && (
+                <div className="text-xs text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-200/60 flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-primary shrink-0 mt-0.5" />
+                  <span>{matchIndicator.details}</span>
+                </div>
+              )}
+            </div>
 
             {/* Overview */}
             <div className="bg-white rounded-3xl border border-brand-border shadow-card p-6 sm:p-8 space-y-4">

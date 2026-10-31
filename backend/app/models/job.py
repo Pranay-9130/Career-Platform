@@ -31,6 +31,9 @@ class Job(BaseUUIDModel):
     is_featured = Column(Boolean, default=False, index=True, nullable=False)
     application_start_date = Column(DateTime(timezone=True), nullable=True)
     deadline = Column(DateTime(timezone=True), nullable=True)
+    eligible_batches = Column(JSON, default=list, nullable=False)
+    candidate_type = Column(String(50), nullable=True)
+    eligible_qualifications = Column(JSON, default=list, nullable=False)
 
     def __repr__(self) -> str:
         return f"<Job {self.title} at {self.company_name} (type={self.job_type}, mode={self.work_mode})>"

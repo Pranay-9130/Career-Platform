@@ -348,3 +348,140 @@ export function getJobApplicationDestination(job) {
     }
   }
 }
+
+/**
+ * Job Eligibility Constants & Helpers
+ */
+export const ELIGIBLE_BATCH_OPTIONS = [
+  '2023',
+  '2024',
+  '2025',
+  '2026',
+  '2027',
+  '2028',
+  '2029',
+  'All Batches',
+];
+
+export const CANDIDATE_TYPE_OPTIONS = [
+  'Freshers Only',
+  'Experienced Only',
+  'Both Freshers and Experienced',
+];
+
+export const ELIGIBLE_QUALIFICATION_OPTIONS = [
+  'B.Tech',
+  'B.E.',
+  'M.Tech',
+  'M.E.',
+  'BCA',
+  'MCA',
+  'B.Sc',
+  'M.Sc',
+  'MBA',
+  'Diploma',
+  'Other',
+];
+
+export function getJobEligibilityDetails(job) {
+  const batches = Array.isArray(job?.eligible_batches) ? job.eligible_batches : [];
+  const candidateType = job?.candidate_type || null;
+  const qualifications = Array.isArray(job?.eligible_qualifications) ? job.eligible_qualifications : [];
+
+  const batchesText = batches.length > 0 ? batches.join(', ') : 'Not Specified';
+  const candidateTypeText = candidateType || 'Not Specified';
+  const qualificationsText = qualifications.length > 0 ? qualifications.join(', ') : 'Not Specified';
+
+  const hasAnyEligibility = batches.length > 0 || Boolean(candidateType) || qualifications.length > 0;
+
+  return {
+    batches,
+    batchesText,
+    candidateType,
+    candidateTypeText,
+    qualifications,
+    qualificationsText,
+    hasAnyEligibility,
+    isBatchesSpecified: batches.length > 0,
+    isCandidateTypeSpecified: Boolean(candidateType),
+    isQualificationsSpecified: qualifications.length > 0,
+  };
+}
+
+export function checkProfileEligibilityMatch(job, profile) {
+  if (!profile) {
+    return {
+      status: 'unknown',
+      label: 'Eligibility cannot be determined',
+      details: 'Sign in to see if this opportunity matches your academic profile.',
+    };
+  }
+
+  const { batches, qualifications, hasAnyEligibility } = getJobEligibilityDetails(job);
+
+  if (!hasAnyEligibility) {
+    return {
+      status: 'open',
+      label: 'Open to all candidates',
+      details: 'No specific graduation batch or degree restrictions specified.',
+    };
+  }
+
+  const studentYear = profile.graduation_year ? String(profile.graduation_year).trim() : null;
+  const studentDegree = profile.degree ? profile.degree.trim() : null;
+
+  if (!studentYear && !studentDegree) {
+    return {
+      status: 'unknown',
+      label: 'Eligibility cannot be determined',
+      details: 'Add graduation year and degree to your profile to check matching status.',
+    };
+  }
+
+  let batchMatch = true;
+  if (batches.length > 0) {
+    if (!studentYear) {
+      batchMatch = null;
+    } else if (batches.includes('All Batches') || batches.includes(studentYear)) {
+      batchMatch = true;
+    } else {
+      batchMatch = false;
+    }
+  }
+
+  let qualMatch = true;
+  if (qualifications.length > 0) {
+    if (!studentDegree) {
+      qualMatch = null;
+    } else {
+      const lowerDegree = studentDegree.toLowerCase().replace(/[\.\s]/g, '');
+      qualMatch = qualifications.some((q) => {
+        const cleanQ = q.toLowerCase().replace(/[\.\s]/g, '');
+        return lowerDegree.includes(cleanQ) || (q === 'Other' && true);
+      });
+    }
+  }
+
+  if (batchMatch === false || qualMatch === false) {
+    return {
+      status: 'mismatch',
+      label: 'May not match all criteria',
+      details: 'Your profile details differ from the preferred graduation batch or qualification.',
+    };
+  }
+
+  if (batchMatch === true && qualMatch === true) {
+    return {
+      status: 'match',
+      label: 'Matches your profile',
+      details: 'Your graduation year and qualification match this job opening.',
+    };
+  }
+
+  return {
+    status: 'partial',
+    label: 'Partially matches profile',
+    details: 'Some criteria could not be determined from your profile.',
+  };
+}
+

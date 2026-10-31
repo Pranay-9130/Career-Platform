@@ -1,7 +1,8 @@
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy import select, func, desc, update
 from sqlalchemy.orm.attributes import flag_modified
@@ -20,11 +21,15 @@ from app.schemas.resume import (
     ResumeUpdate,
     ResumeListResponse,
 )
-from app.schemas.ats import AtsAnalysisRequest, AtsAnalysisResponse
+from app.schemas.ats import AtsAnalysisRequest, AtsAnalysisResponse, ResumeExtractTextResponse
 from app.api.dependencies.auth import get_current_active_user
 from app.core.rate_limiter import ai_rate_limiter
 from app.services.pdf_generator import generate_resume_pdf
-from app.services.ats_analyzer import analyze_ats, extract_resume_text_from_dict
+from app.services.ats_analyzer import (
+    analyze_ats,
+    extract_resume_text_from_dict,
+    extract_text_from_resume_file,
+)
 
 router = APIRouter(prefix="/resumes", tags=["Resume Builder"])
 
@@ -471,6 +476,70 @@ async def preview_resume_pdf(
         headers={
             "Content-Disposition": 'inline; filename="Resume_Preview.pdf"',
         },
+    )
+
+
+@router.post(
+    "/extract-text",
+    response_model=ResumeExtractTextResponse,
+    dependencies=[Depends(ai_rate_limiter)],
+)
+async def extract_resume_file_text(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Extracts text from an uploaded PDF or DOCX resume without storing the file permanently.
+    Validates file format, magic bytes, size limits, and extractable content.
+    """
+    safe_filename = os.path.basename(file.filename or "resume")
+    fname_lower = safe_filename.lower()
+
+    if not (fname_lower.endswith(".pdf") or fname_lower.endswith(".docx")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file format. Please upload a PDF (.pdf) or Word document (.docx).",
+        )
+
+    content = await file.read()
+    file_size = len(content)
+
+    # 5 MB maximum file size limit
+    MAX_FILE_SIZE = 5 * 1024 * 1024
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File size exceeds maximum allowed limit of 5 MB.",
+        )
+    if file_size < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded file is empty or corrupted.",
+        )
+
+    try:
+        extracted = extract_text_from_resume_file(content, safe_filename)
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except RuntimeError as re:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(re))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process uploaded resume: {str(exc)}",
+        )
+
+    clean_text = extracted.strip()
+    words = clean_text.split()
+    preview = clean_text[:350].strip() + ("..." if len(clean_text) > 350 else "")
+
+    return ResumeExtractTextResponse(
+        filename=safe_filename,
+        file_size=file_size,
+        extracted_text=clean_text,
+        preview=preview,
+        character_count=len(clean_text),
+        word_count=len(words),
     )
 
 

@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 VALID_APPLICATION_METHODS = {"INTERNAL", "GOOGLE_FORM", "EMAIL", "EXTERNAL_URL"}
+VALID_CANDIDATE_TYPES = {"Freshers Only", "Experienced Only", "Both Freshers and Experienced"}
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 
@@ -73,6 +74,42 @@ class JobBase(BaseModel):
     is_featured: bool = False
     application_start_date: Optional[datetime] = None
     deadline: Optional[datetime] = None
+    eligible_batches: List[str] = Field(default_factory=list)
+    candidate_type: Optional[str] = None
+    eligible_qualifications: List[str] = Field(default_factory=list)
+
+    @field_validator("candidate_type", mode="before")
+    @classmethod
+    def validate_candidate_type(cls, v):
+        if not v:
+            return None
+        v_clean = str(v).strip()
+        if not v_clean:
+            return None
+        if v_clean not in VALID_CANDIDATE_TYPES:
+            raise ValueError(f"Candidate type must be one of: {', '.join(sorted(VALID_CANDIDATE_TYPES))}")
+        return v_clean
+
+    @field_validator("eligible_batches", mode="before")
+    @classmethod
+    def validate_batches(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, list):
+            cleaned = [str(x).strip() for x in v if str(x).strip()]
+            if "All Batches" in cleaned:
+                return ["All Batches"]
+            return cleaned
+        return []
+
+    @field_validator("eligible_qualifications", mode="before")
+    @classmethod
+    def validate_qualifications(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        return []
 
     @field_validator("application_method", mode="before")
     @classmethod
@@ -132,6 +169,42 @@ class JobUpdate(BaseModel):
     is_featured: Optional[bool] = None
     application_start_date: Optional[datetime] = None
     deadline: Optional[datetime] = None
+    eligible_batches: Optional[List[str]] = None
+    candidate_type: Optional[str] = None
+    eligible_qualifications: Optional[List[str]] = None
+
+    @field_validator("candidate_type", mode="before")
+    @classmethod
+    def validate_update_candidate_type(cls, v):
+        if v is None:
+            return None
+        v_clean = str(v).strip()
+        if not v_clean:
+            return None
+        if v_clean not in VALID_CANDIDATE_TYPES:
+            raise ValueError(f"Candidate type must be one of: {', '.join(sorted(VALID_CANDIDATE_TYPES))}")
+        return v_clean
+
+    @field_validator("eligible_batches", mode="before")
+    @classmethod
+    def validate_update_batches(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, list):
+            cleaned = [str(x).strip() for x in v if str(x).strip()]
+            if "All Batches" in cleaned:
+                return ["All Batches"]
+            return cleaned
+        return []
+
+    @field_validator("eligible_qualifications", mode="before")
+    @classmethod
+    def validate_update_qualifications(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        return []
 
     @field_validator("application_method", mode="before")
     @classmethod
@@ -185,6 +258,7 @@ class JobFacets(BaseModel):
     job_types: List[JobFacetItem] = Field(default_factory=list)
     work_modes: List[JobFacetItem] = Field(default_factory=list)
     experience_levels: List[JobFacetItem] = Field(default_factory=list)
+    candidate_types: List[JobFacetItem] = Field(default_factory=list)
 
 class JobListResponse(BaseModel):
     items: List[JobRead]

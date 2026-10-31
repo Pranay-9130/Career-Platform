@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, MapPin, DollarSign, Calendar, Bookmark, ArrowRight, Briefcase } from 'lucide-react';
+import { Building2, MapPin, DollarSign, Calendar, Bookmark, ArrowRight, Briefcase, GraduationCap } from 'lucide-react';
 import { Card, Badge, Button } from '@/components/common';
 
 import { formatSalary, formatDeadline, formatApplicationWindow } from '@/utils/jobHelpers';
+import { useAuth } from '@/context/AuthContext';
 
 export default function JobCard({
   id = '1',
@@ -23,6 +24,12 @@ export default function JobCard({
   stipend_or_salary = '',
   skills,
   skills_required = [],
+  eligible_batches = [],
+  eligibleBatches = [],
+  candidate_type,
+  candidateType,
+  eligible_qualifications = [],
+  eligibleQualifications = [],
   application_start_date,
   applicationStartDate,
   deadline,
@@ -42,7 +49,13 @@ export default function JobCard({
   const windowInfo = formatApplicationWindow(application_start_date || applicationStartDate, deadline);
   const deadlineInfo = windowInfo.deadline;
   const displaySkills = skills || skills_required || [];
+  const displayBatches = Array.isArray(eligible_batches) && eligible_batches.length ? eligible_batches : (Array.isArray(eligibleBatches) ? eligibleBatches : []);
+  const displayCandidateType = candidate_type || candidateType || null;
+  const displayQualifications = Array.isArray(eligible_qualifications) && eligible_qualifications.length ? eligible_qualifications : (Array.isArray(eligibleQualifications) ? eligibleQualifications : []);
   const [saved, setSaved] = useState(initialSaved);
+  const { isAuthenticated } = useAuth();
+  const detailsTarget = isAuthenticated ? `/jobs/${id}` : '/login';
+  const detailsState = isAuthenticated ? undefined : { from: `/jobs/${id}` };
 
   const handleSaveToggle = (e) => {
     e.preventDefault();
@@ -85,7 +98,7 @@ export default function JobCard({
                 )}
               </div>
               <h3 className="font-display font-bold text-sm sm:text-base text-brand-text group-hover:text-brand-primary transition-colors line-clamp-1">
-                <Link to={`/jobs/${id}`}>{displayTitle}</Link>
+                <Link to={detailsTarget} state={detailsState}>{displayTitle}</Link>
               </h3>
             </div>
           </div>
@@ -150,12 +163,47 @@ export default function JobCard({
             </span>
           )}
         </div>
+
+        {/* Compact Candidate Eligibility */}
+        {displayBatches.length > 0 || displayCandidateType || displayQualifications.length > 0 ? (
+          <div className="mb-4 p-2.5 rounded-lg bg-slate-50/90 border border-slate-200/80 text-[11px] space-y-1">
+            <div className="font-semibold text-slate-700 flex items-center gap-1.5">
+              <GraduationCap className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+              <span>Eligibility</span>
+            </div>
+            <div className="space-y-0.5 text-slate-600 pl-5">
+              {displayBatches.length > 0 && (
+                <div className="truncate">
+                  <span className="text-slate-400">Eligible Batches: </span>
+                  <span className="font-medium text-slate-800">{displayBatches.join(', ')}</span>
+                </div>
+              )}
+              {displayCandidateType && (
+                <div className="truncate">
+                  <span className="text-slate-400">Candidate Type: </span>
+                  <span className="font-medium text-slate-800">{displayCandidateType}</span>
+                </div>
+              )}
+              {displayQualifications.length > 0 && (
+                <div className="truncate">
+                  <span className="text-slate-400">Qualifications: </span>
+                  <span className="font-medium text-slate-800">{displayQualifications.join(', ')}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mb-4 px-2.5 py-1 rounded-md bg-slate-50/50 border border-dashed border-slate-200 text-[10px] text-slate-400 flex items-center gap-1.5">
+            <GraduationCap className="w-3 h-3 text-slate-400 shrink-0" />
+            <span>Eligibility: Not Specified</span>
+          </div>
+        )}
       </div>
 
       {/* Footer: View action */}
       <div className="pt-3 border-t border-brand-border flex items-center justify-between">
         <span className="text-[11px] text-brand-muted">Easy apply available</span>
-        <Link to={`/jobs/${id}`}>
+        <Link to={detailsTarget} state={detailsState}>
           <Button size="sm" variant="secondary" rightIcon={ArrowRight} className="text-xs py-1 px-3">
             View Details
           </Button>

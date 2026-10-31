@@ -29,3 +29,13 @@ class AtsAnalysisResponse(BaseModel):
     critical_gaps: List[str] = Field(default_factory=list)
     bullet_recommendations: List[BulletRewrite] = Field(default_factory=list)
     analyzed_with: str = "rule-based-nlp-engine"
+
+
+class ResumeExtractTextResponse(BaseModel):
+    filename: str
+    file_size: int
+    extracted_text: str
+    preview: str
+    character_count: int
+    word_count: int
+

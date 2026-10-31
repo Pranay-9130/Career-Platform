@@ -49,6 +49,9 @@ import {
   isValidGoogleFormUrl,
   isValidEmail,
   APPLICATION_METHODS,
+  ELIGIBLE_BATCH_OPTIONS,
+  CANDIDATE_TYPE_OPTIONS,
+  ELIGIBLE_QUALIFICATION_OPTIONS,
 } from '@/utils/jobHelpers';
 
 export default function AdminDashboardPage() {
@@ -133,6 +136,9 @@ export default function AdminDashboardPage() {
     application_start_date: '',
     no_deadline: true,
     deadline: '',
+    eligible_batches: [],
+    candidate_type: '',
+    eligible_qualifications: [],
   };
   const [jobFormData, setJobFormData] = useState(initialJobFormData);
 
@@ -379,6 +385,9 @@ export default function AdminDashboardPage() {
       application_start_date: hasStartDate ? job.application_start_date.split('T')[0] : '',
       no_deadline: !hasDeadline,
       deadline: hasDeadline ? job.deadline.split('T')[0] : '',
+      eligible_batches: Array.isArray(job.eligible_batches) ? job.eligible_batches : [],
+      candidate_type: job.candidate_type || '',
+      eligible_qualifications: Array.isArray(job.eligible_qualifications) ? job.eligible_qualifications : [],
     });
     setJobActionFeedback(null);
     setIsJobModalOpen(true);
@@ -468,6 +477,9 @@ export default function AdminDashboardPage() {
       stipend_or_salary: finalSalary,
       application_start_date: finalStartDate,
       deadline: finalDeadline,
+      eligible_batches: Array.isArray(jobFormData.eligible_batches) ? jobFormData.eligible_batches : [],
+      candidate_type: jobFormData.candidate_type || null,
+      eligible_qualifications: Array.isArray(jobFormData.eligible_qualifications) ? jobFormData.eligible_qualifications : [],
       skills_required: jobFormData.skills_required
         ? jobFormData.skills_required.split(',').map((s) => s.trim()).filter(Boolean)
         : [],
@@ -2165,6 +2177,172 @@ export default function AdminDashboardPage() {
                   placeholder="Hands-on experience with Python or Node.js&#10;Familiarity with Docker and Git&#10;Pursuing or completed B.S. in Computer Science"
                   className="w-full text-xs p-2.5 border border-slate-200 rounded-lg"
                 />
+              </div>
+            </div>
+
+            {/* CANDIDATE ELIGIBILITY */}
+            <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-brand-primary" />
+                  Candidate Eligibility
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Specify graduation pass-out batch, experience type, and degree qualifications. Leave any field unselected if not restricted.
+                </p>
+              </div>
+
+              {/* A. Eligible Graduation Batches */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-semibold text-slate-700">
+                    Graduation / Pass-out Year
+                  </label>
+                  {jobFormData.eligible_batches?.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setJobFormData({ ...jobFormData, eligible_batches: [] })}
+                      className="text-[11px] text-slate-500 hover:text-rose-600 font-medium"
+                    >
+                      Clear Batches
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {ELIGIBLE_BATCH_OPTIONS.map((batch) => {
+                    const isSelected = jobFormData.eligible_batches?.includes(batch);
+                    return (
+                      <button
+                        key={batch}
+                        type="button"
+                        onClick={() => {
+                          const current = jobFormData.eligible_batches || [];
+                          if (batch === 'All Batches') {
+                            setJobFormData({
+                              ...jobFormData,
+                              eligible_batches: isSelected ? [] : ['All Batches'],
+                            });
+                          } else {
+                            let updated = current.filter((b) => b !== 'All Batches');
+                            if (isSelected) {
+                              updated = updated.filter((b) => b !== batch);
+                            } else {
+                              updated = [...updated, batch];
+                            }
+                            setJobFormData({
+                              ...jobFormData,
+                              eligible_batches: updated,
+                            });
+                          }
+                        }}
+                        className={`px-2.5 py-1 text-xs rounded-lg font-medium transition border cursor-pointer ${
+                          isSelected
+                            ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {batch}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Click 'All Batches' for any graduation year, or select specific years. Unspecified allows all candidates.
+                </p>
+              </div>
+
+              {/* B. Candidate Type */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-semibold text-slate-700">
+                    Candidate Type
+                  </label>
+                  {jobFormData.candidate_type && (
+                    <button
+                      type="button"
+                      onClick={() => setJobFormData({ ...jobFormData, candidate_type: '' })}
+                      className="text-[11px] text-slate-500 hover:text-rose-600 font-medium"
+                    >
+                      Clear Candidate Type
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CANDIDATE_TYPE_OPTIONS.map((type) => {
+                    const isSelected = jobFormData.candidate_type === type;
+                    return (
+                      <label
+                        key={type}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer text-xs transition ${
+                          isSelected
+                            ? 'border-brand-primary bg-brand-primary/5 text-brand-primary font-bold'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="candidate_type"
+                          checked={isSelected}
+                          onChange={() => setJobFormData({ ...jobFormData, candidate_type: type })}
+                          className="w-3.5 h-3.5 text-brand-primary focus:ring-0"
+                        />
+                        <span>{type}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Select candidate profile requirements or leave unselected for Not Specified.
+                </p>
+              </div>
+
+              {/* C. Eligible Qualifications */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-semibold text-slate-700">
+                    Eligible Qualifications
+                  </label>
+                  {jobFormData.eligible_qualifications?.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setJobFormData({ ...jobFormData, eligible_qualifications: [] })}
+                      className="text-[11px] text-slate-500 hover:text-rose-600 font-medium"
+                    >
+                      Clear Qualifications
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {ELIGIBLE_QUALIFICATION_OPTIONS.map((qual) => {
+                    const isSelected = jobFormData.eligible_qualifications?.includes(qual);
+                    return (
+                      <button
+                        key={qual}
+                        type="button"
+                        onClick={() => {
+                          const current = jobFormData.eligible_qualifications || [];
+                          const updated = isSelected
+                            ? current.filter((q) => q !== qual)
+                            : [...current, qual];
+                          setJobFormData({
+                            ...jobFormData,
+                            eligible_qualifications: updated,
+                          });
+                        }}
+                        className={`px-2.5 py-1 text-xs rounded-lg font-medium transition border cursor-pointer ${
+                          isSelected
+                            ? 'bg-brand-primary text-white border-brand-primary shadow-xs'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {qual}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Select applicable degrees or leave unselected for Not Specified.
+                </p>
               </div>
             </div>
 

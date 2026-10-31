@@ -73,11 +73,24 @@ async def _compute_job_facets(db: AsyncSession) -> JobFacets:
         JobFacetItem(name=row[0], count=row[1]) for row in exp_rows if row[0]
     ]
 
+    # 5. Candidate Types
+    c_stmt = (
+        select(Job.candidate_type, func.count(Job.id))
+        .where(Job.is_active.is_(True), Job.candidate_type.isnot(None), Job.candidate_type != "")
+        .group_by(Job.candidate_type)
+        .order_by(desc(func.count(Job.id)))
+    )
+    c_rows = (await db.execute(c_stmt)).all()
+    candidate_types = [
+        JobFacetItem(name=row[0], count=row[1]) for row in c_rows if row[0]
+    ]
+
     return JobFacets(
         domains=domains,
         job_types=job_types,
         work_modes=work_modes,
         experience_levels=experience_levels,
+        candidate_types=candidate_types,
     )
 
 
@@ -88,6 +101,9 @@ async def list_jobs(
     job_type: Optional[str] = Query(None, description="Type filter (Full-time, Internship, Contract)"),
     work_mode: Optional[str] = Query(None, description="Work mode (Remote, Hybrid, Onsite)"),
     experience_level: Optional[str] = Query(None, description="Level (Internship, Entry Level, Mid-Level)"),
+    graduation_batch: Optional[str] = Query(None, description="Filter by graduation year (e.g., 2025 or All Batches)"),
+    candidate_type: Optional[str] = Query(None, description="Filter by candidate type (Freshers Only, Experienced Only, Both Freshers and Experienced)"),
+    qualification: Optional[str] = Query(None, description="Filter by qualification (e.g., B.Tech, MCA)"),
     featured_only: bool = Query(False, description="Filter only featured opportunities"),
     sort: str = Query("newest", pattern="^(newest|title|company)$"),
     page: int = Query(1, ge=1),
@@ -116,6 +132,57 @@ async def list_jobs(
 
     if experience_level and experience_level.strip() and experience_level.strip().lower() != "all":
         conditions.append(Job.experience_level.ilike(f"%{experience_level.strip()}%"))
+
+    if graduation_batch and graduation_batch.strip() and graduation_batch.strip().lower() != "all":
+        b_term = graduation_batch.strip()
+        if b_term != "All Batches":
+            conditions.append(
+                or_(
+                    cast(Job.eligible_batches, String).ilike('%"All Batches"%'),
+                    cast(Job.eligible_batches, String).ilike(f'%"{b_term}"%'),
+                    Job.eligible_batches.is_(None),
+                    cast(Job.eligible_batches, String) == "[]",
+                )
+            )
+
+    if candidate_type and candidate_type.strip() and candidate_type.strip().lower() != "all":
+        c_term = candidate_type.strip()
+        if c_term == "Freshers Only":
+            conditions.append(
+                or_(
+                    Job.candidate_type == "Freshers Only",
+                    Job.candidate_type == "Both Freshers and Experienced",
+                    Job.candidate_type.is_(None),
+                    Job.candidate_type == "",
+                )
+            )
+        elif c_term == "Experienced Only":
+            conditions.append(
+                or_(
+                    Job.candidate_type == "Experienced Only",
+                    Job.candidate_type == "Both Freshers and Experienced",
+                    Job.candidate_type.is_(None),
+                    Job.candidate_type == "",
+                )
+            )
+        elif c_term == "Both Freshers and Experienced":
+            conditions.append(
+                or_(
+                    Job.candidate_type == "Both Freshers and Experienced",
+                    Job.candidate_type.is_(None),
+                    Job.candidate_type == "",
+                )
+            )
+
+    if qualification and qualification.strip() and qualification.strip().lower() != "all":
+        q_term = qualification.strip()
+        conditions.append(
+            or_(
+                cast(Job.eligible_qualifications, String).ilike(f'%"{q_term}"%'),
+                Job.eligible_qualifications.is_(None),
+                cast(Job.eligible_qualifications, String) == "[]",
+            )
+        )
 
     if search and search.strip():
         term = f"%{search.strip()}%"
@@ -271,10 +338,10 @@ async def toggle_job_bookmark(
 async def get_job_by_id(
     identifier: str,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_current_user),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
-    Retrieve single job details by UUID identifier.
+    Retrieve single job details by UUID identifier. Requires authentication.
     """
     try:
         job_uuid = uuid.UUID(identifier)
@@ -340,6 +407,9 @@ async def create_job(payload: JobCreate, db: AsyncSession = Depends(get_db)):
         is_featured=payload.is_featured,
         application_start_date=payload.application_start_date,
         deadline=payload.deadline,
+        eligible_batches=payload.eligible_batches or [],
+        candidate_type=payload.candidate_type,
+        eligible_qualifications=payload.eligible_qualifications or [],
     )
     db.add(new_job)
     await db.commit()

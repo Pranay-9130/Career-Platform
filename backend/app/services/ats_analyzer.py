@@ -1,5 +1,7 @@
+import io
 import json
 import logging
+import os
 import re
 from typing import Dict, Any, List, Optional
 import httpx
@@ -88,6 +90,76 @@ def extract_resume_text_from_dict(resume_data: Dict[str, Any]) -> str:
                 lines.append(f"Coursework: {edu.get('highlights')}")
 
     return "\n".join(lines)
+
+
+def extract_text_from_docx(docx_bytes: bytes) -> str:
+    """
+    Extracts text from DOCX bytes using python-docx.
+    Safely parses paragraphs and table content.
+    """
+    if not docx_bytes or len(docx_bytes) < 10:
+        raise ValueError("The uploaded file is empty or too small to be a valid Word document.")
+
+    # Validate DOCX ZIP magic header
+    if not docx_bytes.startswith(b"PK\x03\x04"):
+        raise ValueError("The uploaded file does not appear to be a valid Word (.docx) document.")
+
+    try:
+        import docx
+    except (ImportError, ModuleNotFoundError):
+        logger.error("python-docx is not installed on the server.")
+        raise RuntimeError("Word document (.docx) parsing engine is not installed on the server.")
+
+    try:
+        doc = docx.Document(io.BytesIO(docx_bytes))
+        lines: List[str] = []
+
+        for p in doc.paragraphs:
+            text = (p.text or "").strip()
+            if text:
+                lines.append(text)
+
+        for table in doc.tables:
+            for row in table.rows:
+                row_texts = [cell.text.strip() for cell in row.cells if cell.text and cell.text.strip()]
+                if row_texts:
+                    lines.append(" | ".join(row_texts))
+
+        full_text = "\n".join(lines).strip()
+        if not full_text:
+            raise ValueError("The Word document contains no readable text. Please ensure the document is not blank.")
+        return full_text
+    except ValueError:
+        raise
+    except Exception as exc:
+        logger.warning("DOCX parsing error: %s", exc)
+        raise ValueError("Corrupted or invalid Word document: unable to parse document content.")
+
+
+def extract_text_from_resume_file(file_bytes: bytes, filename: str) -> str:
+    """
+    Safely extracts text from an uploaded resume file (PDF or DOCX).
+    Enforces format validation, content header checks, and readable text extraction.
+    """
+    safe_name = os.path.basename(filename or "").lower()
+
+    if safe_name.endswith(".pdf"):
+        from app.services.skill_intelligence import extract_text_from_pdf
+        try:
+            return extract_text_from_pdf(file_bytes)
+        except ValueError as ve:
+            err_msg = str(ve)
+            if "readable text" in err_msg.lower() or "selectable text" in err_msg.lower():
+                raise ValueError(
+                    "Could not extract readable text from the provided PDF. "
+                    "If this is a scanned document or image-only PDF, OCR is not supported. "
+                    "Please upload a document with selectable text or paste your resume text directly."
+                )
+            raise
+    elif safe_name.endswith(".docx"):
+        return extract_text_from_docx(file_bytes)
+    else:
+        raise ValueError("Unsupported file format. Please upload a PDF (.pdf) or Word document (.docx).")
 
 
 async def analyze_ats(resume_text: str, job_description: str) -> Dict[str, Any]:

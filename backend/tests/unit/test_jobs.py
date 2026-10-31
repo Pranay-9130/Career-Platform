@@ -89,6 +89,7 @@ async def test_homepage_job_request_uses_supported_sort_without_facets(client):
         "job_types": [],
         "work_modes": [],
         "experience_levels": [],
+        "candidate_types": [],
     }
 
 
@@ -205,12 +206,17 @@ async def test_get_job_detail_and_update(client, db_session):
     db_session.add(job)
     await db_session.commit()
 
-    # 1. Get Job by ID
+    # 1. Unauthenticated request to Job Details must return 401 Unauthorized
+    resp_unauth = await client.get(f"/api/jobs/{job.id}")
+    assert resp_unauth.status_code == 401
+
+    # 2. Authenticated Student request returns 200 with full details
+    app.dependency_overrides[get_current_active_user] = lambda: student_user
     resp_get = await client.get(f"/api/jobs/{job.id}")
     assert resp_get.status_code == 200
     assert resp_get.json()["title"] == "Platform Engineer"
 
-    # 2. Update Job (Admin)
+    # 3. Update Job (Admin)
     app.dependency_overrides[get_current_active_user] = lambda: admin_user
     resp_update = await client.put(
         f"/api/jobs/{job.id}",
@@ -220,11 +226,11 @@ async def test_get_job_detail_and_update(client, db_session):
     assert resp_update.json()["title"] == "Senior Platform Engineer"
     assert resp_update.json()["stipend_or_salary"] == "$150,000/yr"
 
-    # 3. Delete Job (Admin)
+    # 4. Delete Job (Admin)
     resp_del = await client.delete(f"/api/jobs/{job.id}")
     assert resp_del.status_code == 204
 
-    # Verify deleted
+    # Verify deleted (authenticated)
     resp_after = await client.get(f"/api/jobs/{job.id}")
     assert resp_after.status_code == 404
 
@@ -269,3 +275,130 @@ async def test_job_application_start_date_and_deadline(client):
     }
     resp_invalid = await client.put(f"/api/jobs/{job_id}", json=invalid_payload)
     assert resp_invalid.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_job_eligibility_fields_and_filtering(client, db_session):
+    """Test job creation, update, and filtering with eligibility fields."""
+    app.dependency_overrides[get_current_active_user] = lambda: admin_user
+
+    # 1. Create Job with specific eligibility fields
+    payload_1 = {
+        "title": "Graduate Software Engineer",
+        "company_name": "TechCorp",
+        "domain": "Software Development",
+        "job_type": "Full-time",
+        "work_mode": "Hybrid",
+        "apply_url": "https://techcorp.com/apply",
+        "eligible_batches": ["2025", "2026"],
+        "candidate_type": "Freshers Only",
+        "eligible_qualifications": ["B.Tech", "MCA"],
+    }
+    resp1 = await client.post("/api/jobs", json=payload_1)
+    assert resp1.status_code == 201
+    job1 = resp1.json()
+    assert job1["eligible_batches"] == ["2025", "2026"]
+    assert job1["candidate_type"] == "Freshers Only"
+    assert job1["eligible_qualifications"] == ["B.Tech", "MCA"]
+
+    # 2. Create Job with "All Batches"
+    payload_2 = {
+        "title": "Senior Backend Architect",
+        "company_name": "TechCorp",
+        "domain": "Software Development",
+        "job_type": "Full-time",
+        "work_mode": "Remote",
+        "apply_url": "https://techcorp.com/apply-senior",
+        "eligible_batches": ["All Batches"],
+        "candidate_type": "Experienced Only",
+        "eligible_qualifications": ["B.Tech", "M.Tech"],
+    }
+    resp2 = await client.post("/api/jobs", json=payload_2)
+    assert resp2.status_code == 201
+    job2 = resp2.json()
+    assert job2["eligible_batches"] == ["All Batches"]
+    assert job2["candidate_type"] == "Experienced Only"
+
+    # 3. Create Job with "Both Freshers and Experienced" and unspecified batches
+    payload_3 = {
+        "title": "UI Designer",
+        "company_name": "DesignStudio",
+        "domain": "Design",
+        "job_type": "Contract",
+        "work_mode": "Remote",
+        "apply_url": "https://designstudio.com/apply",
+        "eligible_batches": [],
+        "candidate_type": "Both Freshers and Experienced",
+        "eligible_qualifications": ["Diploma", "B.Sc", "Other"],
+    }
+    resp3 = await client.post("/api/jobs", json=payload_3)
+    assert resp3.status_code == 201
+    job3 = resp3.json()
+    assert job3["eligible_batches"] == []
+    assert job3["candidate_type"] == "Both Freshers and Experienced"
+
+    # 4. Create Job with completely unspecified eligibility (older jobs style)
+    payload_4 = {
+        "title": "Data Analyst",
+        "company_name": "AnalyticsCo",
+        "domain": "Data",
+        "job_type": "Full-time",
+        "work_mode": "On-site",
+        "apply_url": "https://analyticsco.com/apply",
+    }
+    resp4 = await client.post("/api/jobs", json=payload_4)
+    assert resp4.status_code == 201
+    job4 = resp4.json()
+    assert job4["eligible_batches"] == []
+    assert job4["candidate_type"] is None
+    assert job4["eligible_qualifications"] == []
+
+    # 5. Update eligibility fields on job1
+    update_payload = {
+        "eligible_batches": ["2024", "2025"],
+        "candidate_type": "Both Freshers and Experienced",
+        "eligible_qualifications": ["B.Tech", "B.E.", "MCA"],
+    }
+    resp_up = await client.put(f"/api/jobs/{job1['id']}", json=update_payload)
+    assert resp_up.status_code == 200
+    assert resp_up.json()["eligible_batches"] == ["2024", "2025"]
+    assert resp_up.json()["candidate_type"] == "Both Freshers and Experienced"
+    assert resp_up.json()["eligible_qualifications"] == ["B.Tech", "B.E.", "MCA"]
+
+    # 6. Reject invalid candidate type
+    resp_invalid_type = await client.put(f"/api/jobs/{job1['id']}", json={"candidate_type": "Invalid Type"})
+    assert resp_invalid_type.status_code == 422
+
+    # 7. Test Filtering:
+    # Filter by graduation_batch: "2024" should match:
+    # - job1 (has 2024)
+    # - job2 (has "All Batches")
+    # - job3 (unspecified batches)
+    # - job4 (unspecified batches)
+    resp_f_batch = await client.get("/api/jobs?graduation_batch=2024")
+    assert resp_f_batch.status_code == 200
+    batch_job_ids = {j["id"] for j in resp_f_batch.json()["items"]}
+    assert job1["id"] in batch_job_ids
+    assert job2["id"] in batch_job_ids
+    assert job3["id"] in batch_job_ids
+    assert job4["id"] in batch_job_ids
+
+    # Filter by candidate_type: "Freshers Only" should match:
+    # - jobs accepting Freshers Only OR Both Freshers and Experienced OR unspecified
+    resp_f_cand = await client.get("/api/jobs?candidate_type=Freshers%20Only")
+    assert resp_f_cand.status_code == 200
+    cand_job_ids = {j["id"] for j in resp_f_cand.json()["items"]}
+    assert job1["id"] in cand_job_ids  # updated to "Both Freshers and Experienced"
+    assert job3["id"] in cand_job_ids  # "Both Freshers and Experienced"
+    assert job4["id"] in cand_job_ids  # unspecified
+    assert job2["id"] not in cand_job_ids  # "Experienced Only" should NOT match
+
+    # Filter by qualification: "M.Tech" should match:
+    # - job2 (has M.Tech)
+    # - job4 (unspecified qualifications)
+    resp_f_qual = await client.get("/api/jobs?qualification=M.Tech")
+    assert resp_f_qual.status_code == 200
+    qual_job_ids = {j["id"] for j in resp_f_qual.json()["items"]}
+    assert job2["id"] in qual_job_ids
+    assert job4["id"] in qual_job_ids
+    assert job3["id"] not in qual_job_ids

@@ -42,6 +42,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
 
   const handleLogout = () => {
@@ -138,11 +139,17 @@ export default function RegisterPage() {
       const targetPath = getDashboardPath(response.user);
       navigate(targetPath, { replace: true });
     } catch (err) {
+      const rawDetail = err.response?.data?.detail;
       const message =
-        err.response?.data?.detail ||
+        (typeof rawDetail === 'string'
+          ? rawDetail
+          : Array.isArray(rawDetail)
+            ? rawDetail.map((d) => d.msg || JSON.stringify(d)).join(', ')
+            : null) ||
         err.response?.data?.message ||
         'Registration failed. Please check your information and try again.';
       setErrorMessage(message);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -212,7 +219,7 @@ export default function RegisterPage() {
             >
               <div className="space-y-1">
                 <p>{errorMessage}</p>
-                {errorMessage.includes('already exists') && (
+                {typeof errorMessage === 'string' && errorMessage.includes('already exists') && (
                   <p className="text-xs pt-1">
                     Already have an account?{' '}
                     <Link

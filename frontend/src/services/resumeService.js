@@ -130,6 +130,21 @@ export const resumeService = {
   },
 
   /**
+   * Extract plain text from an uploaded PDF or DOCX resume document.
+   * @param {File} file
+   */
+  async extractText(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/resumes/extract-text', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  /**
    * Run dual-input ATS analysis comparing candidate resume against target job description.
    * @param {object} payload { resume_id, resume_text, job_id, job_description }
    */

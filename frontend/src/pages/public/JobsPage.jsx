@@ -17,14 +17,28 @@ import {
   CheckCircle2,
   Mail,
   FileText,
+  GraduationCap,
+  UserCheck,
 } from 'lucide-react';
 import JobCard from '../../components/cards/JobCard';
 import jobService from '../../services/jobService';
+import userService from '../../services/userService';
+import { useAuth } from '../../context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getBreadcrumbListSchema } from '@/utils/seoSchemas';
-import { formatSalary, formatDeadline, getJobApplicationDestination } from '@/utils/jobHelpers';
+import {
+  formatSalary,
+  formatDeadline,
+  getJobApplicationDestination,
+  ELIGIBLE_BATCH_OPTIONS,
+  CANDIDATE_TYPE_OPTIONS,
+  ELIGIBLE_QUALIFICATION_OPTIONS,
+} from '@/utils/jobHelpers';
 
 export default function JobsPage() {
+  const { user, isAuthenticated } = useAuth();
+  const [profile, setProfile] = useState(null);
+
   const [jobs, setJobs] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -37,6 +51,7 @@ export default function JobsPage() {
     job_types: [],
     work_modes: [],
     experience_levels: [],
+    candidate_types: [],
   });
 
   // Filters
@@ -46,11 +61,31 @@ export default function JobsPage() {
   const [jobType, setJobType] = useState('All');
   const [workMode, setWorkMode] = useState('All');
   const [experienceLevel, setExperienceLevel] = useState('All');
+  const [graduationBatch, setGraduationBatch] = useState('All');
+  const [candidateType, setCandidateType] = useState('All');
+  const [qualification, setQualification] = useState('All');
   const [featuredOnly, setFeaturedOnly] = useState(false);
   const [sort, setSort] = useState('newest');
 
   // Selected job for detail modal
   const [selectedJob, setSelectedJob] = useState(null);
+
+  // Load student profile for "Find Jobs Matching My Profile"
+  useEffect(() => {
+    async function loadStudentProfile() {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+      try {
+        const data = await userService.getProfile();
+        setProfile(data);
+      } catch (err) {
+        setProfile(null);
+      }
+    }
+    loadStudentProfile();
+  }, [user]);
 
   // Debounce search
   useEffect(() => {
@@ -71,6 +106,9 @@ export default function JobsPage() {
         job_type: jobType !== 'All' ? jobType : undefined,
         work_mode: workMode !== 'All' ? workMode : undefined,
         experience_level: experienceLevel !== 'All' ? experienceLevel : undefined,
+        graduation_batch: graduationBatch !== 'All' ? graduationBatch : undefined,
+        candidate_type: candidateType !== 'All' ? candidateType : undefined,
+        qualification: qualification !== 'All' ? qualification : undefined,
         featured_only: featuredOnly ? true : undefined,
         sort,
         page,
@@ -88,7 +126,19 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, domain, jobType, workMode, experienceLevel, featuredOnly, sort, page]);
+  }, [
+    debouncedSearch,
+    domain,
+    jobType,
+    workMode,
+    experienceLevel,
+    graduationBatch,
+    candidateType,
+    qualification,
+    featuredOnly,
+    sort,
+    page,
+  ]);
 
   useEffect(() => {
     fetchJobs();
@@ -100,10 +150,32 @@ export default function JobsPage() {
     setJobType('All');
     setWorkMode('All');
     setExperienceLevel('All');
+    setGraduationBatch('All');
+    setCandidateType('All');
+    setQualification('All');
     setFeaturedOnly(false);
     setSort('newest');
     setPage(1);
   };
+
+  const handleMatchProfile = () => {
+    if (!profile) return;
+    if (profile.graduation_year) {
+      setGraduationBatch(String(profile.graduation_year));
+    }
+    if (profile.degree) {
+      const degClean = profile.degree.toLowerCase().replace(/[\.\s]/g, '');
+      const matchedQual = ELIGIBLE_QUALIFICATION_OPTIONS.find((q) =>
+        degClean.includes(q.toLowerCase().replace(/[\.\s]/g, ''))
+      );
+      if (matchedQual) {
+        setQualification(matchedQual);
+      }
+    }
+    setPage(1);
+  };
+
+  const hasProfileData = Boolean(profile?.graduation_year || profile?.degree);
 
   const hasActiveFilters =
     Boolean(search) ||
@@ -111,6 +183,9 @@ export default function JobsPage() {
     jobType !== 'All' ||
     workMode !== 'All' ||
     experienceLevel !== 'All' ||
+    graduationBatch !== 'All' ||
+    candidateType !== 'All' ||
+    qualification !== 'All' ||
     featuredOnly;
 
   return (
@@ -204,6 +279,27 @@ export default function JobsPage() {
                   </button>
                 )}
               </div>
+
+              {/* Profile-based convenience */}
+              {user && hasProfileData && (
+                <div className="p-3 bg-gradient-to-r from-brand-primary/10 to-sky-50 rounded-xl border border-brand-primary/20 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-brand-primary">
+                    <Sparkles className="w-3.5 h-3.5 text-brand-primary" />
+                    <span>Quick Profile Match</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-snug">
+                    Filter opportunities matching your profile ({profile.graduation_year ? `Batch ${profile.graduation_year}` : ''}{profile.degree ? `${profile.graduation_year ? ', ' : ''}${profile.degree}` : ''}).
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleMatchProfile}
+                    className="w-full py-1.5 px-3 rounded-lg bg-brand-primary text-white font-semibold text-xs hover:bg-brand-primaryDark transition shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    Find Jobs Matching My Profile
+                  </button>
+                </div>
+              )}
 
               {/* Work Mode */}
               <div className="space-y-2">
@@ -301,6 +397,77 @@ export default function JobsPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Graduation Batch */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                  <GraduationCap className="w-3.5 h-3.5 text-brand-primary" />
+                  Graduation Batch
+                </label>
+                <select
+                  value={graduationBatch}
+                  onChange={(e) => {
+                    setGraduationBatch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-brand-border rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                >
+                  <option value="All">All Batches (No Restriction)</option>
+                  {ELIGIBLE_BATCH_OPTIONS.filter((b) => b !== 'All Batches').map((b) => (
+                    <option key={b} value={b}>
+                      Class of {b}
+                    </option>
+                  ))}
+                  <option value="All Batches">Explicitly Open to All Batches</option>
+                </select>
+              </div>
+
+              {/* Candidate Type */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Candidate Type
+                </label>
+                <div className="space-y-1">
+                  {['All', ...CANDIDATE_TYPE_OPTIONS].map((cType) => (
+                    <button
+                      key={cType}
+                      onClick={() => {
+                        setCandidateType(cType);
+                        setPage(1);
+                      }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center justify-between ${
+                        candidateType === cType
+                          ? 'bg-brand-primary/10 text-brand-primary font-semibold'
+                          : 'text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className="truncate">{cType === 'All' ? 'All Types (Freshers & Experienced)' : cType}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Qualification */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Eligible Qualification
+                </label>
+                <select
+                  value={qualification}
+                  onChange={(e) => {
+                    setQualification(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-brand-border rounded-lg text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                >
+                  <option value="All">All Qualifications</option>
+                  {ELIGIBLE_QUALIFICATION_OPTIONS.map((q) => (
+                    <option key={q} value={q}>
+                      {q}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Featured toggle */}
@@ -499,6 +666,44 @@ export default function JobsPage() {
                 </span>
               </div>
 
+              {/* Job Eligibility */}
+              <div className="p-4 rounded-xl bg-slate-50/90 border border-brand-border space-y-2.5">
+                <div className="font-bold uppercase tracking-wider text-[11px] text-slate-800 flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-brand-primary" />
+                  Job Eligibility
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">
+                      Graduation Batches
+                    </span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {selectedJob.eligible_batches && selectedJob.eligible_batches.length > 0
+                        ? selectedJob.eligible_batches.join(', ')
+                        : 'Not Specified'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">
+                      Candidate Type
+                    </span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {selectedJob.candidate_type || 'Not Specified'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">
+                      Eligible Qualifications
+                    </span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {selectedJob.eligible_qualifications && selectedJob.eligible_qualifications.length > 0
+                        ? selectedJob.eligible_qualifications.join(', ')
+                        : 'Not Specified'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* Description */}
               {selectedJob.description && (
                 <div>
@@ -614,7 +819,8 @@ export default function JobsPage() {
                       </a>
                     ) : (
                       <Link
-                        to={`/jobs/${selectedJob.id}`}
+                        to={isAuthenticated ? `/jobs/${selectedJob.id}` : '/login'}
+                        state={!isAuthenticated ? { from: `/jobs/${selectedJob.id}` } : undefined}
                         className="px-5 py-2 text-xs font-semibold text-white bg-brand-primary hover:bg-brand-primaryDark shadow-sm rounded-lg transition inline-flex items-center gap-1.5"
                       >
                         {modalAppDest.buttonText}

@@ -94,7 +94,14 @@ export default function App() {
               <Route path="/guidelines" element={<SubmissionGuidelinesPage />} />
               <Route path="/projects/submit/guidelines" element={<SubmissionGuidelinesPage />} />
               <Route path="/jobs" element={<JobsPage />} />
-              <Route path="/jobs/:id" element={<JobDetailPage />} />
+              <Route
+                path="/jobs/:id"
+                element={
+                  <ProtectedRoute>
+                    <JobDetailPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/design-system" element={<DesignSystemShowcasePage />} />

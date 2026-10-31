@@ -212,3 +212,152 @@ async def test_cross_user_resume_analysis_isolated(client, db_session):
         json={"resume_id": str(resume.id), "job_description": "General Software Engineer"},
     )
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_extract_resume_text_valid_docx(client):
+    """Student can upload a valid .docx file and extract clean resume text."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    import io
+    import docx
+
+    # Generate an in-memory DOCX
+    doc = docx.Document()
+    doc.add_paragraph("Alex Rivera - Full Stack Developer")
+    doc.add_paragraph("Skills: Python, FastAPI, React, Docker, PostgreSQL")
+    doc.add_paragraph("Experience: Built scalable cloud APIs and deployed with Docker.")
+    table = doc.add_table(rows=1, cols=2)
+    table.rows[0].cells[0].text = "University of California"
+    table.rows[0].cells[1].text = "B.S. Computer Science"
+
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    docx_bytes = buffer.getvalue()
+
+    files = {"file": ("my_resume.docx", docx_bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+    resp = await client.post("/api/resumes/extract-text", files=files)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["filename"] == "my_resume.docx"
+    assert "Alex Rivera" in data["extracted_text"]
+    assert "FastAPI" in data["extracted_text"]
+    assert "B.S. Computer Science" in data["extracted_text"]
+    assert data["character_count"] > 50
+    assert data["word_count"] > 10
+    assert len(data["preview"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_extract_resume_text_valid_pdf(client):
+    """Student can upload a valid .pdf file and extract clean resume text."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    c.drawString(100, 750, "Jordan Lee - Backend Systems Engineer")
+    c.drawString(100, 730, "Core Skills: Python, FastAPI, Redis, Kubernetes, AWS")
+    c.drawString(100, 710, "Built microservices handling 10k requests per second.")
+    c.save()
+    pdf_bytes = buffer.getvalue()
+
+    files = {"file": ("jordan_resume.pdf", pdf_bytes, "application/pdf")}
+    resp = await client.post("/api/resumes/extract-text", files=files)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["filename"] == "jordan_resume.pdf"
+    assert "Jordan Lee" in data["extracted_text"]
+    assert "FastAPI" in data["extracted_text"]
+
+
+@pytest.mark.asyncio
+async def test_extract_resume_unsupported_format(client):
+    """Rejects files with unsupported extensions or MIME types."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    files = {"file": ("notes.txt", b"Plain text resume content", "text/plain")}
+    resp = await client.post("/api/resumes/extract-text", files=files)
+    assert resp.status_code == 400
+    assert "Unsupported file format" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_extract_resume_oversized_file(client):
+    """Rejects files exceeding 5 MB limit."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    huge_bytes = b"%PDF-1.4 " + b"0" * (6 * 1024 * 1024)
+    files = {"file": ("huge_resume.pdf", huge_bytes, "application/pdf")}
+    resp = await client.post("/api/resumes/extract-text", files=files)
+    assert resp.status_code == 400
+    assert "exceeds maximum allowed limit" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_extract_resume_corrupted_pdf(client):
+    """Gracefully handles corrupted PDF documents."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    corrupt_bytes = b"%PDF-1.4 completely corrupted non-renderable bytes\x00\x01\x02"
+    files = {"file": ("corrupted.pdf", corrupt_bytes, "application/pdf")}
+    resp = await client.post("/api/resumes/extract-text", files=files)
+    assert resp.status_code == 400
+    assert "Corrupted or invalid PDF" in resp.json()["detail"] or "unable to parse" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_extract_resume_empty_scanned_pdf(client):
+    """Gracefully handles PDFs without extractable text (e.g. image-only / blank)."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    import io
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    # Don't draw any text strings — empty blank page
+    c.showPage()
+    c.save()
+    pdf_bytes = buffer.getvalue()
+
+    files = {"file": ("scanned_blank.pdf", pdf_bytes, "application/pdf")}
+    resp = await client.post("/api/resumes/extract-text", files=files)
+    assert resp.status_code == 400
+    assert "readable text" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_end_to_end_extracted_resume_to_ats_analysis(client):
+    """Verifies that text extracted from an uploaded document feeds directly into ATS analysis."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    import io
+    import docx
+
+    # 1. Upload DOCX resume
+    doc = docx.Document()
+    doc.add_paragraph("Morgan Developer")
+    doc.add_paragraph("Skills: Python, FastAPI, Docker, PostgreSQL, Redis, Unit Testing")
+    doc.add_paragraph("Experience: Developed backend microservices using FastAPI and Docker.")
+    buffer = io.BytesIO()
+    doc.save(buffer)
+
+    files = {"file": ("morgan_cv.docx", buffer.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+    extract_resp = await client.post("/api/resumes/extract-text", files=files)
+    assert extract_resp.status_code == 200
+    extracted_text = extract_resp.json()["extracted_text"]
+
+    # 2. Submit extracted text to ATS analysis pipeline
+    analysis_resp = await client.post(
+        "/api/resumes/analyze-ats",
+        json={
+            "resume_text": extracted_text,
+            "job_description": "Seeking Python Engineer with FastAPI and Docker experience.",
+        },
+    )
+    assert analysis_resp.status_code == 200
+    ats_data = analysis_resp.json()
+    assert ats_data["overall_score"] >= 40
+    matched = [m.lower() for m in ats_data["matched_skills"]]
+    assert "python" in matched
+    assert "fastapi" in matched
+    assert "docker" in matched
+

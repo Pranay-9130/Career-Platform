@@ -355,7 +355,11 @@ async def create_admin_job(payload: JobCreate, db: AsyncSession = Depends(get_db
         application_instructions=payload.application_instructions,
         is_active=payload.is_active,
         is_featured=payload.is_featured,
+        application_start_date=payload.application_start_date,
         deadline=payload.deadline,
+        eligible_batches=payload.eligible_batches or [],
+        candidate_type=payload.candidate_type,
+        eligible_qualifications=payload.eligible_qualifications or [],
     )
     db.add(new_job)
     await db.commit()

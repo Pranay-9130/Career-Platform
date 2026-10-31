@@ -258,7 +258,12 @@ async def test_legacy_job_defaults_to_internal_application(client, db_session):
     db_session.add(legacy_job)
     await db_session.commit()
 
-    # Public get
+    # Unauthenticated request returns 401
+    resp_unauth = await client.get(f"/api/jobs/{legacy_job.id}")
+    assert resp_unauth.status_code == 401
+
+    # Authenticated student request returns 200
+    app.dependency_overrides[get_current_active_user] = lambda: student_user
     resp = await client.get(f"/api/jobs/{legacy_job.id}")
     assert resp.status_code == 200
     data = resp.json()
