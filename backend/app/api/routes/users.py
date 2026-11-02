@@ -1,10 +1,11 @@
 import re
 import time
+import uuid
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -858,10 +859,48 @@ async def get_public_profile(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Returns public student profile and showcased project portfolio for the given username.
+    Returns public student profile and showcased project portfolio for the given username or identifier.
     """
-    stmt = select(Profile).where(Profile.username == username.lower())
+    clean_identifier = (username or "").strip()
+    if not clean_identifier:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student profile identifier must not be empty.",
+        )
+
+    profile = None
+    # 1. Direct case-insensitive username match
+    stmt = select(Profile).where(func.lower(Profile.username) == clean_identifier.lower())
     profile = (await db.execute(stmt)).scalar_one_or_none()
+
+    # 2. Fallback: check if identifier is a valid UUID (User.id or Profile.id or Profile.user_id)
+    if not profile:
+        try:
+            parsed_uuid = uuid.UUID(clean_identifier)
+            stmt_uuid = select(Profile).where(
+                or_(Profile.user_id == parsed_uuid, Profile.id == parsed_uuid)
+            )
+            profile = (await db.execute(stmt_uuid)).scalar_one_or_none()
+            if not profile:
+                u_stmt = select(User).where(User.id == parsed_uuid)
+                u = (await db.execute(u_stmt)).scalar_one_or_none()
+                if u:
+                    profile = await get_or_create_user_profile(u, db)
+        except (ValueError, AttributeError):
+            pass
+
+    # 3. Fallback: check if User exists by email prefix or exact email
+    if not profile:
+        u_stmt = select(User).where(
+            or_(
+                func.lower(User.email).startswith(clean_identifier.lower() + "@"),
+                func.lower(User.email) == clean_identifier.lower(),
+            )
+        )
+        u = (await db.execute(u_stmt)).scalar_one_or_none()
+        if u:
+            profile = await get_or_create_user_profile(u, db)
+
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -870,6 +909,12 @@ async def get_public_profile(
 
     user_stmt = select(User).where(User.id == profile.user_id)
     user = (await db.execute(user_stmt)).scalar_one_or_none()
+
+    if user and not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This student portfolio is currently inactive.",
+        )
 
     # 1. Projects authored by user (published only)
     stmt_authored = (
@@ -903,8 +948,8 @@ async def get_public_profile(
             PublicProjectPreview(
                 id=p.id,
                 slug=p.slug,
-                title=p.title,
-                description=p.short_description,
+                title=p.title or "Untitled Project",
+                description=p.short_description or p.description or "",
                 domain=p.domain,
                 difficulty=p.difficulty,
                 tech_stack=p.tech_stack or [],
@@ -956,8 +1001,8 @@ async def get_public_profile(
                 PublicProjectPreview(
                     id=p.id,
                     slug=p.slug,
-                    title=p.title,
-                    description=p.short_description,
+                    title=p.title or "Untitled Project",
+                    description=p.short_description or p.description or "",
                     domain=p.domain,
                     difficulty=p.difficulty,
                     tech_stack=p.tech_stack or [],

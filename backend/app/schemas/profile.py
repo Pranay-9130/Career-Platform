@@ -57,7 +57,7 @@ class PublicProjectPreview(BaseModel):
     id: Optional[UUID] = None
     slug: Optional[str] = None
     title: str
-    description: str
+    description: Optional[str] = ""
     domain: Optional[str] = None
     difficulty: Optional[str] = None
     tech_stack: List[str] = Field(default_factory=list)

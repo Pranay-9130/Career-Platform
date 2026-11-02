@@ -109,6 +109,7 @@ export default function App() {
               {/* Public Student Portfolio Routes */}
               <Route path="/u/:username" element={<PublicProfilePage />} />
               <Route path="/profile/:username" element={<PublicProfilePage />} />
+              <Route path="/portfolio/:username" element={<PublicProfilePage />} />
 
               {/* Auth Flow */}
               <Route path="/login" element={<LoginPage />} />

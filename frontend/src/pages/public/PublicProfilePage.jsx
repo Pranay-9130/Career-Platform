@@ -36,16 +36,22 @@ export default function PublicProfilePage() {
 
   useEffect(() => {
     async function fetchPublicData() {
-      if (!username) return;
+      const cleanUsername = (username || '').trim();
+      if (!cleanUsername) return;
       setLoading(true);
       setError(null);
       try {
-        const data = await userService.getPublicProfile(username);
+        const data = await userService.getPublicProfile(cleanUsername);
         setProfile(data);
       } catch (err) {
         console.error('Error fetching public portfolio:', err);
+        const isInactive =
+          err.response?.status === 403 ||
+          err.response?.data?.detail?.toLowerCase()?.includes('inactive');
         setError(
-          err.response?.status === 404
+          isInactive
+            ? 'This student portfolio is currently inactive.'
+            : err.response?.status === 404
             ? 'Student profile not found.'
             : 'Unable to load profile portfolio. Please try again later.'
         );
@@ -81,21 +87,38 @@ export default function PublicProfilePage() {
       .toUpperCase();
   };
 
-  // 404 / Error State
+  // 404 / Inactive / Error State
   if (!loading && error) {
+    const isInactive = error.toLowerCase().includes('inactive');
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center space-y-6">
-        <div className="w-16 h-16 rounded-2xl bg-blue-50 text-brand-primary flex items-center justify-center mx-auto">
+        <div
+          className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
+            isInactive
+              ? 'bg-amber-50 text-amber-600'
+              : 'bg-blue-50 text-brand-primary'
+          }`}
+        >
           <FolderGit2 className="w-8 h-8" />
         </div>
         <div>
           <h1 className="text-2xl font-display font-extrabold text-brand-text">
-            Profile Not Found
+            {isInactive ? 'Portfolio Inactive' : 'Profile Not Found'}
           </h1>
           <p className="text-sm text-brand-muted mt-2 max-w-md mx-auto">
-            We couldn't find a student profile with the username{' '}
-            <span className="font-mono font-semibold text-brand-text">@{username}</span>.
-            The account may not exist or the link may have changed.
+            {isInactive ? (
+              <>
+                The public portfolio for{' '}
+                <span className="font-mono font-semibold text-brand-text">@{username}</span>{' '}
+                is currently disabled or inactive.
+              </>
+            ) : (
+              <>
+                We couldn't find a student profile with the identifier{' '}
+                <span className="font-mono font-semibold text-brand-text">@{username}</span>.
+                The account may not exist or the link may have changed.
+              </>
+            )}
           </p>
         </div>
         <div className="flex justify-center gap-3">

@@ -28,6 +28,7 @@ from app.schemas.admin import (
 )
 from app.api.dependencies.auth import require_role, get_current_active_user
 from app.api.routes.projects import _map_project_to_detail_read
+from app.api.routes.users import get_or_create_user_profile
 from app.services.email_service import EmailService
 from app.api.routes.resumes import AVAILABLE_TEMPLATES
 
@@ -518,6 +519,12 @@ async def get_admin_students(
     items = []
     for u in users:
         prof = u.profile
+        if not prof and u.is_active:
+            try:
+                prof = await get_or_create_user_profile(u, db)
+            except Exception:
+                prof = None
+
         items.append(
             StudentAdminRead(
                 id=u.id,
@@ -662,16 +669,24 @@ async def create_resume_template(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_role(UserRole.ADMIN))],
 )
-async def update_resume_template(template_id: str, payload: ResumeTemplateUpdate):
+async def update_resume_template(
+    template_id: str,
+    payload: ResumeTemplateUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
     Update an existing template's title, description, badge, preview or download link.
+    Persists changes to the database catalog.
     """
+    await ensure_templates_catalog_loaded(db)
     for t in AVAILABLE_TEMPLATES:
         if t["id"] == template_id:
             update_data = payload.model_dump(exclude_unset=True)
             for k, v in update_data.items():
                 if v is not None:
                     t[k] = v
+            await persist_templates_catalog(db, current_user.id)
             return t
 
     raise HTTPException(
