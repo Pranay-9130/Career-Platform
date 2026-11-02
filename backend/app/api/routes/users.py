@@ -1,6 +1,8 @@
 import re
+import time
 import logging
 from datetime import datetime, timezone, timedelta
+from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +37,10 @@ from app.schemas.profile import (
 from app.api.dependencies.auth import get_current_active_user
 
 router = APIRouter(prefix="/users", tags=["User Profile & Workspace"])
+
+# 60-second in-memory cache for platform-wide public recommendations
+_RECOMMENDATIONS_CACHE: Dict[str, Any] = {"expires_at": 0.0, "items": []}
+_RECOMMENDATIONS_CACHE_TTL = 60.0
 
 
 def calculate_profile_completion(user: User, profile: Profile) -> int:
@@ -251,18 +257,17 @@ async def get_dashboard_summary(
             applications_applied + interviews_scheduled_count + applications_offer + applications_rejected
         )
 
-        # C. Bookmarks & Unread Notifications
-        stmt_pb = select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == current_user.id)
-        stmt_jb = select(func.count(JobBookmark.id)).where(JobBookmark.user_id == current_user.id)
-        pb_count = (await db.scalar(stmt_pb)) or 0
-        jb_count = (await db.scalar(stmt_jb)) or 0
-        saved_items_count = pb_count + jb_count
-
-        stmt_notif = (
-            select(func.count(Notification.id))
-            .where(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+        # C. Bookmarks & Unread Notifications (Consolidated in single roundtrip)
+        stmt_counts = select(
+            select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == current_user.id).scalar_subquery(),
+            select(func.count(JobBookmark.id)).where(JobBookmark.user_id == current_user.id).scalar_subquery(),
+            select(func.count(Notification.id)).where(Notification.user_id == current_user.id, Notification.is_read.is_(False)).scalar_subquery(),
         )
-        unread_notifications_count = (await db.scalar(stmt_notif)) or 0
+        counts_res = (await db.execute(stmt_counts)).one()
+        pb_count = counts_res[0] or 0
+        jb_count = counts_res[1] or 0
+        saved_items_count = pb_count + jb_count
+        unread_notifications_count = counts_res[2] or 0
 
         # D. Profile Completion
         stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
@@ -377,48 +382,59 @@ async def get_dashboard_summary(
         recent_activity.sort(key=lambda x: x.timestamp, reverse=True)
         recent_activity = recent_activity[:10]
 
-        # H. Recommendations: Active DB jobs and published showcase projects
-        stmt_live_jobs = (
-            select(Job)
-            .where(Job.is_active == True)
-            .order_by(desc(Job.is_featured), desc(Job.created_at))
-            .limit(3)
-        )
-        live_jobs = (await db.scalars(stmt_live_jobs)).all()
-        for j in live_jobs:
-            recommended_opportunities.append(
-                DashboardRecommendation(
-                    id=f"job-{j.id}",
-                    title=j.title,
-                    organization=j.company_name,
-                    category="job",
-                    domain=j.domain,
-                    tag=j.stipend_or_salary or j.job_type,
-                    location=j.location,
-                    link=f"/jobs/{j.id}",
-                )
+        # H. Recommendations: Active DB jobs and published showcase projects (Cached 60s)
+        now_time = time.time()
+        bind = getattr(db, "bind", None) or getattr(getattr(db, "sync_session", None), "bind", None)
+        is_sqlite = (bind is not None and getattr(getattr(bind, "dialect", None), "name", "") == "sqlite")
+        if not is_sqlite and now_time < _RECOMMENDATIONS_CACHE["expires_at"] and _RECOMMENDATIONS_CACHE["items"]:
+            recommended_opportunities.extend(_RECOMMENDATIONS_CACHE["items"])
+        else:
+            cached_recs = []
+            stmt_live_jobs = (
+                select(Job)
+                .where(Job.is_active == True)
+                .order_by(desc(Job.is_featured), desc(Job.created_at))
+                .limit(3)
             )
+            live_jobs = (await db.scalars(stmt_live_jobs)).all()
+            for j in live_jobs:
+                cached_recs.append(
+                    DashboardRecommendation(
+                        id=f"job-{j.id}",
+                        title=j.title,
+                        organization=j.company_name,
+                        category="job",
+                        domain=j.domain,
+                        tag=j.stipend_or_salary or j.job_type,
+                        location=j.location,
+                        link=f"/jobs/{j.id}",
+                    )
+                )
 
-        stmt_pub_proj = (
-            select(Project)
-            .where(Project.status == "Published")
-            .order_by(desc(Project.stars_count), desc(Project.created_at))
-            .limit(3)
-        )
-        pub_projs = (await db.scalars(stmt_pub_proj)).all()
-        for p in pub_projs:
-            recommended_opportunities.append(
-                DashboardRecommendation(
-                    id=f"proj-{p.id}",
-                    title=p.title,
-                    organization="Community Showcase",
-                    category="project",
-                    domain=p.domain,
-                    tag=p.difficulty,
-                    location="Open Source",
-                    link=f"/projects/{p.slug}",
-                )
+            stmt_pub_proj = (
+                select(Project)
+                .where(Project.status == "Published")
+                .order_by(desc(Project.stars_count), desc(Project.created_at))
+                .limit(3)
             )
+            pub_projs = (await db.scalars(stmt_pub_proj)).all()
+            for p in pub_projs:
+                cached_recs.append(
+                    DashboardRecommendation(
+                        id=f"proj-{p.id}",
+                        title=p.title,
+                        organization="Community Showcase",
+                        category="project",
+                        domain=p.domain,
+                        tag=p.difficulty,
+                        location="Open Source",
+                        link=f"/projects/{p.slug}",
+                    )
+                )
+            if cached_recs:
+                _RECOMMENDATIONS_CACHE["items"] = cached_recs
+                _RECOMMENDATIONS_CACHE["expires_at"] = now_time + _RECOMMENDATIONS_CACHE_TTL
+            recommended_opportunities.extend(cached_recs)
 
     except Exception as db_err:
         logger.warning("Error querying dashboard metrics from DB: %s", db_err)

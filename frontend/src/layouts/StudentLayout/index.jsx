@@ -58,7 +58,7 @@ export default function StudentLayout() {
     return () => {
       window.removeEventListener('workspace-counts-updated', handleWorkspaceUpdate);
     };
-  }, [fetchCounts, location.pathname]);
+  }, [fetchCounts]);
 
   useEffect(() => {
     if (!mobileSidebarOpen) return undefined;

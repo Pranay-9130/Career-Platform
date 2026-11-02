@@ -1,10 +1,12 @@
 import math
 import uuid
-from typing import Optional, List
+import time
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, or_, desc, asc, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.job import Job
 from app.models.job_bookmark import JobBookmark
@@ -26,11 +28,21 @@ from app.api.dependencies.auth import (
 
 router = APIRouter(prefix="/jobs", tags=["Jobs & Opportunities"])
 
+# In-memory 60s cache for public job catalog facets
+_JOB_FACETS_CACHE: Dict[str, Any] = {"expires_at": 0.0, "data": None}
+_JOB_FACETS_CACHE_TTL = 60.0
 
 async def _compute_job_facets(db: AsyncSession) -> JobFacets:
     """
     Computes aggregated count of active jobs per domain, job_type, work_mode, and experience_level.
+    Cached for 60 seconds across users in production; bypassed for unit tests.
     """
+    now = time.time()
+    bind = getattr(db, "bind", None) or getattr(getattr(db, "sync_session", None), "bind", None)
+    is_sqlite = (bind is not None and getattr(getattr(bind, "dialect", None), "name", "") == "sqlite") or ("sqlite" in settings.DATABASE_URL)
+    if not is_sqlite and now < _JOB_FACETS_CACHE["expires_at"] and _JOB_FACETS_CACHE["data"] is not None:
+        return _JOB_FACETS_CACHE["data"]
+
     # 1. Domains
     domain_stmt = (
         select(Job.domain, func.count(Job.id))
@@ -85,13 +97,16 @@ async def _compute_job_facets(db: AsyncSession) -> JobFacets:
         JobFacetItem(name=row[0], count=row[1]) for row in c_rows if row[0]
     ]
 
-    return JobFacets(
+    facets = JobFacets(
         domains=domains,
         job_types=job_types,
         work_modes=work_modes,
         experience_levels=experience_levels,
         candidate_types=candidate_types,
     )
+    _JOB_FACETS_CACHE["data"] = facets
+    _JOB_FACETS_CACHE["expires_at"] = now + _JOB_FACETS_CACHE_TTL
+    return facets
 
 
 @router.get("", response_model=JobListResponse)

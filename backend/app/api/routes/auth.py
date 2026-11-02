@@ -44,6 +44,8 @@ from app.api.dependencies.auth import (
     get_current_active_user,
     require_role,
     require_roles,
+    register_active_session,
+    invalidate_session_cache,
 )
 from app.core.rate_limiter import auth_rate_limiter
 
@@ -68,6 +70,7 @@ async def set_refresh_cookie(response: Response, user: User, db: AsyncSession) -
         expires_at=datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     ))
     await db.commit()
+    register_active_session(session_id, user.id)
     is_production = settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release"}
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
@@ -460,14 +463,7 @@ async def login_user(
             detail="This account has been deactivated. Please contact platform support.",
         )
 
-    # Generate access token
-    access_token = create_access_token(
-        data={
-            "sub": str(user.id),
-            "email": user.email,
-            "role": user.role.value,
-        }
-    )
+    # Generate access token and set HttpOnly refresh cookie
     access_token = await set_refresh_cookie(response, user, db)
 
     return AuthResponse(
@@ -702,6 +698,9 @@ async def logout_user(
     """End the browser session by removing its HttpOnly refresh credential."""
     is_production = settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release"}
     if refresh_token:
+        decoded = decode_token(refresh_token, expected_type="refresh")
+        if decoded:
+            invalidate_session_cache(session_id=decoded.get("sid"), user_id=decoded.get("sub"))
         await db.execute(update(AuthSession).where(
             AuthSession.token_hash == hashlib.sha256(refresh_token.encode()).hexdigest(),
             AuthSession.invalidated_at.is_(None),

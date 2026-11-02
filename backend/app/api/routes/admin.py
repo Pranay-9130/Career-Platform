@@ -44,25 +44,19 @@ async def get_admin_stats(db: AsyncSession = Depends(get_db)):
     Retrieve platform-wide operational statistics for the administration dashboard.
     Restricted strictly to administrators.
     """
-    pending_stmt = select(func.count(Project.id)).where(Project.status == "Submitted")
-    pending_count = (await db.execute(pending_stmt)).scalar() or 0
-
-    pub_stmt = select(func.count(Project.id)).where(Project.status == "Published")
-    pub_count = (await db.execute(pub_stmt)).scalar() or 0
-
-    students_stmt = select(func.count(User.id)).where(
-        User.role.in_([UserRole.STUDENT, UserRole.CONTRIBUTOR])
+    stats_stmt = select(
+        select(func.count(Project.id)).where(Project.status == "Submitted").scalar_subquery(),
+        select(func.count(Project.id)).where(Project.status == "Published").scalar_subquery(),
+        select(func.count(User.id)).where(User.role.in_([UserRole.STUDENT, UserRole.CONTRIBUTOR])).scalar_subquery(),
+        select(func.count(Job.id)).scalar_subquery(),
     )
-    students_count = (await db.execute(students_stmt)).scalar() or 0
-
-    jobs_stmt = select(func.count(Job.id))
-    jobs_count = (await db.execute(jobs_stmt)).scalar() or 0
+    row = (await db.execute(stats_stmt)).one()
 
     return AdminStats(
-        pending_submissions=pending_count,
-        published_projects=pub_count,
-        total_students=students_count,
-        total_jobs=jobs_count,
+        pending_submissions=row[0] or 0,
+        published_projects=row[1] or 0,
+        total_students=row[2] or 0,
+        total_jobs=row[3] or 0,
         flagged_reports=0,
     )
 
@@ -78,6 +72,7 @@ async def get_admin_stats(db: AsyncSession = Depends(get_db)):
 )
 async def get_moderation_queue(
     status_filter: Optional[str] = Query("Submitted", description="Status filter (Submitted, Changes Requested, Rejected, All)"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum number of projects to return"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -95,6 +90,7 @@ async def get_moderation_queue(
         )
         .where(*conditions)
         .order_by(desc(Project.created_at))
+        .limit(limit)
     )
     result = await db.execute(stmt)
     projects = result.scalars().all()

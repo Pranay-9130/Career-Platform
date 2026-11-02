@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authService } from '@/services/authService';
 import { isSessionRejection } from '@/services/authErrors';
 
@@ -115,20 +115,36 @@ export function AuthProvider({ children }) {
   const isAdmin = user?.role === 'ADMIN';
   const isStudent = user?.role === 'STUDENT' || user?.role === 'CONTRIBUTOR';
 
-  const value = {
-    user,
-    token,
-    isAuthenticated,
-    isLoading,
-    isAdmin,
-    isStudent,
-    login,
-    loginWithCredentials,
-    registerUser,
-    logout,
-    updateUser,
-    hasRole,
-  };
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      isAuthenticated,
+      isLoading,
+      isAdmin,
+      isStudent,
+      login,
+      loginWithCredentials,
+      registerUser,
+      logout,
+      updateUser,
+      hasRole,
+    }),
+    [
+      user,
+      token,
+      isAuthenticated,
+      isLoading,
+      isAdmin,
+      isStudent,
+      login,
+      loginWithCredentials,
+      registerUser,
+      logout,
+      updateUser,
+      hasRole,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

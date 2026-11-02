@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from app.core.config import settings
 from app.core.middleware import SecurityHeadersMiddleware
 from app.api.routes import api_router
@@ -227,6 +228,9 @@ app.add_middleware(
 
 # OWASP Security Headers Middleware
 app.add_middleware(SecurityHeadersMiddleware)
+
+# HTTP Response Compression Middleware (compress JSON/text responses >= 1KB)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Register API Router & Root SEO endpoints
 from app.api.routes.seo import router as seo_router

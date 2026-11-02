@@ -18,6 +18,14 @@ else:
     # Managed PostgreSQL connection pool settings for production
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_recycle"] = 300  # Recycle idle connections before Neon's 5-minute timeout
+    engine_kwargs["pool_timeout"] = 20  # Prevent indefinite worker blocking
+    engine_kwargs["connect_args"] = {
+        "command_timeout": 30,
+        "server_settings": {
+            "application_name": "aspirepath_api",
+        },
+    }
 
 # SQLAlchemy Async Engine
 engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)

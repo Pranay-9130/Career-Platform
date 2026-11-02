@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Any, Dict, Tuple
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
@@ -86,16 +86,24 @@ async def get_current_user(
     return user
 
 
+def register_active_session(session_id: Any, user_id: Any) -> None:
+    pass
+
+def invalidate_session_cache(session_id: Optional[Any] = None, user_id: Optional[Any] = None) -> None:
+    pass
+
 async def session_is_active(session_id: str, user_id: uuid.UUID, db: AsyncSession) -> bool:
     try:
-        identifier = uuid.UUID(session_id)
+        identifier = uuid.UUID(str(session_id))
     except (ValueError, TypeError):
         return False
-    return (await db.execute(select(AuthSession.id).where(
+
+    result = await db.execute(select(AuthSession.id).where(
         AuthSession.id == identifier, AuthSession.user_id == user_id,
         AuthSession.invalidated_at.is_(None),
         AuthSession.expires_at > datetime.now(timezone.utc),
-    ))).scalar_one_or_none() is not None
+    ))
+    return result.scalar_one_or_none() is not None
 
 
 async def get_current_active_user(

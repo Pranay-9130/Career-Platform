@@ -111,4 +111,33 @@ api.interceptors.response.use(
   }
 );
 
+// In-flight GET request deduplication to prevent redundant simultaneous API requests
+const inFlightRequests = new Map();
+const originalRequest = api.request.bind(api);
+
+api.request = function (config) {
+  const normalizedConfig = typeof config === 'string' ? { url: config } : { ...config };
+  const method = (normalizedConfig.method || 'get').toLowerCase();
+
+  if (method !== 'get' || normalizedConfig._skipDedupe) {
+    return originalRequest(normalizedConfig);
+  }
+
+  const url = normalizedConfig.url || '';
+  const params = normalizedConfig.params ? JSON.stringify(normalizedConfig.params) : '';
+  const token = authStorage.getToken() || '';
+  const dedupeKey = `${url}?${params}#${token}`;
+
+  if (inFlightRequests.has(dedupeKey)) {
+    return inFlightRequests.get(dedupeKey);
+  }
+
+  const requestPromise = originalRequest(normalizedConfig).finally(() => {
+    inFlightRequests.delete(dedupeKey);
+  });
+
+  inFlightRequests.set(dedupeKey, requestPromise);
+  return requestPromise;
+};
+
 export default api;
