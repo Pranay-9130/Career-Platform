@@ -6,7 +6,7 @@ services:
     dockerContext: .
     healthCheckPath: /api/health/ready
     plan: free
-    autoDeploy: false
+    autoDeploy: true
     envVars:
       - key: ENVIRONMENT
         value: production
