@@ -67,28 +67,34 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+export const executeTokenRefresh = async () => {
+  if (!refreshPromise) {
+    refreshPromise = refreshClient.post('/auth/refresh').finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+};
+
 // Response interceptor: handle 401 Unauthorized
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const isPublic = isPublicAuthRequest(error.config?.url);
     const requestWasAuthenticated = Boolean(error.config?.headers?.Authorization);
     const canRefresh =
       error.response?.status === 401 &&
-      requestWasAuthenticated &&
+      !isPublic &&
       !error.config?._sessionRetry;
 
     if (canRefresh) {
       error.config._sessionRetry = true;
       try {
-        if (!refreshPromise) {
-          refreshPromise = refreshClient.post('/auth/refresh').finally(() => {
-            refreshPromise = null;
-          });
-        }
-        const refreshResponse = await refreshPromise;
+        const refreshResponse = await executeTokenRefresh();
         const { access_token: accessToken, user } = refreshResponse.data;
         authStorage.setToken(accessToken);
         authStorage.setUser(user);
+        error.config.headers = error.config.headers || {};
         error.config.headers.Authorization = `Bearer ${accessToken}`;
         return api.request(error.config);
       } catch (refreshError) {
@@ -103,7 +109,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401 && requestWasAuthenticated) {
+    if (error.response?.status === 401 && (requestWasAuthenticated || !isPublic)) {
       authStorage.clear();
       window.dispatchEvent(new Event('auth:unauthorized'));
     }

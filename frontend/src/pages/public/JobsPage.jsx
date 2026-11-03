@@ -36,7 +36,7 @@ import {
 } from '@/utils/jobHelpers';
 
 export default function JobsPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [profile, setProfile] = useState(null);
 
   const [jobs, setJobs] = useState([]);
@@ -73,7 +73,7 @@ export default function JobsPage() {
   // Load student profile for "Find Jobs Matching My Profile"
   useEffect(() => {
     async function loadStudentProfile() {
-      if (!user) {
+      if (isLoading || !isAuthenticated || !user) {
         setProfile(null);
         return;
       }
@@ -85,7 +85,7 @@ export default function JobsPage() {
       }
     }
     loadStudentProfile();
-  }, [user]);
+  }, [user, isAuthenticated, isLoading]);
 
   // Debounce search
   useEffect(() => {

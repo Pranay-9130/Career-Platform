@@ -5,45 +5,57 @@ import { isSessionRejection } from '@/services/authErrors';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => authService.getUser());
-  const [token, setToken] = useState(() => authService.getToken());
-  const [isLoading, setIsLoading] = useState(() => Boolean(authService.getToken()));
+  const initialToken = authService.getToken();
+  const initialUser = initialToken ? authService.getUser() : null;
+  const [user, setUser] = useState(initialUser);
+  const [token, setToken] = useState(initialToken);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Validate a restored session before allowing protected content to render.
   useEffect(() => {
     let active = true;
     const restoredToken = authService.getToken();
 
-    if (!restoredToken) {
-      authService.clearAuth();
-      setUser(null);
-      setIsLoading(false);
-      return () => { active = false; };
-    }
-
-    authService.getCurrentUser()
-      .then((currentUser) => {
-        if (active) {
-          setToken(restoredToken);
-          setUser(currentUser);
+    const initializeAuth = async () => {
+      if (restoredToken) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          if (active) {
+            setToken(restoredToken);
+            setUser(currentUser);
+          }
+        } catch (error) {
+          if (isSessionRejection(error)) {
+            authService.clearAuth();
+            if (active) {
+              setToken(null);
+              setUser(null);
+            }
+          }
         }
-      })
-      .catch((error) => {
-        // Preserve the cached session during temporary network/backend
-        // failures. The API interceptor will retry expired access tokens and
-        // only a definitive authentication rejection should sign the user out.
-        if (isSessionRejection(error)) {
+      } else {
+        // Access token is missing from storage, but a valid HttpOnly refresh cookie might exist
+        try {
+          const refreshData = await authService.refreshToken();
+          if (active && refreshData?.access_token && refreshData?.user) {
+            setToken(refreshData.access_token);
+            setUser(refreshData.user);
+          }
+        } catch {
           authService.clearAuth();
           if (active) {
             setToken(null);
             setUser(null);
           }
         }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+      }
 
+      if (active) {
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
     return () => { active = false; };
   }, []);
 

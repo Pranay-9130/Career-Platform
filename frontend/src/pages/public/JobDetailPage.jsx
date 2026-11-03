@@ -40,7 +40,7 @@ import {
 export default function JobDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +54,7 @@ export default function JobDetailPage() {
 
   useEffect(() => {
     async function loadProfile() {
-      if (!user) {
+      if (isLoading || !isAuthenticated || !user) {
         setProfile(null);
         return;
       }
@@ -67,7 +67,7 @@ export default function JobDetailPage() {
       }
     }
     loadProfile();
-  }, [user]);
+  }, [user, isAuthenticated, isLoading]);
 
   useEffect(() => {
     async function loadJob() {

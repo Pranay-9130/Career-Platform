@@ -427,9 +427,11 @@ async def login_user(
             )
         )
         candidates = result.scalars().all()
+        candidate_map = {c.email.strip().lower(): c for c in candidates}
+        ordered_candidates = [candidate_map[em] for em in admin_emails if em in candidate_map]
         user = None
         password_valid = False
-        for candidate in candidates:
+        for candidate in ordered_candidates:
             if await run_in_threadpool(
                 verify_password, credentials.password, candidate.hashed_password
             ):

@@ -244,11 +244,15 @@ export default function AdminDashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (activeTab === 'overview') {
+      Promise.all([fetchStats(), fetchQueue()]);
+    } else {
+      fetchStats();
+    }
+  }, [activeTab, fetchStats, fetchQueue]);
 
   useEffect(() => {
-    if (activeTab === 'overview' || activeTab === 'projects') {
+    if (activeTab === 'projects') {
       fetchQueue();
     }
     if (activeTab === 'jobs') {

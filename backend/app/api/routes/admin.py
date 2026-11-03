@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File, Response, Form
 from sqlalchemy import select, func, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from pathlib import Path
 import re
 import json
@@ -86,7 +86,7 @@ async def get_moderation_queue(
     stmt = (
         select(Project)
         .options(
-            selectinload(Project.owner).selectinload(User.profile),
+            selectinload(Project.owner).joinedload(User.profile),
             selectinload(Project.screenshots_list),
         )
         .where(*conditions)

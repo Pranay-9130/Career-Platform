@@ -1,4 +1,4 @@
-import api from './api';
+import api, { executeTokenRefresh } from './api';
 import { authStorage } from './authStorage';
 
 export const authService = {
@@ -30,6 +30,13 @@ export const authService = {
 
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
+    const { access_token, user } = response.data;
+    if (access_token && user) authStorage.setSession(access_token, user, true);
+    return response.data;
+  },
+
+  refreshToken: async () => {
+    const response = await executeTokenRefresh();
     const { access_token, user } = response.data;
     if (access_token && user) authStorage.setSession(access_token, user, true);
     return response.data;
