@@ -36,7 +36,7 @@ export default function PublicProfilePage() {
 
   useEffect(() => {
     async function fetchPublicData() {
-      const cleanUsername = (username || '').trim();
+      const cleanUsername = (username || '').trim().replace(/^@+/, '').replace(/\/+$/, '');
       if (!cleanUsername) return;
       setLoading(true);
       setError(null);
@@ -48,12 +48,14 @@ export default function PublicProfilePage() {
         const isInactive =
           err.response?.status === 403 ||
           err.response?.data?.detail?.toLowerCase()?.includes('inactive');
+        const isNotFound = err.response?.status === 404;
+
         setError(
           isInactive
-            ? 'This student portfolio is currently inactive.'
-            : err.response?.status === 404
-            ? 'Student profile not found.'
-            : 'Unable to load profile portfolio. Please try again later.'
+            ? 'inactive'
+            : isNotFound
+            ? 'not_found'
+            : 'server_error'
         );
       } finally {
         setLoading(false);
@@ -87,49 +89,90 @@ export default function PublicProfilePage() {
       .toUpperCase();
   };
 
-  // 404 / Inactive / Error State
+  // 404 / Inactive / Server Error State
   if (!loading && error) {
-    const isInactive = error.toLowerCase().includes('inactive');
+    if (error === 'inactive') {
+      return (
+        <div className="max-w-3xl mx-auto px-4 py-20 text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+            <FolderGit2 className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-extrabold text-brand-text">
+              Portfolio Inactive
+            </h1>
+            <p className="text-sm text-brand-muted mt-2 max-w-md mx-auto">
+              The public portfolio for{' '}
+              <span className="font-mono font-semibold text-brand-text">@{username}</span>{' '}
+              is currently disabled or inactive.
+            </p>
+          </div>
+          <div className="flex justify-center gap-3">
+            <Link to="/">
+              <Button variant="outline" size="sm" leftIcon={ArrowLeft}>
+                Back to Home
+              </Button>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    if (error === 'not_found') {
+      return (
+        <div className="max-w-3xl mx-auto px-4 py-20 text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 text-brand-primary flex items-center justify-center mx-auto">
+            <FolderGit2 className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-display font-extrabold text-brand-text">
+              Profile Not Found
+            </h1>
+            <p className="text-sm text-brand-muted mt-2 max-w-md mx-auto">
+              We couldn't find a student profile with the identifier{' '}
+              <span className="font-mono font-semibold text-brand-text">@{username}</span>.
+              The account may not exist or the link may have changed.
+            </p>
+          </div>
+          <div className="flex justify-center gap-3">
+            <Link to="/">
+              <Button variant="outline" size="sm" leftIcon={ArrowLeft}>
+                Back to Home
+              </Button>
+            </Link>
+            <Link to="/projects">
+              <Button variant="primary" size="sm">
+                Explore Student Projects
+              </Button>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    // Generic server / network error
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center space-y-6">
-        <div
-          className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
-            isInactive
-              ? 'bg-amber-50 text-amber-600'
-              : 'bg-blue-50 text-brand-primary'
-          }`}
-        >
+        <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
           <FolderGit2 className="w-8 h-8" />
         </div>
         <div>
           <h1 className="text-2xl font-display font-extrabold text-brand-text">
-            {isInactive ? 'Portfolio Inactive' : 'Profile Not Found'}
+            Unable to Load Portfolio
           </h1>
           <p className="text-sm text-brand-muted mt-2 max-w-md mx-auto">
-            {isInactive ? (
-              <>
-                The public portfolio for{' '}
-                <span className="font-mono font-semibold text-brand-text">@{username}</span>{' '}
-                is currently disabled or inactive.
-              </>
-            ) : (
-              <>
-                We couldn't find a student profile with the identifier{' '}
-                <span className="font-mono font-semibold text-brand-text">@{username}</span>.
-                The account may not exist or the link may have changed.
-              </>
-            )}
+            An unexpected error occurred while loading the portfolio for{' '}
+            <span className="font-mono font-semibold text-brand-text">@{username}</span>.
+            Please try again in a few moments.
           </p>
         </div>
         <div className="flex justify-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            Retry
+          </Button>
           <Link to="/">
-            <Button variant="outline" size="sm" leftIcon={ArrowLeft}>
-              Back to Home
-            </Button>
-          </Link>
-          <Link to="/projects">
             <Button variant="primary" size="sm">
-              Explore Student Projects
+              Back to Home
             </Button>
           </Link>
         </div>

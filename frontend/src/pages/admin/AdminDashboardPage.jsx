@@ -1482,7 +1482,7 @@ export default function AdminDashboardPage() {
                             </span>
                           ) : s.username && s.username.trim() ? (
                             <Link
-                              to={`/u/${encodeURIComponent(s.username.trim())}`}
+                              to={`/u/${encodeURIComponent(s.username.trim().replace(/^@+/, ''))}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:text-brand-dark hover:underline transition-colors"

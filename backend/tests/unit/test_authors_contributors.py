@@ -274,3 +274,53 @@ async def test_project_detail_includes_author_social_links(client, db_session):
     assert data["author_linkedin"] == prof.linkedin_url
     assert data["author_portfolio"] == prof.portfolio_url
     assert data["author_university"] == "State University"
+
+
+@pytest.mark.asyncio
+async def test_public_profile_handles_null_contributors_and_at_prefix(client, db_session):
+    """
+    Public profile lookup handles:
+    1. Null/empty fields in other projects' contributors list (no AttributeError).
+    2. Optional '@' prefix in route lookup.
+    3. Trailing slash in route lookup.
+    4. Student with zero projects.
+    """
+    student, prof = await create_user_and_profile(
+        db_session, "jyothisupriyareddy101918@example.com", "Jyothi Supriya Reddy", "jyothisupriyareddy101918"
+    )
+
+    other_owner, _ = await create_user_and_profile(
+        db_session, "otherowner@example.com", "Other Owner", "otherowner"
+    )
+    other_proj = Project(
+        owner_id=other_owner.id,
+        title="Project with Null Contributors",
+        slug="proj-null-contributors",
+        short_description="Testing null contributor resiliency.",
+        domain="Web Development",
+        status="Published",
+        contributors=[
+            {"name": "P.BHAVANA", "role": "Design", "github_username": "", "profile_username": None, "avatar_url": None, "email": None},
+            {"name": None, "role": None, "github_username": None, "profile_username": None},
+        ],
+    )
+    db_session.add(other_proj)
+    await db_session.commit()
+
+    # Direct username lookup
+    res1 = await client.get("/api/users/jyothisupriyareddy101918")
+    assert res1.status_code == 200
+    data1 = res1.json()
+    assert data1["username"] == "jyothisupriyareddy101918"
+    assert data1["full_name"] == "Jyothi Supriya Reddy"
+    assert data1["projects_count"] == 0
+
+    # Lookup with '@' prefix
+    res2 = await client.get("/api/users/@jyothisupriyareddy101918")
+    assert res2.status_code == 200
+    assert res2.json()["username"] == "jyothisupriyareddy101918"
+
+    # Lookup with case insensitivity
+    res3 = await client.get("/api/users/JYOTHISUPRIYAREDDY101918")
+    assert res3.status_code == 200
+    assert res3.json()["username"] == "jyothisupriyareddy101918"

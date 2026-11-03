@@ -861,7 +861,7 @@ async def get_public_profile(
     """
     Returns public student profile and showcased project portfolio for the given username or identifier.
     """
-    clean_identifier = (username or "").strip()
+    clean_identifier = (username or "").strip().strip("/").lstrip("@")
     if not clean_identifier:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -900,6 +900,18 @@ async def get_public_profile(
         u = (await db.execute(u_stmt)).scalar_one_or_none()
         if u:
             profile = await get_or_create_user_profile(u, db)
+
+    # 4. Fallback: check by full name matching (alphanumeric normalized)
+    if not profile:
+        normalized_target = re.sub(r"[^a-z0-9]", "", clean_identifier.lower())
+        if len(normalized_target) >= 3:
+            all_users_stmt = select(User).where(User.is_active.is_(True))
+            all_users = (await db.execute(all_users_stmt)).scalars().all()
+            for cand in all_users:
+                cand_name = re.sub(r"[^a-z0-9]", "", (cand.full_name or "").lower())
+                if cand_name and cand_name == normalized_target:
+                    profile = await get_or_create_user_profile(cand, db)
+                    break
 
     if not profile:
         raise HTTPException(
@@ -944,12 +956,13 @@ async def get_public_profile(
         views = p.views_count or 0
         total_stars += stars
         total_views += views
+        desc_text = getattr(p, "short_description", "") or getattr(p, "problem_statement", "") or ""
         projects_list.append(
             PublicProjectPreview(
                 id=p.id,
                 slug=p.slug,
                 title=p.title or "Untitled Project",
-                description=p.short_description or p.description or "",
+                description=desc_text,
                 domain=p.domain,
                 difficulty=p.difficulty,
                 tech_stack=p.tech_stack or [],
@@ -963,8 +976,8 @@ async def get_public_profile(
         )
 
     # Process co-authored projects
-    username_lower = profile.username.lower()
-    full_name_lower = user.full_name.lower() if user and user.full_name else ""
+    username_lower = (profile.username or "").lower()
+    full_name_lower = (user.full_name or "").lower() if user and user.full_name else ""
     github_profile_url = clean_social_profile_url(profile.github_url, "github")
     github_handle = (
         github_profile_url.rstrip("/").split("/")[-1].lower()
@@ -973,23 +986,27 @@ async def get_public_profile(
     )
 
     for p in other_projects:
-        if not p.contributors:
+        if not p.contributors or not isinstance(p.contributors, list):
             continue
         matched_role = None
         for c in p.contributors:
-            c_name = (c.get("name") if isinstance(c, dict) else str(c)).lower()
-            c_github = (c.get("github_username") if isinstance(c, dict) else "").lower()
-            c_profile = (c.get("profile_username") if isinstance(c, dict) else "").lower()
+            if not isinstance(c, dict):
+                c_str = str(c or "").strip().lower()
+                if (c_str and c_str == username_lower) or (full_name_lower and c_str == full_name_lower):
+                    matched_role = "Co-Author"
+                    break
+                continue
+
+            c_name = str(c.get("name") or "").strip().lower()
+            c_github = str(c.get("github_username") or "").strip().lower()
+            c_profile = str(c.get("profile_username") or "").strip().lower()
+
             if (
                 (c_profile and c_profile == username_lower)
                 or (github_handle and c_github and c_github == github_handle)
                 or (full_name_lower and c_name and c_name == full_name_lower)
             ):
-                matched_role = (
-                    c.get("role", "Co-Author")
-                    if isinstance(c, dict)
-                    else "Co-Author"
-                )
+                matched_role = str(c.get("role") or "Co-Author")
                 break
 
         if matched_role:
@@ -997,12 +1014,13 @@ async def get_public_profile(
             views = p.views_count or 0
             total_stars += stars
             total_views += views
+            desc_text = getattr(p, "short_description", "") or getattr(p, "problem_statement", "") or ""
             projects_list.append(
                 PublicProjectPreview(
                     id=p.id,
                     slug=p.slug,
                     title=p.title or "Untitled Project",
-                    description=p.short_description or p.description or "",
+                    description=desc_text,
                     domain=p.domain,
                     difficulty=p.difficulty,
                     tech_stack=p.tech_stack or [],
@@ -1017,7 +1035,7 @@ async def get_public_profile(
 
     return PublicProfileRead(
         username=profile.username,
-        full_name=user.full_name if user else "Student",
+        full_name=user.full_name if user and user.full_name else (profile.username or "Student"),
         headline=profile.headline or (user.headline if user else None),
         bio=profile.bio,
         avatar_url=profile.avatar_url or (user.avatar_url if user else None),
