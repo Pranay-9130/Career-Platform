@@ -1,8 +1,11 @@
 import hashlib
+import json
 import logging
 import secrets
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select, desc, update
 from sqlalchemy.exc import IntegrityError
@@ -89,9 +92,23 @@ async def set_refresh_cookie(response: Response, user: User, db: AsyncSession) -
 
 def validate_session_origin(request: Request):
     """Cookie-authenticated mutations must originate from an allowed frontend."""
-    origin = request.headers.get("origin")
-    if origin and origin.rstrip("/") not in settings.ALLOWED_ORIGINS:
-        raise HTTPException(status_code=403, detail="Session request origin is not allowed.")
+    origin = request.headers.get("origin") or request.headers.get("referer")
+    if not origin:
+        return
+    parsed = urlparse(origin)
+    clean_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+    if clean_origin in settings.ALLOWED_ORIGINS:
+        return
+    netloc = parsed.netloc.lower()
+    is_valid_preview = (
+        netloc == "aspirepath.vercel.app"
+        or (netloc.startswith("aspirepath-") and netloc.endswith(".vercel.app"))
+    )
+    if is_valid_preview:
+        return
+    if settings.RENDER_EXTERNAL_URL and clean_origin == settings.RENDER_EXTERNAL_URL.rstrip("/"):
+        return
+    raise HTTPException(status_code=403, detail="Session request origin is not allowed.")
 
 
 @router.post(
@@ -411,42 +428,79 @@ async def login_user(
     Validates user credentials against stored bcrypt password hashes.
     Dispatches a signed JWT bearer token on success.
     """
+    t0 = time.perf_counter()
     normalized_email = credentials.email.strip().lower()
     using_admin_username = normalized_email == settings.ADMIN_USERNAME.strip().lower()
 
+    t_lookup_start = time.perf_counter()
+    candidate_timings = []
     if using_admin_username:
-        admin_emails = list(dict.fromkeys([
-            settings.ADMIN_EMAIL.strip().lower(),
-            "pranaykumarr800@gmail.com",
-            "admin@careerplatform.com",
-        ]))
+        configured_admin_emails = []
+        if hasattr(settings, "ADMIN_EMAILS") and settings.ADMIN_EMAILS:
+            for em in settings.ADMIN_EMAILS:
+                em_clean = str(em).strip().lower()
+                if em_clean and em_clean not in configured_admin_emails:
+                    configured_admin_emails.append(em_clean)
+        if settings.ADMIN_EMAIL:
+            ae = settings.ADMIN_EMAIL.strip().lower()
+            if ae and ae not in configured_admin_emails:
+                configured_admin_emails.append(ae)
+
+        # Dynamically query all active platform administrators
         result = await db.execute(
             select(User).where(
-                User.email.in_(admin_emails),
                 User.role == UserRole.ADMIN,
+                User.is_active == True,
             )
         )
-        candidates = result.scalars().all()
-        candidate_map = {c.email.strip().lower(): c for c in candidates}
-        ordered_candidates = [candidate_map[em] for em in admin_emails if em in candidate_map]
+        admins = result.scalars().all()
+        admin_map = {a.email.strip().lower(): a for a in admins}
+        # Order candidates: configured admin emails first by priority, then any remaining active admins
+        ordered_candidates = [admin_map[em] for em in configured_admin_emails if em in admin_map]
+        for a in admins:
+            if a not in ordered_candidates:
+                ordered_candidates.append(a)
+
+        t_lookup_ms = round((time.perf_counter() - t_lookup_start) * 1000, 2)
+        
         user = None
         password_valid = False
-        for candidate in ordered_candidates:
-            if await run_in_threadpool(
+        t_pw_start = time.perf_counter()
+        for idx, candidate in enumerate(ordered_candidates):
+            c_start = time.perf_counter()
+            matched = await run_in_threadpool(
                 verify_password, credentials.password, candidate.hashed_password
-            ):
+            )
+            c_dur = round((time.perf_counter() - c_start) * 1000, 2)
+            candidate_timings.append({
+                "candidate_index": idx,
+                "verified": matched,
+                "duration_ms": c_dur,
+            })
+            if matched:
                 user = candidate
                 password_valid = True
                 break
+        t_pw_ms = round((time.perf_counter() - t_pw_start) * 1000, 2)
     else:
         # Lookup user record
         result = await db.execute(
             select(User).where(User.email == normalized_email)
         )
         user = result.scalar_one_or_none()
+        t_lookup_ms = round((time.perf_counter() - t_lookup_start) * 1000, 2)
+        
+        t_pw_start = time.perf_counter()
         password_valid = bool(user) and await run_in_threadpool(
             verify_password, credentials.password, user.hashed_password
         )
+        t_pw_ms = round((time.perf_counter() - t_pw_start) * 1000, 2)
+        if user:
+            candidate_timings.append({
+                "candidate_index": 0,
+                "verified": password_valid,
+                "duration_ms": t_pw_ms,
+            })
 
     if (
         not user
@@ -466,7 +520,21 @@ async def login_user(
         )
 
     # Generate access token and set HttpOnly refresh cookie
+    t_session_start = time.perf_counter()
     access_token = await set_refresh_cookie(response, user, db)
+    t_session_ms = round((time.perf_counter() - t_session_start) * 1000, 2)
+
+    t_total_ms = round((time.perf_counter() - t0) * 1000, 2)
+    timings = {
+        "db_lookup_ms": t_lookup_ms,
+        "password_verify_ms": t_pw_ms,
+        "candidates_evaluated": len(candidate_timings),
+        "refresh_session_and_commit_ms": t_session_ms,
+        "total_login_ms": t_total_ms,
+    }
+    if settings.DEBUG:
+        response.headers["X-Login-Breakdown"] = json.dumps(timings)
+    logger.info("Admin login timing breakdown: %s", timings)
 
     return AuthResponse(
         access_token=access_token,
@@ -694,27 +762,39 @@ async def refresh_session(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT,
              dependencies=[Depends(validate_session_origin)])
 async def logout_user(
+    response: Response,
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
     db: AsyncSession = Depends(get_db),
 ):
     """End the browser session by removing its HttpOnly refresh credential."""
     is_production = settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release"}
     if refresh_token:
-        decoded = decode_token(refresh_token, expected_type="refresh")
-        if decoded:
-            invalidate_session_cache(session_id=decoded.get("sid"), user_id=decoded.get("sub"))
-        await db.execute(update(AuthSession).where(
-            AuthSession.token_hash == hashlib.sha256(refresh_token.encode()).hexdigest(),
-            AuthSession.invalidated_at.is_(None),
-        ).values(invalidated_at=datetime.now(timezone.utc)))
-        await db.commit()
-    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+        try:
+            decoded = decode_token(refresh_token, expected_type="refresh")
+            if decoded:
+                invalidate_session_cache(session_id=decoded.get("sid"), user_id=decoded.get("sub"))
+            await db.execute(update(AuthSession).where(
+                AuthSession.token_hash == hashlib.sha256(refresh_token.encode()).hexdigest(),
+                AuthSession.invalidated_at.is_(None),
+            ).values(invalidated_at=datetime.now(timezone.utc)))
+            await db.commit()
+        except Exception as e:
+            logger.warning("Session revocation error during logout: %s", e)
+            await db.rollback()
+    response.status_code = status.HTTP_204_NO_CONTENT
     response.delete_cookie(
         key=REFRESH_COOKIE_NAME,
         httponly=True,
         secure=is_production,
         samesite="none" if is_production else "lax",
         path="/api/auth",
+    )
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        httponly=True,
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+        path="/",
     )
     return response
 

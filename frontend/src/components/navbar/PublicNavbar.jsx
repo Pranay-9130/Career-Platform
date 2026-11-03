@@ -457,8 +457,8 @@ export default function PublicNavbar() {
               <div className="pt-3 mt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => {
-                    logout();
+                  onClick={async () => {
+                    await logout();
                     setMobileMenuOpen(false);
                   }}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200"

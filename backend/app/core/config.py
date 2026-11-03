@@ -60,6 +60,23 @@ class Settings(BaseSettings):
             return [str(o).rstrip("/") for o in v if o]
         return v
 
+    @field_validator("ADMIN_EMAILS", mode="before")
+    @classmethod
+    def parse_admin_emails(cls, v):
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(v_str)
+                    return [str(o).strip().lower() for o in parsed if o]
+                except Exception:
+                    return [o.strip().lower() for o in v_str.strip("[]").split(",") if o.strip()]
+            return [o.strip().lower() for o in v_str.split(",") if o.strip()]
+        elif isinstance(v, list):
+            return [str(o).strip().lower() for o in v if o]
+        return v
+
     # Database Configuration (PostgreSQL default, SQLite fallback for unit testing)
     DATABASE_URL: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/career_platform",
@@ -137,6 +154,11 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ADMIN_USERNAME: str = "pranay"
     ADMIN_EMAIL: str = "pranay@careerplatform.com"
+    ADMIN_EMAILS: Union[List[str], str] = [
+        "pranaykumarr800@gmail.com",
+        "pranay@careerplatform.com",
+        "admin@careerplatform.com",
+    ]
 
     # Google Authentication (OAuth2 / Identity Services)
     GOOGLE_CLIENT_ID: str = ""

@@ -31,9 +31,9 @@ export default function AdminNavbar({ onToggleSidebar }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setAdminDropdownOpen(false);
-    logout();
+    await logout();
     navigate('/login', { replace: true });
   };
 

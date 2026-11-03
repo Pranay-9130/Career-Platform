@@ -32,8 +32,8 @@ export default function LoginPage() {
 
   const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setHasExistingSession(false);
   };
 

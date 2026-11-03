@@ -13,9 +13,10 @@ export const authService = {
   clearAuth: () => authStorage.clear(),
 
   logout: async () => {
-    authStorage.clear();
     try {
       await api.post('/auth/logout');
+    } catch (error) {
+      console.warn('Logout request completed with notice:', error);
     } finally {
       authStorage.clear();
     }

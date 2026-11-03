@@ -141,3 +141,86 @@ async def test_admin_queue_loads_with_joined_profile(client, db_session):
     assert projects[0]["slug"] == "portfolio-platform"
     assert projects[0]["author_username"] == "studentdev"
     assert projects[0]["author_name"] == "Student Dev"
+
+
+@pytest.mark.asyncio
+async def test_admin_login_secondary_admin_authenticates(client, db_session):
+    """Admin login with admin username authenticates against secondary admin if primary password differs."""
+    primary_admin = User(
+        email="pranaykumarr800@gmail.com",
+        full_name="Primary Admin",
+        role=UserRole.ADMIN,
+        hashed_password=get_password_hash("PrimaryPass123!"),
+        is_active=True,
+        is_verified=True,
+    )
+    secondary_admin = User(
+        email="secondadmin@careerplatform.com",
+        full_name="Second Admin",
+        role=UserRole.ADMIN,
+        hashed_password=get_password_hash("SecondaryPass123!"),
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add_all([primary_admin, secondary_admin])
+    await db_session.commit()
+
+    # Login with secondary password authenticates successfully
+    resp = await client.post("/api/auth/login", json={
+        "email": settings.ADMIN_USERNAME,
+        "password": "SecondaryPass123!",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["user"]["email"] == "secondadmin@careerplatform.com"
+
+
+@pytest.mark.asyncio
+async def test_login_timing_instrumentation_is_sanitized(client, db_session):
+    """Login timing instrumentation does not expose emails or private identifiers."""
+    admin = User(
+        email=settings.ADMIN_EMAIL.strip().lower(),
+        full_name="Admin",
+        role=UserRole.ADMIN,
+        hashed_password=get_password_hash("AdminPass123!"),
+        is_active=True,
+        is_verified=True,
+    )
+    db_session.add(admin)
+    await db_session.commit()
+
+    resp = await client.post("/api/auth/login", json={
+        "email": settings.ADMIN_USERNAME,
+        "password": "AdminPass123!",
+    })
+    assert resp.status_code == 200
+    # If timing header is returned, verify no email leak
+    if "X-Login-Breakdown" in resp.headers:
+        header_val = resp.headers["X-Login-Breakdown"]
+        assert settings.ADMIN_EMAIL not in header_val
+        assert "pranaykumarr800" not in header_val
+        assert "@" not in header_val
+
+
+@pytest.mark.asyncio
+async def test_logout_works_without_access_token_and_deletes_cookies(client):
+    """Logout responds with HTTP 204 and clears cookies even without Authorization bearer token."""
+    resp = await client.post(
+        "/api/auth/logout",
+        headers={"origin": "https://aspirepath.vercel.app"},
+    )
+    assert resp.status_code == 204
+    set_cookie_headers = resp.headers.get_list("set-cookie")
+    assert any("career_platform_refresh" in h for h in set_cookie_headers)
+
+
+@pytest.mark.asyncio
+async def test_validate_session_origin_blocks_malicious_subdomain(client):
+    """Cookie-authenticated mutations reject spoofed or attacker-controlled origins."""
+    resp = await client.post(
+        "/api/auth/logout",
+        headers={"origin": "https://evil-aspirepath.vercel.app"},
+    )
+    assert resp.status_code == 403
+    assert "not allowed" in resp.json()["detail"]
+

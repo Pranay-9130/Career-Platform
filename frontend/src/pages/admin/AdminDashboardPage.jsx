@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -243,15 +243,25 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  const lastActiveTabRef = useRef(null);
+  const lastLoadedSubTabRef = useRef(null);
+
   useEffect(() => {
     if (activeTab === 'overview') {
-      Promise.all([fetchStats(), fetchQueue()]);
+      if (lastActiveTabRef.current !== 'overview') {
+        Promise.all([fetchStats(), fetchQueue()]);
+      }
     } else {
-      fetchStats();
+      if (lastActiveTabRef.current !== activeTab) {
+        fetchStats();
+      }
     }
+    lastActiveTabRef.current = activeTab;
   }, [activeTab, fetchStats, fetchQueue]);
 
   useEffect(() => {
+    if (lastLoadedSubTabRef.current === activeTab) return;
+    lastLoadedSubTabRef.current = activeTab;
     if (activeTab === 'projects') {
       fetchQueue();
     }

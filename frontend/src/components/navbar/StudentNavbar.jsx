@@ -38,9 +38,9 @@ export default function StudentNavbar({ onToggleSidebar }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setProfileDropdownOpen(false);
-    logout();
+    await logout();
     navigate('/login', { replace: true });
   };
 

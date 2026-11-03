@@ -101,10 +101,15 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    authService.logout().catch(() => {});
-    setToken(null);
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn('Logout notice:', error);
+    } finally {
+      setToken(null);
+      setUser(null);
+    }
   }, []);
 
   const updateUser = useCallback((updatedFields) => {
