@@ -33,8 +33,8 @@ export function AuthProvider({ children }) {
             }
           }
         }
-      } else {
-        // Access token is missing from storage, but a valid HttpOnly refresh cookie might exist
+      } else if (authStorage.hasActiveSessionHint()) {
+        // Access token is missing, but an active session hint exists (silent token restoration)
         try {
           const refreshData = await authService.refreshToken();
           if (active && refreshData?.access_token && refreshData?.user) {
@@ -47,6 +47,12 @@ export function AuthProvider({ children }) {
             setToken(null);
             setUser(null);
           }
+        }
+      } else {
+        // Guest or logged out: do not dispatch a doomed refresh request
+        if (active) {
+          setToken(null);
+          setUser(null);
         }
       }
 

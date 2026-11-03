@@ -1,5 +1,6 @@
 const TOKEN_KEY = 'career_platform_token';
 const USER_KEY = 'career_platform_user';
+const SESSION_INDICATOR_KEY = 'career_platform_session_active';
 
 const stores = () => [window.localStorage, window.sessionStorage];
 
@@ -25,6 +26,10 @@ export const authStorage = {
     });
   },
 
+  hasActiveSessionHint() {
+    return safely(false, () => Boolean(window.localStorage.getItem(SESSION_INDICATOR_KEY)));
+  },
+
   setSession(token, user, persistent = true) {
     safely(undefined, () => {
       const target = persistent ? window.localStorage : window.sessionStorage;
@@ -33,6 +38,7 @@ export const authStorage = {
       other.removeItem(USER_KEY);
       target.setItem(TOKEN_KEY, token);
       target.setItem(USER_KEY, JSON.stringify(user));
+      window.localStorage.setItem(SESSION_INDICATOR_KEY, 'true');
     });
   },
 
@@ -42,8 +48,12 @@ export const authStorage = {
       const target = usePersistent ? window.localStorage : window.sessionStorage;
       const other = usePersistent ? window.sessionStorage : window.localStorage;
       other.removeItem(TOKEN_KEY);
-      if (token) target.setItem(TOKEN_KEY, token);
-      else target.removeItem(TOKEN_KEY);
+      if (token) {
+        target.setItem(TOKEN_KEY, token);
+        window.localStorage.setItem(SESSION_INDICATOR_KEY, 'true');
+      } else {
+        target.removeItem(TOKEN_KEY);
+      }
     });
   },
 
@@ -63,6 +73,7 @@ export const authStorage = {
         store.removeItem(TOKEN_KEY);
         store.removeItem(USER_KEY);
       });
+      window.localStorage.removeItem(SESSION_INDICATOR_KEY);
     });
   },
 };

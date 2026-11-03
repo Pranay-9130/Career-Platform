@@ -532,9 +532,14 @@ async def login_user(
         "refresh_session_and_commit_ms": t_session_ms,
         "total_login_ms": t_total_ms,
     }
-    if settings.DEBUG:
-        response.headers["X-Login-Breakdown"] = json.dumps(timings)
-    logger.info("Admin login timing breakdown: %s", timings)
+    response.headers["X-Login-Breakdown"] = json.dumps(timings)
+    response.headers["Server-Timing"] = (
+        f"lookup;dur={t_lookup_ms}, "
+        f"bcrypt;dur={t_pw_ms}, "
+        f"session;dur={t_session_ms}, "
+        f"total;dur={t_total_ms}"
+    )
+    logger.info("Login timing breakdown: %s", timings)
 
     return AuthResponse(
         access_token=access_token,
