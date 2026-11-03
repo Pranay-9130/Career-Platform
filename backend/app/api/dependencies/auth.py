@@ -1,3 +1,4 @@
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, Any, Dict, Tuple
@@ -86,11 +87,14 @@ async def get_current_user(
     return user
 
 
-def register_active_session(session_id: Any, user_id: Any) -> None:
+def register_active_session(session_id: Any = None, user_id: Any = None) -> None:
+    """Safe no-op helper preserved for backwards compatibility."""
     pass
 
 def invalidate_session_cache(session_id: Optional[Any] = None, user_id: Optional[Any] = None) -> None:
+    """Safe no-op helper preserved for backwards compatibility."""
     pass
+
 
 async def session_is_active(session_id: str, user_id: uuid.UUID, db: AsyncSession) -> bool:
     try:
@@ -98,11 +102,14 @@ async def session_is_active(session_id: str, user_id: uuid.UUID, db: AsyncSessio
     except (ValueError, TypeError):
         return False
 
-    result = await db.execute(select(AuthSession.id).where(
-        AuthSession.id == identifier, AuthSession.user_id == user_id,
-        AuthSession.invalidated_at.is_(None),
-        AuthSession.expires_at > datetime.now(timezone.utc),
-    ))
+    result = await db.execute(
+        select(AuthSession.id).where(
+            AuthSession.id == identifier,
+            AuthSession.user_id == user_id,
+            AuthSession.invalidated_at.is_(None),
+            AuthSession.expires_at > datetime.now(timezone.utc),
+        )
+    )
     return result.scalar_one_or_none() is not None
 
 

@@ -5,16 +5,32 @@ import jwt
 from passlib.context import CryptContext
 from app.core.config import settings
 
-# Password hashing context (Bcrypt / Argon2)
+import bcrypt
+
+# Password hashing context (Bcrypt / Argon2 fallback)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a raw password against its stored hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a raw password against its stored hash with optimized direct bcrypt execution."""
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        if hashed_password.startswith(("$2a$", "$2b$", "$2y$")):
+            return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        pass
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 def get_password_hash(password: str) -> str:
-    """Generate secure hash for a plaintext password."""
-    return pwd_context.hash(password)
+    """Generate secure bcrypt hash with balanced round complexity."""
+    try:
+        salt = bcrypt.gensalt(rounds=11)
+        return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+    except Exception:
+        return pwd_context.hash(password)
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """Create a signed JWT access token."""

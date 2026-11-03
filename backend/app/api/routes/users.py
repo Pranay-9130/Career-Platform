@@ -258,21 +258,30 @@ async def get_dashboard_summary(
             applications_applied + interviews_scheduled_count + applications_offer + applications_rejected
         )
 
-        # C. Bookmarks & Unread Notifications (Consolidated in single roundtrip)
+        # C. Bookmarks, Notifications, Skills & Career Preferences (Consolidated in single roundtrip)
         stmt_counts = select(
             select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == current_user.id).scalar_subquery(),
             select(func.count(JobBookmark.id)).where(JobBookmark.user_id == current_user.id).scalar_subquery(),
             select(func.count(Notification.id)).where(Notification.user_id == current_user.id, Notification.is_read.is_(False)).scalar_subquery(),
+            select(func.count(StudentSkill.id)).where(StudentSkill.user_id == current_user.id, StudentSkill.is_confirmed.is_(True)).scalar_subquery(),
+            select(func.count(StudentSkill.id)).where(StudentSkill.user_id == current_user.id, StudentSkill.status.in_(["Learning", "Practiced", "Completed"])).scalar_subquery(),
+            select(StudentTargetRole.target_role).where(StudentTargetRole.user_id == current_user.id).limit(1).scalar_subquery(),
         )
         counts_res = (await db.execute(stmt_counts)).one()
         pb_count = counts_res[0] or 0
         jb_count = counts_res[1] or 0
         saved_items_count = pb_count + jb_count
         unread_notifications_count = counts_res[2] or 0
+        confirmed_skills_count = counts_res[3] or 0
+        active_roadmap_skills = counts_res[4] or 0
+        target_role_name = counts_res[5]
+        has_target_role = bool(target_role_name and str(target_role_name).strip())
 
-        # D. Profile Completion
-        stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
-        profile = (await db.scalars(stmt_prof)).first()
+        # D. Profile Completion (use in-memory profile if already loaded)
+        profile = getattr(current_user, "profile", None)
+        if profile is None:
+            stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
+            profile = (await db.scalars(stmt_prof)).first()
         profile_completion = calculate_profile_completion(current_user, profile) if profile else (25 if current_user.full_name else 0)
 
         # E. Resume Record Check & Accurate Resume Completion
@@ -501,24 +510,9 @@ async def get_dashboard_summary(
         res_pts += 10
     res_pts = min(res_pts, 20)
 
-    # 3. Skills & Roadmap (20% weight)
-    stmt_target_role = select(StudentTargetRole).where(StudentTargetRole.user_id == current_user.id)
-    target_role_rec = (await db.scalars(stmt_target_role)).first()
-    has_target_role = bool(target_role_rec and target_role_rec.target_role)
-
-    stmt_confirmed_skills = select(func.count(StudentSkill.id)).where(
-        StudentSkill.user_id == current_user.id,
-        StudentSkill.is_confirmed == True,
-    )
-    confirmed_skills_count = (await db.scalar(stmt_confirmed_skills)) or 0
+    # 3. Skills & Roadmap (20% weight - computed in consolidated roundtrip)
     if profile and profile.skills and confirmed_skills_count == 0:
         confirmed_skills_count = len(profile.skills)
-
-    stmt_active_roadmap = select(func.count(StudentSkill.id)).where(
-        StudentSkill.user_id == current_user.id,
-        StudentSkill.status.in_(["Learning", "Practiced", "Completed"]),
-    )
-    active_roadmap_skills = (await db.scalar(stmt_active_roadmap)) or 0
 
     skills_pts = 0
     if has_target_role:
