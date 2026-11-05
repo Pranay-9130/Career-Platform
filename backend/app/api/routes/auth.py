@@ -25,7 +25,6 @@ from app.core.security import (
     decode_token,
 )
 from app.models.user import User, UserRole
-from app.models.otp import OTPVerification
 from app.models.password_reset import PasswordResetToken
 from app.models.auth_session import AuthSession
 from app.schemas.user import UserRead, UserCreate, UserLogin, GoogleLoginRequest, AuthResponse
@@ -41,7 +40,6 @@ from app.schemas.password_reset import (
     ResetPasswordRequest,
     PasswordResetResponse,
 )
-from app.utils.otp import generate_secure_otp, hash_otp, verify_otp_hash
 from app.services.email_service import EmailService
 from app.api.dependencies.auth import (
     get_current_active_user,
@@ -185,230 +183,32 @@ async def register_user(
 @router.post(
     "/resend-otp",
     response_model=OTPResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Resend a 6-digit email OTP with rate-limiting cooldown",
-    dependencies=[Depends(auth_rate_limiter)],
+    status_code=status.HTTP_410_GONE,
+    summary="[Deprecated] Legacy OTP verification retired",
 )
 @router.post(
     "/send-otp",
     response_model=OTPResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Generate and dispatch a 6-digit email OTP",
-    dependencies=[Depends(auth_rate_limiter)],
+    status_code=status.HTTP_410_GONE,
+    summary="[Deprecated] Legacy OTP verification retired",
 )
-async def send_or_resend_otp(
-    req: OTPRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Generates and emails a new 6-digit OTP.
-    Enforces a 60-second cooldown period between successive OTP requests.
-    """
-    normalized_email = req.email.strip().lower()
-
-    # Verify user exists
-    user_query = await db.execute(
-        select(User).where(User.email == normalized_email)
-    )
-    user = user_query.scalar_one_or_none()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account associated with this email address was found.",
-        )
-
-    if user.is_verified and req.purpose == "registration":
-        return OTPResponse(
-            success=True,
-            message="Your account is already verified. You can log in directly.",
-            email=normalized_email,
-            cooldown_seconds=0,
-            expires_in_seconds=0,
-        )
-
-    # Check resend cooldown on the most recent OTP
-    recent_otp_query = await db.execute(
-        select(OTPVerification)
-        .where(
-            OTPVerification.email == normalized_email,
-            OTPVerification.purpose == req.purpose,
-        )
-        .order_by(desc(OTPVerification.created_at))
-    )
-    last_otp = recent_otp_query.scalars().first()
-
-    now_utc = datetime.now(timezone.utc)
-    if last_otp and last_otp.created_at:
-        # Calculate elapsed seconds (handle tz-aware datetime)
-        last_created = last_otp.created_at
-        if last_created.tzinfo is None:
-            last_created = last_created.replace(tzinfo=timezone.utc)
-        elapsed = (now_utc - last_created).total_seconds()
-
-        if elapsed < settings.OTP_RESEND_COOLDOWN_SECONDS:
-            remaining = int(settings.OTP_RESEND_COOLDOWN_SECONDS - elapsed)
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Please wait {remaining} seconds before requesting a new verification code.",
-            )
-
-    # Invalidate previous unexpired OTPs for this purpose
-    previous_otps_query = await db.execute(
-        select(OTPVerification).where(
-            OTPVerification.email == normalized_email,
-            OTPVerification.purpose == req.purpose,
-            OTPVerification.invalidated_at.is_(None),
-        )
-    )
-    for prev in previous_otps_query.scalars().all():
-        prev.invalidated_at = now_utc
-
-    # Generate new secure 6-digit OTP
-    otp_code = generate_secure_otp(6)
-    expires_at = now_utc + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
-
-    new_otp_record = OTPVerification(
-        user_id=user.id,
-        email=normalized_email,
-        otp_hash=hash_otp(otp_code),
-        purpose=req.purpose,
-        attempt_count=0,
-        max_attempts=settings.OTP_MAX_ATTEMPTS,
-        expires_at=expires_at,
-    )
-    db.add(new_otp_record)
-    await db.flush()
-
-    # Dispatch email
-    delivered = await EmailService.send_otp_email(
-        to_email=normalized_email,
-        otp_code=otp_code,
-        recipient_name=user.full_name,
-        purpose=req.purpose,
-    )
-    if not delivered:
-        await db.rollback()
-        raise HTTPException(status_code=503, detail="Verification email could not be delivered. Please try again later.")
-    await db.commit()
-
-    return OTPResponse(
-        success=True,
-        message="A new 6-digit verification code has been dispatched to your email.",
-        email=normalized_email,
-        cooldown_seconds=settings.OTP_RESEND_COOLDOWN_SECONDS,
-        expires_in_seconds=settings.OTP_EXPIRE_MINUTES * 60,
+async def send_or_resend_otp(req: OTPRequest = None):
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="OTP verification has been retired. Student accounts are active immediately upon registration.",
     )
 
 
 @router.post(
     "/verify-otp",
     response_model=OTPVerificationSuccessResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Verify 6-digit OTP code and activate account",
+    status_code=status.HTTP_410_GONE,
+    summary="[Deprecated] Legacy OTP verification retired",
 )
-async def verify_otp(
-    req: OTPVerifyRequest,
-    response: Response,
-    db: AsyncSession = Depends(get_db),
-):
-    """
-    Validates the submitted 6-digit OTP against the stored cryptographic hash.
-    Enforces maximum attempt limits (max 5) and marks the account as verified upon success.
-    """
-    normalized_email = req.email.strip().lower()
-
-    # Retrieve user
-    user_query = await db.execute(
-        select(User).where(User.email == normalized_email)
-    )
-    user = user_query.scalar_one_or_none()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User account not found.",
-        )
-
-    # Retrieve latest active OTP record for this email and purpose
-    otp_query = await db.execute(
-        select(OTPVerification)
-        .where(
-            OTPVerification.email == normalized_email,
-            OTPVerification.purpose == req.purpose,
-            OTPVerification.invalidated_at.is_(None),
-        )
-        .order_by(desc(OTPVerification.created_at))
-    )
-    otp_record = otp_query.scalars().first()
-
-    now_utc = datetime.now(timezone.utc)
-
-    if not otp_record:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No active verification code found. Please request a new code.",
-        )
-
-    # Check expiration
-    record_expires = otp_record.expires_at
-    if record_expires.tzinfo is None:
-        record_expires = record_expires.replace(tzinfo=timezone.utc)
-
-    if now_utc > record_expires:
-        otp_record.invalidated_at = now_utc
-        await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The verification code has expired. Please request a new code.",
-        )
-
-    # Check attempt limit
-    if otp_record.attempt_count >= otp_record.max_attempts:
-        otp_record.invalidated_at = now_utc
-        await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Maximum verification attempts exceeded. Please request a new code.",
-        )
-
-    # Validate OTP hash
-    if not verify_otp_hash(req.otp, otp_record.otp_hash):
-        otp_record.attempt_count += 1
-        if otp_record.attempt_count >= otp_record.max_attempts:
-            otp_record.invalidated_at = now_utc
-            await db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Incorrect verification code. Maximum attempts reached. Please request a new code.",
-            )
-        await db.commit()
-        remaining_attempts = otp_record.max_attempts - otp_record.attempt_count
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid verification code. {remaining_attempts} attempt(s) remaining.",
-        )
-
-    # Code matches: Invalidate OTP and verify user account
-    otp_record.invalidated_at = now_utc
-    user.is_verified = True
-    await db.commit()
-    await db.refresh(user)
-
-    # Generate refreshed access token with verified status
-    access_token = create_access_token(
-        data={
-            "sub": str(user.id),
-            "email": user.email,
-            "role": user.role.value,
-        }
-    )
-    access_token = await set_refresh_cookie(response, user, db)
-
-    return OTPVerificationSuccessResponse(
-        success=True,
-        message="Account verified successfully! Welcome to Student Career Platform.",
-        is_verified=True,
-        user=user,
-        access_token=access_token,
+async def verify_otp(req: OTPVerifyRequest = None):
+    raise HTTPException(
+        status_code=status.HTTP_410_GONE,
+        detail="OTP verification has been retired. Student accounts are active immediately upon registration.",
     )
 
 

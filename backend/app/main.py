@@ -14,15 +14,15 @@ async def lifespan(app: FastAPI):
     Application startup and shutdown lifecycle management.
     Initializes database schema. Accounts are registered or provisioned explicitly.
     """
+    if settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release", "test"}:
+        yield
+        return
+
     from app.core.database import engine, Base, AsyncSessionLocal
     from sqlalchemy import select, func
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    if settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release"}:
-        yield
-        return
 
     async with AsyncSessionLocal() as session:
         # Seed demo jobs for jobs & internship discovery if not present

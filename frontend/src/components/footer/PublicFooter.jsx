@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Github, Linkedin, Instagram, Mail, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Linkedin, Instagram, Mail, Sparkles } from 'lucide-react';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -55,15 +55,6 @@ export default function PublicFooter() {
                 className="w-8 h-8 rounded-lg bg-slate-50 border border-brand-border flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-brand-veryLight transition-colors"
               >
                 <Instagram className="w-4 h-4" />
-              </a>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub"
-                className="w-8 h-8 rounded-lg bg-slate-50 border border-brand-border flex items-center justify-center text-slate-500 hover:text-brand-primary hover:bg-brand-veryLight transition-colors"
-              >
-                <Github className="w-4 h-4" />
               </a>
             </div>
 
