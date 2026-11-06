@@ -34,6 +34,7 @@ class Job(BaseUUIDModel):
     eligible_batches = Column(JSON, default=list, nullable=False)
     candidate_type = Column(String(50), nullable=True)
     eligible_qualifications = Column(JSON, default=list, nullable=False)
+    experience_requirements = Column(String(100), nullable=True)
 
     def __repr__(self) -> str:
         return f"<Job {self.title} at {self.company_name} (type={self.job_type}, mode={self.work_mode})>"

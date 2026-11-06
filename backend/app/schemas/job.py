@@ -77,6 +77,17 @@ class JobBase(BaseModel):
     eligible_batches: List[str] = Field(default_factory=list)
     candidate_type: Optional[str] = None
     eligible_qualifications: List[str] = Field(default_factory=list)
+    experience_requirements: Optional[str] = Field(default=None, max_length=100)
+
+    @field_validator("experience_requirements", mode="before")
+    @classmethod
+    def validate_experience_requirements(cls, v):
+        if not v:
+            return None
+        v_clean = str(v).strip()
+        if not v_clean or v_clean.lower() == "not specified":
+            return None
+        return v_clean
 
     @field_validator("candidate_type", mode="before")
     @classmethod
@@ -172,6 +183,17 @@ class JobUpdate(BaseModel):
     eligible_batches: Optional[List[str]] = None
     candidate_type: Optional[str] = None
     eligible_qualifications: Optional[List[str]] = None
+    experience_requirements: Optional[str] = None
+
+    @field_validator("experience_requirements", mode="before")
+    @classmethod
+    def validate_update_experience_requirements(cls, v):
+        if v is None:
+            return None
+        v_clean = str(v).strip()
+        if not v_clean or v_clean.lower() == "not specified":
+            return None
+        return v_clean
 
     @field_validator("candidate_type", mode="before")
     @classmethod

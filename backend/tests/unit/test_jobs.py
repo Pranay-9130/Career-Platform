@@ -402,3 +402,98 @@ async def test_job_eligibility_fields_and_filtering(client, db_session):
     assert job2["id"] in qual_job_ids
     assert job4["id"] in qual_job_ids
     assert job3["id"] not in qual_job_ids
+
+
+@pytest.mark.asyncio
+async def test_job_experience_requirements_lifecycle_and_independence(client):
+    """
+    Experience requirements can be created, updated, and operate completely independently
+    of graduation batches, candidate types, and eligible qualifications.
+    """
+    app.dependency_overrides[get_current_active_user] = lambda: admin_user
+
+    # 1. Create job without experience requirement (backward-compatible, defaults to None)
+    resp1 = await client.post(
+        "/api/jobs",
+        json={
+            "title": "Unspecified Exp Role",
+            "company_name": "Tech Corp",
+            "location": "Remote",
+            "job_type": "Full-time",
+            "work_mode": "Remote",
+            "experience_level": "Mid Level",
+            "domain": "Software Engineering",
+            "description": "General role without experience requirement specified",
+            "application_method": "INTERNAL",
+        },
+    )
+    assert resp1.status_code == 201
+    job1 = resp1.json()
+    assert job1["experience_requirements"] is None
+
+    # 2. Create job with preset experience requirement (e.g. 3–5 Years)
+    resp2 = await client.post(
+        "/api/jobs",
+        json={
+            "title": "Senior Backend Dev",
+            "company_name": "Tech Corp",
+            "location": "Bengaluru",
+            "job_type": "Full-time",
+            "work_mode": "Hybrid",
+            "experience_level": "Senior Level",
+            "domain": "Software Engineering",
+            "description": "Senior engineer position",
+            "application_method": "INTERNAL",
+            "experience_requirements": "3–5 Years",
+        },
+    )
+    assert resp2.status_code == 201
+    job2 = resp2.json()
+    assert job2["experience_requirements"] == "3–5 Years"
+
+    # 3. Create job with custom open-ended experience requirement (e.g. 3+ Years)
+    # and NO graduation batches specified (testing true independence)
+    resp3 = await client.post(
+        "/api/jobs",
+        json={
+            "title": "Staff Architect",
+            "company_name": "Enterprise Inc",
+            "location": "Remote",
+            "job_type": "Full-time",
+            "work_mode": "Remote",
+            "experience_level": "Lead",
+            "domain": "Cloud Computing",
+            "description": "Staff architect with 3+ years experience",
+            "application_method": "INTERNAL",
+            "experience_requirements": "3+ Years",
+            "candidate_type": "Experienced Only",
+            # No eligible_batches or eligible_qualifications specified
+        },
+    )
+    assert resp3.status_code == 201
+    job3 = resp3.json()
+    assert job3["experience_requirements"] == "3+ Years"
+    assert job3["eligible_batches"] == []
+    assert job3["candidate_type"] == "Experienced Only"
+    assert job3["eligible_qualifications"] == []
+
+    # 4. Update experience requirements
+    resp_up = await client.put(
+        f"/api/jobs/{job1['id']}",
+        json={"experience_requirements": "1–2 Years"},
+    )
+    assert resp_up.status_code == 200
+    assert resp_up.json()["experience_requirements"] == "1–2 Years"
+
+    # 5. Clear experience requirements by setting to None or "Not Specified"
+    resp_clear = await client.put(
+        f"/api/jobs/{job1['id']}",
+        json={"experience_requirements": "Not Specified"},
+    )
+    assert resp_clear.status_code == 200
+    assert resp_clear.json()["experience_requirements"] is None
+
+    # 6. Fetch via public endpoint
+    resp_get = await client.get(f"/api/jobs/{job3['id']}")
+    assert resp_get.status_code == 200
+    assert resp_get.json()["experience_requirements"] == "3+ Years"

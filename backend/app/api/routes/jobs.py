@@ -425,6 +425,7 @@ async def create_job(payload: JobCreate, db: AsyncSession = Depends(get_db)):
         eligible_batches=payload.eligible_batches or [],
         candidate_type=payload.candidate_type,
         eligible_qualifications=payload.eligible_qualifications or [],
+        experience_requirements=payload.experience_requirements,
     )
     db.add(new_job)
     await db.commit()

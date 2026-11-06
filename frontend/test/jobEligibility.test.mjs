@@ -5,6 +5,9 @@ import {
   ELIGIBLE_BATCH_OPTIONS,
   CANDIDATE_TYPE_OPTIONS,
   ELIGIBLE_QUALIFICATION_OPTIONS,
+  EXPERIENCE_REQUIREMENT_OPTIONS,
+  formatCustomExperience,
+  parseExperienceRequirements,
   getJobEligibilityDetails,
   checkProfileEligibilityMatch,
 } from '../src/utils/jobHelpers.js';
@@ -115,4 +118,107 @@ test('checkProfileEligibilityMatch evaluates matching status correctly', () => {
   // 6. Logged out / null profile
   const resLoggedOut = checkProfileEligibilityMatch(job, null);
   assert.equal(resLoggedOut.status, 'unknown');
+});
+
+test('EXPERIENCE_REQUIREMENT_OPTIONS defines preset options', () => {
+  const expected = [
+    'Fresher (0 Years)',
+    '0–1 Years',
+    '1–2 Years',
+    '2–3 Years',
+    '3–5 Years',
+    '5–8 Years',
+    '8+ Years',
+  ];
+  assert.deepEqual(EXPERIENCE_REQUIREMENT_OPTIONS, expected);
+});
+
+test('formatCustomExperience formats min and max into standardized string', () => {
+  // Empty inputs
+  assert.equal(formatCustomExperience('', ''), '');
+  assert.equal(formatCustomExperience(null, null), '');
+
+  // Min only (open-ended e.g. 3+ years)
+  assert.equal(formatCustomExperience(3, ''), '3+ Years');
+  assert.equal(formatCustomExperience('3', ''), '3+ Years');
+  assert.equal(formatCustomExperience(0, ''), '0+ Years');
+
+  // Min and Max range
+  assert.equal(formatCustomExperience(3, 5), '3–5 Years');
+  assert.equal(formatCustomExperience('3', '5'), '3–5 Years');
+  assert.equal(formatCustomExperience(0, 2), '0–2 Years');
+
+  // Min == Max
+  assert.equal(formatCustomExperience(2, 2), '2 Years');
+  assert.equal(formatCustomExperience(0, 0), 'Fresher (0 Years)');
+
+  // Invalid: max < min
+  assert.equal(formatCustomExperience(5, 3), '');
+
+  // Invalid: negative numbers
+  assert.equal(formatCustomExperience(-1, 5), '');
+});
+
+test('parseExperienceRequirements correctly identifies presets vs custom ranges', () => {
+  // Preset options
+  const fresher = parseExperienceRequirements('Fresher (0 Years)');
+  assert.equal(fresher.isPreset, true);
+  assert.equal(fresher.preset, 'Fresher (0 Years)');
+
+  const threeToFive = parseExperienceRequirements('3–5 Years');
+  assert.equal(threeToFive.isPreset, true);
+  assert.equal(threeToFive.preset, '3–5 Years');
+
+  // Open-ended custom: 3+ Years
+  const openEnded = parseExperienceRequirements('3+ Years');
+  assert.equal(openEnded.isPreset, false);
+  assert.equal(openEnded.min, '3');
+  assert.equal(openEnded.max, '');
+
+  // Custom range: 4–7 Years
+  const customRange = parseExperienceRequirements('4–7 Years');
+  assert.equal(customRange.isPreset, false);
+  assert.equal(customRange.min, '4');
+  assert.equal(customRange.max, '7');
+
+  // Single year custom: 4 Years
+  const singleCustom = parseExperienceRequirements('4 Years');
+  assert.equal(singleCustom.isPreset, false);
+  assert.equal(singleCustom.min, '4');
+  assert.equal(singleCustom.max, '4');
+
+  // Unspecified or null
+  const empty = parseExperienceRequirements(null);
+  assert.equal(empty.isPreset, false);
+  assert.equal(empty.min, '');
+  assert.equal(empty.max, '');
+});
+
+test('getJobEligibilityDetails includes experience_requirements and supports independent fields', () => {
+  // Job with only experience specified (e.g. 3+ years, no batch restriction)
+  const expOnlyJob = {
+    experience_requirements: '3+ Years',
+  };
+  const expDetails = getJobEligibilityDetails(expOnlyJob);
+  assert.equal(expDetails.experienceRequirements, '3+ Years');
+  assert.equal(expDetails.experienceRequirementsText, '3+ Years');
+  assert.equal(expDetails.isExperienceSpecified, true);
+  assert.equal(expDetails.batchesText, 'Not Specified');
+  assert.equal(expDetails.candidateTypeText, 'Not Specified');
+  assert.equal(expDetails.qualificationsText, 'Not Specified');
+  assert.equal(expDetails.hasAnyEligibility, true);
+
+  // Job with all 4 eligibility fields
+  const fullJob = {
+    eligible_batches: ['2027'],
+    candidate_type: 'Freshers Only',
+    experience_requirements: 'Fresher (0 Years)',
+    eligible_qualifications: ['B.Tech'],
+  };
+  const fullDetails = getJobEligibilityDetails(fullJob);
+  assert.equal(fullDetails.batchesText, '2027');
+  assert.equal(fullDetails.candidateTypeText, 'Freshers Only');
+  assert.equal(fullDetails.experienceRequirementsText, 'Fresher (0 Years)');
+  assert.equal(fullDetails.qualificationsText, 'B.Tech');
+  assert.equal(fullDetails.hasAnyEligibility, true);
 });

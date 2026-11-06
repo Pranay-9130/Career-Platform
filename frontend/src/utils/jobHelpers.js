@@ -383,27 +383,100 @@ export const ELIGIBLE_QUALIFICATION_OPTIONS = [
   'Other',
 ];
 
+export const EXPERIENCE_REQUIREMENT_OPTIONS = [
+  'Fresher (0 Years)',
+  '0–1 Years',
+  '1–2 Years',
+  '2–3 Years',
+  '3–5 Years',
+  '5–8 Years',
+  '8+ Years',
+];
+
+export function formatCustomExperience(min, max) {
+  const minClean = String(min ?? '').trim();
+  const maxClean = String(max ?? '').trim();
+
+  if (minClean === '' && maxClean === '') return '';
+
+  const minNum = minClean !== '' ? Number(minClean) : 0;
+  if (isNaN(minNum) || minNum < 0) return '';
+
+  if (maxClean === '') {
+    return `${minNum}+ Years`;
+  }
+
+  const maxNum = Number(maxClean);
+  if (isNaN(maxNum) || maxNum < minNum) return '';
+
+  if (minNum === 0 && maxNum === 0) {
+    return 'Fresher (0 Years)';
+  }
+
+  if (minNum === maxNum) {
+    return `${minNum} Years`;
+  }
+
+  return `${minNum}–${maxNum} Years`;
+}
+
+export function parseExperienceRequirements(val) {
+  if (!val || typeof val !== 'string') {
+    return { isPreset: false, preset: '', min: '', max: '' };
+  }
+  const trimmed = val.trim();
+  if (EXPERIENCE_REQUIREMENT_OPTIONS.includes(trimmed)) {
+    return { isPreset: true, preset: trimmed, min: '', max: '' };
+  }
+
+  const plusMatch = trimmed.match(/^(\d+)\+\s*Years?$/i);
+  if (plusMatch) {
+    return { isPreset: false, preset: 'Custom Range', min: plusMatch[1], max: '' };
+  }
+
+  const rangeMatch = trimmed.match(/^(\d+)\s*[–-]\s*(\d+)\s*Years?$/i);
+  if (rangeMatch) {
+    return { isPreset: false, preset: 'Custom Range', min: rangeMatch[1], max: rangeMatch[2] };
+  }
+
+  const singleMatch = trimmed.match(/^(\d+)\s*Years?$/i);
+  if (singleMatch) {
+    return { isPreset: false, preset: 'Custom Range', min: singleMatch[1], max: singleMatch[1] };
+  }
+
+  return { isPreset: false, preset: 'Custom Range', min: '', max: '' };
+}
+
 export function getJobEligibilityDetails(job) {
   const batches = Array.isArray(job?.eligible_batches) ? job.eligible_batches : [];
   const candidateType = job?.candidate_type || null;
   const qualifications = Array.isArray(job?.eligible_qualifications) ? job.eligible_qualifications : [];
+  const experienceRequirements = job?.experience_requirements || null;
 
   const batchesText = batches.length > 0 ? batches.join(', ') : 'Not Specified';
   const candidateTypeText = candidateType || 'Not Specified';
   const qualificationsText = qualifications.length > 0 ? qualifications.join(', ') : 'Not Specified';
+  const experienceRequirementsText = experienceRequirements || 'Not Specified';
 
-  const hasAnyEligibility = batches.length > 0 || Boolean(candidateType) || qualifications.length > 0;
+  const hasAnyEligibility =
+    batches.length > 0 ||
+    Boolean(candidateType) ||
+    Boolean(experienceRequirements) ||
+    qualifications.length > 0;
 
   return {
     batches,
     batchesText,
     candidateType,
     candidateTypeText,
+    experienceRequirements,
+    experienceRequirementsText,
     qualifications,
     qualificationsText,
     hasAnyEligibility,
     isBatchesSpecified: batches.length > 0,
     isCandidateTypeSpecified: Boolean(candidateType),
+    isExperienceSpecified: Boolean(experienceRequirements),
     isQualificationsSpecified: qualifications.length > 0,
   };
 }

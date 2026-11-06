@@ -30,6 +30,8 @@ export default function JobCard({
   candidateType,
   eligible_qualifications = [],
   eligibleQualifications = [],
+  experience_requirements,
+  experienceRequirements,
   application_start_date,
   applicationStartDate,
   deadline,
@@ -51,6 +53,7 @@ export default function JobCard({
   const displaySkills = skills || skills_required || [];
   const displayBatches = Array.isArray(eligible_batches) && eligible_batches.length ? eligible_batches : (Array.isArray(eligibleBatches) ? eligibleBatches : []);
   const displayCandidateType = candidate_type || candidateType || null;
+  const displayExperience = experience_requirements || experienceRequirements || null;
   const displayQualifications = Array.isArray(eligible_qualifications) && eligible_qualifications.length ? eligible_qualifications : (Array.isArray(eligibleQualifications) ? eligibleQualifications : []);
   const [saved, setSaved] = useState(initialSaved);
   const { isAuthenticated } = useAuth();
@@ -165,7 +168,7 @@ export default function JobCard({
         </div>
 
         {/* Compact Candidate Eligibility */}
-        {displayBatches.length > 0 || displayCandidateType || displayQualifications.length > 0 ? (
+        {displayBatches.length > 0 || displayCandidateType || displayExperience || displayQualifications.length > 0 ? (
           <div className="mb-4 p-2.5 rounded-lg bg-slate-50/90 border border-slate-200/80 text-[11px] space-y-1">
             <div className="font-semibold text-slate-700 flex items-center gap-1.5">
               <GraduationCap className="w-3.5 h-3.5 text-brand-primary shrink-0" />
@@ -182,6 +185,12 @@ export default function JobCard({
                 <div className="truncate">
                   <span className="text-slate-400">Candidate Type: </span>
                   <span className="font-medium text-slate-800">{displayCandidateType}</span>
+                </div>
+              )}
+              {displayExperience && (
+                <div className="truncate">
+                  <span className="text-slate-400">Experience: </span>
+                  <span className="font-medium text-slate-800">{displayExperience}</span>
                 </div>
               )}
               {displayQualifications.length > 0 && (

@@ -672,7 +672,7 @@ export default function JobsPage() {
                   <GraduationCap className="w-4 h-4 text-brand-primary" />
                   Job Eligibility
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200">
                     <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">
                       Graduation Batches
@@ -689,6 +689,14 @@ export default function JobsPage() {
                     </span>
                     <span className="font-bold text-slate-800 text-xs">
                       {selectedJob.candidate_type || 'Not Specified'}
+                    </span>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200">
+                    <span className="text-[10px] text-slate-400 block font-semibold mb-0.5">
+                      Experience Requirements
+                    </span>
+                    <span className="font-bold text-slate-800 text-xs">
+                      {selectedJob.experience_requirements || 'Not Specified'}
                     </span>
                   </div>
                   <div className="bg-white p-2.5 rounded-lg border border-slate-200">

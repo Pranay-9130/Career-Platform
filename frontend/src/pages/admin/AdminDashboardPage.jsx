@@ -52,6 +52,9 @@ import {
   ELIGIBLE_BATCH_OPTIONS,
   CANDIDATE_TYPE_OPTIONS,
   ELIGIBLE_QUALIFICATION_OPTIONS,
+  EXPERIENCE_REQUIREMENT_OPTIONS,
+  formatCustomExperience,
+  parseExperienceRequirements,
 } from '@/utils/jobHelpers';
 
 export default function AdminDashboardPage() {
@@ -139,6 +142,10 @@ export default function AdminDashboardPage() {
     eligible_batches: [],
     candidate_type: '',
     eligible_qualifications: [],
+    experience_requirements: '',
+    is_custom_experience: false,
+    custom_min_experience: '',
+    custom_max_experience: '',
   };
   const [jobFormData, setJobFormData] = useState(initialJobFormData);
 
@@ -402,6 +409,10 @@ export default function AdminDashboardPage() {
       eligible_batches: Array.isArray(job.eligible_batches) ? job.eligible_batches : [],
       candidate_type: job.candidate_type || '',
       eligible_qualifications: Array.isArray(job.eligible_qualifications) ? job.eligible_qualifications : [],
+      experience_requirements: job.experience_requirements || '',
+      is_custom_experience: Boolean(job.experience_requirements && !EXPERIENCE_REQUIREMENT_OPTIONS.includes(job.experience_requirements)),
+      custom_min_experience: parseExperienceRequirements(job.experience_requirements).min || '',
+      custom_max_experience: parseExperienceRequirements(job.experience_requirements).max || '',
     });
     setJobActionFeedback(null);
     setIsJobModalOpen(true);
@@ -481,7 +492,46 @@ export default function AdminDashboardPage() {
       ? new Date(jobFormData.deadline).toISOString()
       : null;
 
-    const { has_salary, immediate_start, no_deadline, ...cleanedData } = jobFormData;
+    // Validation for custom experience requirements
+    let finalExperience = null;
+    if (jobFormData.is_custom_experience) {
+      const minStr = String(jobFormData.custom_min_experience ?? '').trim();
+      const maxStr = String(jobFormData.custom_max_experience ?? '').trim();
+
+      if (minStr === '') {
+        setJobActionFeedback({
+          type: 'error',
+          text: 'Please enter a valid Minimum Experience (Years) for the custom range.',
+        });
+        return;
+      }
+
+      const minNum = Number(minStr);
+      if (isNaN(minNum) || minNum < 0) {
+        setJobActionFeedback({
+          type: 'error',
+          text: 'Minimum Experience must be a non-negative number.',
+        });
+        return;
+      }
+
+      if (maxStr !== '') {
+        const maxNum = Number(maxStr);
+        if (isNaN(maxNum) || maxNum < minNum) {
+          setJobActionFeedback({
+            type: 'error',
+            text: 'Maximum Experience cannot be less than Minimum Experience.',
+          });
+          return;
+        }
+      }
+
+      finalExperience = formatCustomExperience(minStr, maxStr);
+    } else if (jobFormData.experience_requirements && jobFormData.experience_requirements !== 'Not Specified') {
+      finalExperience = jobFormData.experience_requirements.trim();
+    }
+
+    const { has_salary, immediate_start, no_deadline, is_custom_experience, custom_min_experience, custom_max_experience, ...cleanedData } = jobFormData;
     const payload = {
       ...cleanedData,
       apply_url: calculatedApplyUrl,
@@ -494,6 +544,7 @@ export default function AdminDashboardPage() {
       eligible_batches: Array.isArray(jobFormData.eligible_batches) ? jobFormData.eligible_batches : [],
       candidate_type: jobFormData.candidate_type || null,
       eligible_qualifications: Array.isArray(jobFormData.eligible_qualifications) ? jobFormData.eligible_qualifications : [],
+      experience_requirements: finalExperience || null,
       skills_required: jobFormData.skills_required
         ? jobFormData.skills_required.split(',').map((s) => s.trim()).filter(Boolean)
         : [],
@@ -2207,7 +2258,7 @@ export default function AdminDashboardPage() {
                   Candidate Eligibility
                 </h4>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Specify graduation pass-out batch, experience type, and degree qualifications. Leave any field unselected if not restricted.
+                  Specify graduation pass-out batch, candidate type, experience requirements, and degree qualifications. Leave any field unselected if not restricted.
                 </p>
               </div>
 
@@ -2315,7 +2366,178 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
 
-              {/* C. Eligible Qualifications */}
+              {/* C. Experience Requirements */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-semibold text-slate-700">
+                    Experience Requirements
+                  </label>
+                  {(jobFormData.experience_requirements || jobFormData.is_custom_experience) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setJobFormData({
+                          ...jobFormData,
+                          experience_requirements: '',
+                          is_custom_experience: false,
+                          custom_min_experience: '',
+                          custom_max_experience: '',
+                        })
+                      }
+                      className="text-[11px] text-slate-500 hover:text-rose-600 font-medium cursor-pointer"
+                    >
+                      Clear Experience
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+                  {/* Not Specified option */}
+                  <label
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition ${
+                      !jobFormData.experience_requirements && !jobFormData.is_custom_experience
+                        ? 'border-brand-primary bg-brand-primary/5 text-brand-primary font-bold'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="experience_requirements_option"
+                      checked={!jobFormData.experience_requirements && !jobFormData.is_custom_experience}
+                      onChange={() =>
+                        setJobFormData({
+                          ...jobFormData,
+                          experience_requirements: '',
+                          is_custom_experience: false,
+                          custom_min_experience: '',
+                          custom_max_experience: '',
+                        })
+                      }
+                      className="w-3.5 h-3.5 text-brand-primary focus:ring-0"
+                    />
+                    <span>Not Specified</span>
+                  </label>
+
+                  {/* Preset options */}
+                  {EXPERIENCE_REQUIREMENT_OPTIONS.map((opt) => {
+                    const isSelected =
+                      !jobFormData.is_custom_experience &&
+                      jobFormData.experience_requirements === opt;
+                    return (
+                      <label
+                        key={opt}
+                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition ${
+                          isSelected
+                            ? 'border-brand-primary bg-brand-primary/5 text-brand-primary font-bold'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="experience_requirements_option"
+                          checked={isSelected}
+                          onChange={() =>
+                            setJobFormData({
+                              ...jobFormData,
+                              experience_requirements: opt,
+                              is_custom_experience: false,
+                              custom_min_experience: '',
+                              custom_max_experience: '',
+                            })
+                          }
+                          className="w-3.5 h-3.5 text-brand-primary focus:ring-0"
+                        />
+                        <span>{opt}</span>
+                      </label>
+                    );
+                  })}
+
+                  {/* Custom Range option */}
+                  <label
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition ${
+                      jobFormData.is_custom_experience
+                        ? 'border-brand-primary bg-brand-primary/5 text-brand-primary font-bold'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="experience_requirements_option"
+                      checked={jobFormData.is_custom_experience}
+                      onChange={() =>
+                        setJobFormData({
+                          ...jobFormData,
+                          is_custom_experience: true,
+                          experience_requirements: '',
+                        })
+                      }
+                      className="w-3.5 h-3.5 text-brand-primary focus:ring-0"
+                    />
+                    <span>Custom Range</span>
+                  </label>
+                </div>
+
+                {/* Custom Range Inputs */}
+                {jobFormData.is_custom_experience && (
+                  <div className="mt-2.5 p-3 rounded-xl bg-slate-100/70 border border-slate-200 space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                          Minimum Experience (Years) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="e.g. 3"
+                          value={jobFormData.custom_min_experience}
+                          onChange={(e) =>
+                            setJobFormData({ ...jobFormData, custom_min_experience: e.target.value })
+                          }
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                          Maximum Experience (Years){' '}
+                          <span className="text-slate-400 font-normal">
+                            (Leave blank for{' '}
+                            {jobFormData.custom_min_experience
+                              ? `${jobFormData.custom_min_experience}+`
+                              : 'X+'}{' '}
+                            years)
+                          </span>
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          placeholder="e.g. 5 (or blank for 3+ years)"
+                          value={jobFormData.custom_max_experience}
+                          onChange={(e) =>
+                            setJobFormData({ ...jobFormData, custom_max_experience: e.target.value })
+                          }
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-white focus:outline-hidden focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-500">
+                      Preview:{' '}
+                      <span className="font-semibold text-slate-700">
+                        {formatCustomExperience(
+                          jobFormData.custom_min_experience,
+                          jobFormData.custom_max_experience
+                        ) || 'Please enter minimum experience'}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Specify required professional experience (e.g. Fresher, 3–5 Years, or 3+ Years) or leave Not Specified.
+                </p>
+              </div>
+
+              {/* D. Eligible Qualifications */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block font-semibold text-slate-700">

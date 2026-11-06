@@ -438,7 +438,7 @@ export default function JobDetailPage() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <div className="text-xs font-semibold text-slate-500 mb-1">Graduation Batches</div>
                   <div className="text-sm font-bold text-slate-800">
@@ -452,6 +452,13 @@ export default function JobDetailPage() {
                   <div className="text-xs font-semibold text-slate-500 mb-1">Candidate Type</div>
                   <div className="text-sm font-bold text-slate-800">
                     {job.candidate_type || 'Not Specified'}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="text-xs font-semibold text-slate-500 mb-1">Experience Requirements</div>
+                  <div className="text-sm font-bold text-slate-800">
+                    {job.experience_requirements || 'Not Specified'}
                   </div>
                 </div>
 
