@@ -77,3 +77,8 @@ temp/
 *.zip
 *.log
 backup_*.json
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3

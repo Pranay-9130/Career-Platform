@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
@@ -34,6 +35,8 @@ from app.services.ats_analyzer import (
 router = APIRouter(prefix="/resumes", tags=["Resume Builder"])
 
 AVAILABLE_TEMPLATES: List[Dict[str, Any]] = []
+_TEMPLATES_CACHE_EXPIRES = 0.0
+_TEMPLATES_CACHE_TTL = 60.0
 
 DEFAULT_EXCLUDED_TEMPLATE_IDS = {
     "classic-tech",
@@ -52,6 +55,14 @@ async def list_templates(db: AsyncSession = Depends(get_db)):
     Public catalogue of ATS resume templates.
     Returns exclusively templates added or uploaded by the administrator.
     """
+    global _TEMPLATES_CACHE_EXPIRES
+    now = time.time()
+    if now < _TEMPLATES_CACHE_EXPIRES and AVAILABLE_TEMPLATES:
+        return [
+            t for t in AVAILABLE_TEMPLATES
+            if t.get("is_active", True) and t.get("id") not in DEFAULT_EXCLUDED_TEMPLATE_IDS
+        ]
+
     try:
         from pathlib import Path
         import json
@@ -77,6 +88,7 @@ async def list_templates(db: AsyncSession = Depends(get_db)):
         if loaded_data is not None:
             AVAILABLE_TEMPLATES.clear()
             AVAILABLE_TEMPLATES.extend(loaded_data)
+            _TEMPLATES_CACHE_EXPIRES = now + _TEMPLATES_CACHE_TTL
     except Exception:
         pass
 

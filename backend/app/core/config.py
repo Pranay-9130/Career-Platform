@@ -101,7 +101,9 @@ class Settings(BaseSettings):
             if frontend_clean not in self.ALLOWED_ORIGINS:
                 self.ALLOWED_ORIGINS = list(dict.fromkeys([*self.ALLOWED_ORIGINS, frontend_clean]))
         url = self.DATABASE_URL
-        if url.startswith("postgres://"):
+        if url.startswith("sqlite://") and not url.startswith("sqlite+aiosqlite://"):
+            url = url.replace("sqlite://", "sqlite+aiosqlite://", 1)
+        elif url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)

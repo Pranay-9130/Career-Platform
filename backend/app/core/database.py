@@ -15,17 +15,36 @@ engine_kwargs = {
 if "sqlite" in settings.DATABASE_URL:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
-    # Managed PostgreSQL connection pool settings for production
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
+    # Managed PostgreSQL connection pool settings for production.
+    # Connection budget:
+    #   pool_size (15) + max_overflow (15) = 30 max connections per worker process.
+    #   With WEB_CONCURRENCY=1 (Render Free 512MB default): max 30 runtime connections.
+    #   With WEB_CONCURRENCY=2: max 60 runtime connections (leaves headroom under Neon's
+    #   ~100 connection ceiling and PgBouncer session/transaction limits).
+    engine_kwargs["pool_size"] = 15
+    engine_kwargs["max_overflow"] = 15
     engine_kwargs["pool_recycle"] = 300  # Recycle idle connections before Neon's 5-minute timeout
-    engine_kwargs["pool_timeout"] = 20  # Prevent indefinite worker blocking
-    engine_kwargs["connect_args"] = {
+    engine_kwargs["pool_timeout"] = 15   # Fail-fast timeout to prevent worker backlog during spikes
+
+    connect_args = {
         "command_timeout": 30,
         "server_settings": {
             "application_name": "aspirepath_api",
         },
     }
+
+    # Neon connection pooler (PgBouncer in transaction mode) compatibility:
+    # When connecting via a pooler hostname (-pooler) or port 6543, disable asyncpg statement cache
+    is_neon_pooler = (
+        "-pooler" in settings.DATABASE_URL
+        or ":6543" in settings.DATABASE_URL
+        or "pooler" in settings.DATABASE_URL.lower()
+    )
+    if is_neon_pooler:
+        connect_args["statement_cache_size"] = 0
+        connect_args["prepared_statement_name_func"] = lambda: None
+
+    engine_kwargs["connect_args"] = connect_args
 
 # SQLAlchemy Async Engine
 engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)

@@ -1,14 +1,16 @@
 import math
 import re
 import secrets
+import time
 import uuid
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile, File
 from fastapi.responses import FileResponse, Response
 from sqlalchemy import select, func, or_, cast, String, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.profile_links import clean_social_profile_url
 from app.models.project import Project
@@ -46,6 +48,49 @@ from app.schemas.project import (
 from app.api.dependencies import get_optional_current_user, get_current_active_user
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
+
+# In-memory 60s cache for public project catalog facets to eliminate redundant full table scans
+_PROJECT_FACETS_CACHE: Dict[str, Any] = {"expires_at": 0.0, "data": None}
+_PROJECT_FACETS_CACHE_TTL = 60.0
+
+async def _compute_project_facets(db: AsyncSession) -> ProjectFacets:
+    """
+    Computes aggregated domain, difficulty, and tech stack options across published projects.
+    Cached for 60 seconds across users in production; bypassed for unit tests.
+    """
+    now = time.time()
+    bind = getattr(db, "bind", None) or getattr(getattr(db, "sync_session", None), "bind", None)
+    is_sqlite = (bind is not None and getattr(getattr(bind, "dialect", None), "name", "") == "sqlite") or ("sqlite" in settings.DATABASE_URL)
+    if not is_sqlite and now < _PROJECT_FACETS_CACHE["expires_at"] and _PROJECT_FACETS_CACHE["data"] is not None:
+        return _PROJECT_FACETS_CACHE["data"]
+
+    all_pub_stmt = select(Project.domain, Project.difficulty, Project.tech_stack).where(
+        Project.status == "Published"
+    )
+    all_pub_res = (await db.execute(all_pub_stmt)).all()
+
+    domain_counts = {}
+    difficulty_counts = {}
+    tech_set = set()
+
+    for d, diff, stack in all_pub_res:
+        if d:
+            domain_counts[d] = domain_counts.get(d, 0) + 1
+        if diff:
+            difficulty_counts[diff] = difficulty_counts.get(diff, 0) + 1
+        if stack and isinstance(stack, list):
+            for t in stack:
+                if t and isinstance(t, str):
+                    tech_set.add(t.strip())
+
+    facets = ProjectFacets(
+        domains=[FacetItem(name=k, count=v) for k, v in sorted(domain_counts.items(), key=lambda x: x[0])],
+        difficulties=[FacetItem(name=k, count=v) for k, v in sorted(difficulty_counts.items(), key=lambda x: x[0])],
+        technologies=sorted(list(tech_set)),
+    )
+    _PROJECT_FACETS_CACHE["data"] = facets
+    _PROJECT_FACETS_CACHE["expires_at"] = now + _PROJECT_FACETS_CACHE_TTL
+    return facets
 
 
 def _generate_slug(title: str) -> str:
@@ -358,31 +403,8 @@ async def list_projects(
 
     total_pages = math.ceil(total_count / limit) if total_count > 0 else 1
 
-    # Compute global facets across published catalog
-    all_pub_stmt = select(Project.domain, Project.difficulty, Project.tech_stack).where(
-        Project.status == "Published"
-    )
-    all_pub_res = (await db.execute(all_pub_stmt)).all()
-
-    domain_counts = {}
-    difficulty_counts = {}
-    tech_set = set()
-
-    for d, diff, stack in all_pub_res:
-        if d:
-            domain_counts[d] = domain_counts.get(d, 0) + 1
-        if diff:
-            difficulty_counts[diff] = difficulty_counts.get(diff, 0) + 1
-        if stack and isinstance(stack, list):
-            for t in stack:
-                if t and isinstance(t, str):
-                    tech_set.add(t.strip())
-
-    facets = ProjectFacets(
-        domains=[FacetItem(name=k, count=v) for k, v in sorted(domain_counts.items(), key=lambda x: x[0])],
-        difficulties=[FacetItem(name=k, count=v) for k, v in sorted(difficulty_counts.items(), key=lambda x: x[0])],
-        technologies=sorted(list(tech_set)),
-    )
+    # Compute global facets across published catalog (cached 60s to prevent full table scans)
+    facets = await _compute_project_facets(db)
 
     return ProjectListResponse(
         items=items,

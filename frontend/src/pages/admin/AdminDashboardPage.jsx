@@ -106,6 +106,7 @@ export default function AdminDashboardPage() {
   const [jobsList, setJobsList] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobSearchQuery, setJobSearchQuery] = useState('');
+  const [jobSearchInput, setJobSearchInput] = useState('');
   const [jobStatusFilter, setJobStatusFilter] = useState('all');
   const [isJobModalOpen, setIsJobModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
@@ -153,6 +154,7 @@ export default function AdminDashboardPage() {
   const [studentsList, setStudentsList] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [studentSearchInput, setStudentSearchInput] = useState('');
 
   // 4. Resume Templates State
   const [templatesList, setTemplatesList] = useState([]);
@@ -208,6 +210,17 @@ export default function AdminDashboardPage() {
       setLoadingQueue(false);
     }
   }, [projectStatusFilter]);
+
+  // Debounce search inputs by 350 ms to prevent API floods on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setJobSearchQuery(jobSearchInput), 350);
+    return () => clearTimeout(timer);
+  }, [jobSearchInput]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setStudentSearchQuery(studentSearchInput), 350);
+    return () => clearTimeout(timer);
+  }, [studentSearchInput]);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -266,22 +279,34 @@ export default function AdminDashboardPage() {
     lastActiveTabRef.current = activeTab;
   }, [activeTab, fetchStats, fetchQueue]);
 
+  const lastFetchKeyRef = useRef({});
+
   useEffect(() => {
-    if (lastLoadedSubTabRef.current === activeTab) return;
-    lastLoadedSubTabRef.current = activeTab;
     if (activeTab === 'projects') {
-      fetchQueue();
+      const key = `projects:${projectStatusFilter}`;
+      if (lastFetchKeyRef.current.projects !== key) {
+        lastFetchKeyRef.current.projects = key;
+        fetchQueue();
+      }
+    } else if (activeTab === 'jobs') {
+      const key = `jobs:${jobStatusFilter}:${jobSearchQuery}`;
+      if (lastFetchKeyRef.current.jobs !== key) {
+        lastFetchKeyRef.current.jobs = key;
+        fetchJobs();
+      }
+    } else if (activeTab === 'students') {
+      const key = `students:${studentSearchQuery}`;
+      if (lastFetchKeyRef.current.students !== key) {
+        lastFetchKeyRef.current.students = key;
+        fetchStudents();
+      }
+    } else if (activeTab === 'templates') {
+      if (!lastFetchKeyRef.current.templates) {
+        lastFetchKeyRef.current.templates = true;
+        fetchTemplates();
+      }
     }
-    if (activeTab === 'jobs') {
-      fetchJobs();
-    }
-    if (activeTab === 'students') {
-      fetchStudents();
-    }
-    if (activeTab === 'templates') {
-      fetchTemplates();
-    }
-  }, [activeTab, fetchQueue, fetchJobs, fetchStudents, fetchTemplates]);
+  }, [activeTab, projectStatusFilter, jobStatusFilter, jobSearchQuery, studentSearchQuery, fetchQueue, fetchJobs, fetchStudents, fetchTemplates]);
 
   // =========================================================================
   // MODERATION ACTIONS (With automated student email notification)
@@ -1254,8 +1279,8 @@ export default function AdminDashboardPage() {
               <input
                 type="text"
                 placeholder="Search jobs by title or company..."
-                value={jobSearchQuery}
-                onChange={(e) => setJobSearchQuery(e.target.value)}
+                value={jobSearchInput}
+                onChange={(e) => setJobSearchInput(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-brand-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary"
               />
             </div>
@@ -1452,8 +1477,8 @@ export default function AdminDashboardPage() {
               <input
                 type="text"
                 placeholder="Search by student name, email, university..."
-                value={studentSearchQuery}
-                onChange={(e) => setStudentSearchQuery(e.target.value)}
+                value={studentSearchInput}
+                onChange={(e) => setStudentSearchInput(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-brand-border rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-primary shadow-xs"
               />
             </div>
