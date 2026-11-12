@@ -50,7 +50,7 @@ class Project(BaseUUIDModel):
     screenshots_list = relationship(
         "ProjectScreenshot",
         back_populates="project",
-        lazy="selectin",
+        lazy="select",
         cascade="all, delete-orphan",
     )
 

@@ -546,9 +546,11 @@ async def refresh_session(
         AuthSession.invalidated_at.is_(None),
         AuthSession.expires_at > now,
     ).values(invalidated_at=now).returning(AuthSession.id))
-    if consumed.scalar_one_or_none() is None:
+    consumed_sid = consumed.scalar_one_or_none()
+    if consumed_sid is None:
         await db.rollback()
         raise HTTPException(status_code=401, detail="Session has been revoked or already refreshed.")
+    invalidate_session_cache(session_id=consumed_sid, user_id=user.id)
 
     access_token = create_access_token({
         "sub": str(user.id),
@@ -578,11 +580,14 @@ async def logout_user(
             decoded = decode_token(refresh_token, expected_type="refresh")
             if decoded:
                 invalidate_session_cache(session_id=decoded.get("sid"), user_id=decoded.get("sub"))
-            await db.execute(update(AuthSession).where(
+            revoked = await db.execute(update(AuthSession).where(
                 AuthSession.token_hash == hashlib.sha256(refresh_token.encode()).hexdigest(),
                 AuthSession.invalidated_at.is_(None),
-            ).values(invalidated_at=datetime.now(timezone.utc)))
+            ).values(invalidated_at=datetime.now(timezone.utc)).returning(AuthSession.id))
+            revoked_sid = revoked.scalar_one_or_none()
             await db.commit()
+            if revoked_sid:
+                invalidate_session_cache(session_id=revoked_sid)
         except Exception as e:
             logger.warning("Session revocation error during logout: %s", e)
             await db.rollback()
@@ -785,6 +790,7 @@ async def reset_password(
     token_record.invalidated_at = now_utc
 
     await db.commit()
+    invalidate_session_cache(user_id=user.id)
 
     return PasswordResetResponse(
         success=True,

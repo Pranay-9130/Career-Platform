@@ -30,6 +30,7 @@ export default defineConfig({
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-http': ['axios'],
           'vendor-icons': ['lucide-react'],
+          'vendor-pdf': ['pdfjs-dist'],
         },
       },
     },

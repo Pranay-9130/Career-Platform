@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye,
@@ -10,12 +10,15 @@ import {
   X,
   ExternalLink,
   ShieldAlert,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import api from '../../services/api';
 import { resumeService } from '../../services/resumeService';
 import { useAuth } from '../../context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getSoftwareApplicationSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
+import PdfViewer from '@/components/common/PdfViewer';
 
 export default function TemplatesPage() {
   const navigate = useNavigate();
@@ -24,18 +27,21 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
-  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewBlob, setPreviewBlob] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState(false);
+  const [isFullscreenModal, setIsFullscreenModal] = useState(false);
 
-  // Fetch local blob for preview when a template is selected
+  // In-memory cache for downloaded template blobs to avoid re-downloading
+  const templateBlobCacheRef = useRef({});
+
+  // Fetch or retrieve cached blob for preview when a template is selected
   useEffect(() => {
     let active = true;
-    let createdUrl = null;
 
     async function loadPdfBlob() {
       if (!previewTemplate) {
-        setPreviewBlobUrl(null);
+        setPreviewBlob(null);
         setPreviewError(false);
         setPreviewLoading(false);
         return;
@@ -48,8 +54,16 @@ export default function TemplatesPage() {
           previewTemplate.file_type === '.pdf');
 
       if (!isPdf || previewTemplate.preview_image_url) {
-        setPreviewBlobUrl(null);
+        setPreviewBlob(null);
         setPreviewLoading(false);
+        return;
+      }
+
+      // 1. Check in-memory cache first to avoid redundant downloads
+      if (templateBlobCacheRef.current[previewTemplate.id]) {
+        setPreviewBlob(templateBlobCacheRef.current[previewTemplate.id]);
+        setPreviewLoading(false);
+        setPreviewError(false);
         return;
       }
 
@@ -62,9 +76,9 @@ export default function TemplatesPage() {
           responseType: 'blob',
         });
         const blob = new Blob([response.data], { type: 'application/pdf' });
-        createdUrl = URL.createObjectURL(blob);
+        templateBlobCacheRef.current[previewTemplate.id] = blob;
         if (active) {
-          setPreviewBlobUrl(createdUrl);
+          setPreviewBlob(blob);
         }
       } catch (err) {
         console.error('Failed to load PDF preview blob:', err);
@@ -82,9 +96,6 @@ export default function TemplatesPage() {
 
     return () => {
       active = false;
-      if (createdUrl) {
-        URL.revokeObjectURL(createdUrl);
-      }
     };
   }, [previewTemplate]);
 
@@ -132,15 +143,22 @@ export default function TemplatesPage() {
     if (template.download_url && template.download_url.trim()) {
       try {
         setDownloadingId(template.id);
-        const rawEndpoint = template.download_url || '';
-        const endpoint = rawEndpoint.startsWith('/api/') ? rawEndpoint.slice(4) : rawEndpoint;
-        const response = await api.get(
-          endpoint.includes('?') ? `${endpoint}&download=1` : `${endpoint}?download=1`,
-          { responseType: 'blob' }
-        );
-        const blob = new Blob([response.data], {
-          type: response.headers?.['content-type'] || 'application/pdf',
-        });
+
+        // 1. If blob is already cached from preview, download immediately with 0 extra network calls
+        let blob = templateBlobCacheRef.current[template.id];
+        if (!blob) {
+          const rawEndpoint = template.download_url || '';
+          const endpoint = rawEndpoint.startsWith('/api/') ? rawEndpoint.slice(4) : rawEndpoint;
+          const response = await api.get(
+            endpoint.includes('?') ? `${endpoint}&download=1` : `${endpoint}?download=1`,
+            { responseType: 'blob' }
+          );
+          blob = new Blob([response.data], {
+            type: response.headers?.['content-type'] || 'application/pdf',
+          });
+          templateBlobCacheRef.current[template.id] = blob;
+        }
+
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
@@ -471,23 +489,29 @@ export default function TemplatesPage() {
 
         {/* ViewFull Live Preview Modal */}
         {previewTemplate && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-3xl max-w-4xl w-full border border-brand-border shadow-2xl overflow-hidden my-6">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+            <div
+              className={`bg-white rounded-3xl w-full border border-brand-border shadow-2xl overflow-hidden my-auto flex flex-col transition-all duration-200 ${
+                isFullscreenModal
+                  ? 'fixed inset-0 z-50 rounded-none my-0 max-w-none h-full'
+                  : 'max-w-5xl max-h-[92vh]'
+              }`}
+            >
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border bg-brand-veryLight">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-brand-border bg-brand-veryLight shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-white text-brand-primary shadow-xs border border-brand-border">
                     <FileText className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base sm:text-lg">
+                    <h3 className="font-bold text-slate-900 text-sm sm:text-base">
                       {previewTemplate.name || 'Template Preview'}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white text-brand-primary border border-brand-border">
                         {previewTemplate.badge || 'Professional'}
                       </span>
-                      <span className="text-xs text-brand-muted">
+                      <span className="text-xs text-brand-muted hidden sm:inline">
                         {previewTemplate.description || 'Ready-to-use professional resume format'}
                       </span>
                     </div>
@@ -495,18 +519,18 @@ export default function TemplatesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {previewBlobUrl && (
-                    <a
-                      href={previewBlobUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                      title="Open PDF in a new tab"
-                    >
-                      <span>Open Fullscreen</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsFullscreenModal(!isFullscreenModal)}
+                    className="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors flex items-center gap-1.5"
+                    title={isFullscreenModal ? 'Exit Fullscreen' : 'Open Fullscreen'}
+                  >
+                    {isFullscreenModal ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    <span className="hidden sm:inline">
+                      {isFullscreenModal ? 'Exit Fullscreen' : 'Open Fullscreen'}
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleUseTemplate(previewTemplate.id)}
@@ -515,9 +539,13 @@ export default function TemplatesPage() {
                     <span>Use in Builder</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setPreviewTemplate(null)}
+                    onClick={() => {
+                      setPreviewTemplate(null);
+                      setIsFullscreenModal(false);
+                    }}
                     className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
                     aria-label="Close Preview"
                   >
@@ -526,65 +554,35 @@ export default function TemplatesPage() {
                 </div>
               </div>
 
-              {/* Modal Body: Full Canvas Display */}
-              <div className="p-4 sm:p-6 bg-[#1e232a] flex flex-col items-center justify-center min-h-[50vh] max-h-[75vh] overflow-y-auto">
+              {/* Modal Body: PdfViewer or Image */}
+              <div className="flex-1 bg-[#181c22] overflow-hidden flex flex-col min-h-[420px]">
                 {previewTemplate.preview_image_url ? (
-                  <img
-                    src={previewTemplate.preview_image_url}
-                    alt={previewTemplate.name}
-                    className="max-w-2xl w-full rounded shadow-xl object-contain bg-white"
-                  />
-                ) : previewLoading ? (
-                  <div className="py-20 flex flex-col items-center justify-center text-white space-y-3">
-                    <div className="w-10 h-10 border-3 border-blue-400 border-t-white rounded-full animate-spin" />
-                    <p className="text-xs text-slate-300 font-medium">Loading document preview...</p>
+                  <div className="p-4 sm:p-6 overflow-auto flex items-center justify-center flex-1">
+                    <img
+                      src={previewTemplate.preview_image_url}
+                      alt={previewTemplate.name}
+                      className="max-w-2xl w-full rounded shadow-xl object-contain bg-white"
+                    />
                   </div>
-                ) : previewBlobUrl ? (
-                  <iframe
-                    src={`${previewBlobUrl}#toolbar=0`}
-                    title={previewTemplate.name}
-                    className="w-full max-w-3xl h-[68vh] rounded-2xl bg-white shadow-2xl border-0"
-                  />
                 ) : (
-                  <div className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl p-8 text-center text-white space-y-5 shadow-2xl">
-                    <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto">
-                      <FileText className="w-8 h-8" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-lg text-white">{previewTemplate.name}</h4>
-                      <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-                        {previewTemplate.uploaded_file_name || 'Resume Template Document'}
-                      </p>
-                      <span className="inline-block mt-2 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                        {previewTemplate.badge || 'Professional'}
-                      </span>
-                    </div>
-
-                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadTemplate(previewTemplate)}
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-white text-slate-900 hover:bg-slate-100 transition inline-flex items-center justify-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Download Template File</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUseTemplate(previewTemplate.id)}
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-primary hover:bg-blue-600 text-white transition inline-flex items-center justify-center gap-2"
-                      >
-                        <span>Use in Resume Builder</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                  <PdfViewer
+                    pdfData={previewBlob}
+                    fileName={
+                      previewTemplate.uploaded_file_name ||
+                      `${previewTemplate.name || 'resume-template'}.pdf`
+                    }
+                    title={previewTemplate.name}
+                    onDownload={() => handleDownloadTemplate(previewTemplate)}
+                    onUseTemplate={() => handleUseTemplate(previewTemplate.id)}
+                    isFullscreen={isFullscreenModal}
+                    onToggleFullscreen={(val) => setIsFullscreenModal(val)}
+                    className="h-full border-0 rounded-none"
+                  />
                 )}
               </div>
 
-
               {/* Modal Footer */}
-              <div className="px-6 py-4 bg-brand-veryLight border-t border-brand-border flex flex-wrap justify-between items-center gap-3">
+              <div className="px-5 py-3 bg-brand-veryLight border-t border-brand-border flex flex-wrap justify-between items-center gap-3 shrink-0">
                 <span className="text-xs text-brand-muted">
                   Ready-to-use template optimized for applicant tracking systems.
                 </span>
@@ -594,16 +592,24 @@ export default function TemplatesPage() {
                     type="button"
                     onClick={() => handleDownloadTemplate(previewTemplate)}
                     disabled={downloadingId === previewTemplate.id}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-primary bg-white hover:bg-blue-50 border border-brand-border transition-colors inline-flex items-center gap-1.5 shadow-xs"
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-brand-primary bg-white hover:bg-blue-50 border border-brand-border transition-colors inline-flex items-center gap-1.5 shadow-xs"
                   >
-                    <Download className={`w-3.5 h-3.5 ${downloadingId === previewTemplate.id ? 'animate-bounce' : ''}`} />
-                    <span>{downloadingId === previewTemplate.id ? 'Downloading...' : 'Download Template'}</span>
+                    <Download
+                      className={`w-3.5 h-3.5 ${
+                        downloadingId === previewTemplate.id ? 'animate-bounce' : ''
+                      }`}
+                    />
+                    <span>
+                      {downloadingId === previewTemplate.id
+                        ? 'Downloading...'
+                        : 'Download Template'}
+                    </span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleUseTemplate(previewTemplate.id)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-primary hover:bg-blue-600 shadow-xs transition-colors inline-flex items-center gap-1.5"
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-brand-primary hover:bg-blue-600 shadow-xs transition-colors inline-flex items-center gap-1.5"
                   >
                     <span>Use in Builder</span>
                     <ArrowRight className="w-3.5 h-3.5" />

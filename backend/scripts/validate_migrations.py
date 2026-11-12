@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-EXPECTED_HEAD = "e5f6a7b80013"
+EXPECTED_HEAD = "f6a7b8c90014"
 
 
 def migration_script() -> ScriptDirectory:
