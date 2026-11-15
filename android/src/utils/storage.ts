@@ -3,54 +3,55 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 class StorageAdapter {
-  private isSecureAvailable = false;
+  private secureAvailablePromise: Promise<boolean> | null = null;
 
-  constructor() {
-    this.checkAvailability();
-  }
-
-  private async checkAvailability() {
-    try {
-      if (Platform.OS !== 'web') {
-        this.isSecureAvailable = await SecureStore.isAvailableAsync();
-      }
-    } catch {
-      this.isSecureAvailable = false;
+  private async isSecureAvailable(): Promise<boolean> {
+    if (Platform.OS === 'web') return false;
+    if (this.secureAvailablePromise === null) {
+      this.secureAvailablePromise = SecureStore.isAvailableAsync().catch(() => false);
     }
+    return this.secureAvailablePromise;
   }
 
   async setItem(key: string, value: string): Promise<void> {
     try {
-      if (this.isSecureAvailable) {
+      const canUseSecure = await this.isSecureAvailable();
+      if (canUseSecure) {
         await SecureStore.setItemAsync(key, value);
-      } else {
-        await AsyncStorage.setItem(key, value);
+        return;
       }
     } catch {
-      await AsyncStorage.setItem(key, value);
+      // Fall through to AsyncStorage
     }
+    await AsyncStorage.setItem(key, value);
   }
 
   async getItem(key: string): Promise<string | null> {
     try {
-      if (this.isSecureAvailable) {
+      const canUseSecure = await this.isSecureAvailable();
+      if (canUseSecure) {
         const item = await SecureStore.getItemAsync(key);
         if (item !== null) return item;
       }
-      return await AsyncStorage.getItem(key);
     } catch {
-      return await AsyncStorage.getItem(key);
+      // Fall through to AsyncStorage
     }
+    return await AsyncStorage.getItem(key);
   }
 
   async removeItem(key: string): Promise<void> {
     try {
-      if (this.isSecureAvailable) {
+      const canUseSecure = await this.isSecureAvailable();
+      if (canUseSecure) {
         await SecureStore.deleteItemAsync(key);
       }
+    } catch {
+      // Continue to AsyncStorage cleanup
+    }
+    try {
       await AsyncStorage.removeItem(key);
     } catch {
-      await AsyncStorage.removeItem(key);
+      // Ignore cleanup error
     }
   }
 }

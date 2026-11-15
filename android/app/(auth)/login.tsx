@@ -47,8 +47,18 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       console.error('Login failed:', err);
-      const detail = err.response?.data?.detail;
-      setErrorMessage(typeof detail === 'string' ? detail : 'Invalid email or password. Please try again.');
+      if (!err.response) {
+        setErrorMessage('Unable to reach server. Please check your internet connection.');
+      } else {
+        const detail = err.response?.data?.detail;
+        if (typeof detail === 'string') {
+          setErrorMessage(detail);
+        } else if (Array.isArray(detail)) {
+          setErrorMessage(detail.map((d: any) => d.msg || JSON.stringify(d)).join(', '));
+        } else {
+          setErrorMessage('Invalid email or password. Please verify your credentials.');
+        }
+      }
     } finally {
       setLoading(false);
     }
