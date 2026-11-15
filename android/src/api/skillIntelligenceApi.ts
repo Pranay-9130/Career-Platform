@@ -22,13 +22,21 @@ export const skillIntelligenceApi = {
   },
 
   analyzeSkillGap: async (roleTitle?: string): Promise<any> => {
-    const params = roleTitle ? { role_title: roleTitle } : {};
+    const params: Record<string, string> = {};
+    if (roleTitle) {
+      params.target_role = roleTitle;
+      params.role_title = roleTitle;
+    }
     const res = await apiClient.get('/skill-intelligence/gap-analysis', { params });
     return res.data;
   },
 
   getRoadmap: async (roleTitle?: string): Promise<any> => {
-    const params = roleTitle ? { role_title: roleTitle } : {};
+    const params: Record<string, string> = {};
+    if (roleTitle) {
+      params.target_role = roleTitle;
+      params.role_title = roleTitle;
+    }
     const res = await apiClient.get('/skill-intelligence/roadmap', { params });
     return res.data;
   },

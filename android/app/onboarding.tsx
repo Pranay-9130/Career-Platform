@@ -6,8 +6,8 @@ import {
   FlatList,
   Dimensions,
   TouchableOpacity,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { appStorage } from '../src/utils/storage';
 import { APP_CONFIG } from '../src/constants/config';
@@ -89,7 +89,7 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
       {/* Top Header: Skip Button */}
       <View style={styles.topBar}>
         <View style={styles.logoRow}>

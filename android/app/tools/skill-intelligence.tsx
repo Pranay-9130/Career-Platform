@@ -4,9 +4,9 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { skillIntelligenceApi } from '../../src/api/skillIntelligenceApi';
 import { useThemeStore } from '../../src/store/themeStore';
@@ -50,21 +50,39 @@ export default function SkillIntelligenceScreen() {
     queryFn: () => skillIntelligenceApi.analyzeSkillGap(selectedRole),
   });
 
-  // Fallback state if backend is booting or demo
-  const fitScore = gapData?.fit_score || 80;
-  const verifiedSkills = gapData?.verified_skills || [
-    'React.js',
-    'TypeScript',
-    'HTML5 / CSS3',
-    'Tailwind CSS',
-    'Git & Version Control',
-    'RESTful APIs',
-  ];
-  const missingSkills = gapData?.missing_skills || [
-    'Next.js SSR / SSG',
-    'GraphQL Querying',
-    'Cypress / Playwright E2E Testing',
-  ];
+  // Defensive normalization from backend (supports both object items and string items)
+  const fitScore = Math.round(
+    gapData?.coverage_percentage ?? gapData?.fit_score ?? 80
+  );
+
+  const rawMatched = gapData?.matched_skills || gapData?.verified_skills;
+  const verifiedSkills: string[] = (
+    Array.isArray(rawMatched) && rawMatched.length > 0
+      ? rawMatched.map((item: any) =>
+          typeof item === 'string' ? item : item?.name || item?.skill_name || ''
+        )
+      : [
+          'React.js',
+          'TypeScript',
+          'HTML5 / CSS3',
+          'Tailwind CSS',
+          'Git & Version Control',
+          'RESTful APIs',
+        ]
+  ).filter(Boolean);
+
+  const rawMissing = gapData?.missing_skills;
+  const missingSkills: string[] = (
+    Array.isArray(rawMissing) && rawMissing.length > 0
+      ? rawMissing.map((item: any) =>
+          typeof item === 'string' ? item : item?.name || item?.skill_name || ''
+        )
+      : [
+          'Next.js SSR / SSG',
+          'GraphQL Querying',
+          'Cypress / Playwright E2E Testing',
+        ]
+  ).filter(Boolean);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -145,8 +163,8 @@ export default function SkillIntelligenceScreen() {
           </Text>
 
           <View style={styles.badgeWrap}>
-            {verifiedSkills.map((s: string) => (
-              <Badge key={s} label={s} variant="success" />
+            {verifiedSkills.map((s: string, idx: number) => (
+              <Badge key={`verified-${s}-${idx}`} label={String(s)} variant="success" />
             ))}
           </View>
         </Card>
@@ -164,8 +182,8 @@ export default function SkillIntelligenceScreen() {
           </Text>
 
           <View style={styles.badgeWrap}>
-            {missingSkills.map((s: string) => (
-              <Badge key={s} label={s} variant="warning" />
+            {missingSkills.map((s: string, idx: number) => (
+              <Badge key={`missing-${s}-${idx}`} label={String(s)} variant="warning" />
             ))}
           </View>
         </Card>

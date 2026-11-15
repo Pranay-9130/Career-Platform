@@ -6,8 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
+  Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../src/store/authStore';
@@ -78,27 +79,36 @@ export default function HomeScreen() {
   const appsCount = applicationsList.length;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Top Header */}
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
+      {/* Top Header with AspirePath Logo */}
       <View style={[styles.topHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeft}>
-          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'}
-            </Text>
-          </View>
-          <View>
-            <Text style={[typography.caption, { color: colors.textMuted }]}>Welcome back,</Text>
-            <Text style={[typography.h4, { color: colors.text }]}>{user?.full_name || 'AspirePath Student'}</Text>
-          </View>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
         </View>
 
-        <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: colors.background }]}
-          onPress={() => router.push('/(tabs)/profile')}
-        >
-          <Bell size={18} color={colors.text} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.7}
+          >
+            <Bell size={18} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.avatar, { backgroundColor: colors.primary }]}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.avatarText}>
+              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'A'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -309,25 +319,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+  },
+  headerLogo: {
+    width: 140,
+    height: 36,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 15,
   },
   iconButton: {
     width: 36,

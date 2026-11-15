@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   TextInput,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { atsApi } from '../../src/api/atsApi';
 import { useThemeStore } from '../../src/store/themeStore';
 import { typography, borderRadius } from '../../src/constants/theme';
@@ -117,9 +117,10 @@ export default function AtsAnalyzerScreen() {
               </Text>
             </View>
             <View style={styles.badgeWrap}>
-              {result.matched_skills.map((s: string) => (
-                <Badge key={s} label={s} variant="success" />
-              ))}
+              {result.matched_skills.map((s: any, idx: number) => {
+                const text = typeof s === 'string' ? s : s?.name || s?.skill || String(s);
+                return <Badge key={`matched-${text}-${idx}`} label={text} variant="success" />;
+              })}
             </View>
           </Card>
         )}
@@ -134,9 +135,10 @@ export default function AtsAnalyzerScreen() {
               </Text>
             </View>
             <View style={styles.badgeWrap}>
-              {result.missing_skills.map((s: string) => (
-                <Badge key={s} label={s} variant="error" />
-              ))}
+              {result.missing_skills.map((s: any, idx: number) => {
+                const text = typeof s === 'string' ? s : s?.name || s?.skill || String(s);
+                return <Badge key={`missing-${text}-${idx}`} label={text} variant="error" />;
+              })}
             </View>
           </Card>
         )}
