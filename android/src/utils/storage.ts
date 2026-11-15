@@ -14,39 +14,50 @@ class StorageAdapter {
   }
 
   async setItem(key: string, value: string): Promise<void> {
-    try {
-      const canUseSecure = await this.isSecureAvailable();
-      if (canUseSecure) {
-        await SecureStore.setItemAsync(key, value);
-        return;
+    // SecureStore has a 2048-byte limit on Android Keystore.
+    // Store credentials/tokens securely; larger JSON payloads use AsyncStorage.
+    const isSensitiveShortValue = key.includes('token') && value.length < 2048;
+    if (isSensitiveShortValue) {
+      try {
+        const canUseSecure = await this.isSecureAvailable();
+        if (canUseSecure) {
+          await SecureStore.setItemAsync(key, value);
+          return;
+        }
+      } catch {
+        // Fall through to AsyncStorage
       }
-    } catch {
-      // Fall through to AsyncStorage
     }
     await AsyncStorage.setItem(key, value);
   }
 
   async getItem(key: string): Promise<string | null> {
-    try {
-      const canUseSecure = await this.isSecureAvailable();
-      if (canUseSecure) {
-        const item = await SecureStore.getItemAsync(key);
-        if (item !== null) return item;
+    const isSensitiveKey = key.includes('token');
+    if (isSensitiveKey) {
+      try {
+        const canUseSecure = await this.isSecureAvailable();
+        if (canUseSecure) {
+          const item = await SecureStore.getItemAsync(key);
+          if (item !== null) return item;
+        }
+      } catch {
+        // Fall through to AsyncStorage
       }
-    } catch {
-      // Fall through to AsyncStorage
     }
     return await AsyncStorage.getItem(key);
   }
 
   async removeItem(key: string): Promise<void> {
-    try {
-      const canUseSecure = await this.isSecureAvailable();
-      if (canUseSecure) {
-        await SecureStore.deleteItemAsync(key);
+    const isSensitiveKey = key.includes('token');
+    if (isSensitiveKey) {
+      try {
+        const canUseSecure = await this.isSecureAvailable();
+        if (canUseSecure) {
+          await SecureStore.deleteItemAsync(key);
+        }
+      } catch {
+        // Continue to AsyncStorage cleanup
       }
-    } catch {
-      // Continue to AsyncStorage cleanup
     }
     try {
       await AsyncStorage.removeItem(key);

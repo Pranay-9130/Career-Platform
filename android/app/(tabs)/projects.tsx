@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi } from '../../src/api/projectsApi';
+import { Project } from '../../src/types';
 import { useThemeStore } from '../../src/store/themeStore';
 import { typography, borderRadius } from '../../src/constants/theme';
 import { Card } from '../../src/components/common/Card';
@@ -64,14 +65,15 @@ export default function ProjectsScreen() {
   });
 
   const filteredProjects = useMemo(() => {
-    if (!projects) return [];
-    return projects.filter((proj) => {
+    const list = Array.isArray(projects) ? projects : (projects as any)?.items || [];
+    if (!list.length) return [];
+    return list.filter((proj: any) => {
       if (selectedDomain !== 'All Domains' && proj.domain !== selectedDomain) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchTitle = proj.title.toLowerCase().includes(q);
-        const matchDesc = proj.description.toLowerCase().includes(q);
-        const matchTags = proj.tags?.some((t) => t.toLowerCase().includes(q));
+        const matchTitle = proj.title?.toLowerCase().includes(q);
+        const matchDesc = proj.description?.toLowerCase().includes(q);
+        const matchTags = proj.tags?.some((t: string) => t.toLowerCase().includes(q));
         if (!matchTitle && !matchDesc && !matchTags) return false;
       }
       return true;
@@ -148,7 +150,7 @@ export default function ProjectsScreen() {
             }}
           />
         ) : (
-          filteredProjects.map((proj) => (
+          filteredProjects.map((proj: Project) => (
             <TouchableOpacity
               key={proj.id}
               activeOpacity={0.85}
@@ -199,7 +201,7 @@ export default function ProjectsScreen() {
                 {/* Tags */}
                 {proj.tags && proj.tags.length > 0 && (
                   <View style={styles.tagsRow}>
-                    {proj.tags.slice(0, 4).map((tag) => (
+                    {proj.tags.slice(0, 4).map((tag: string) => (
                       <View key={tag} style={[styles.tagBadge, { backgroundColor: colors.background }]}>
                         <Code size={11} color={colors.textMuted} />
                         <Text style={[typography.tiny, { color: colors.textMuted, marginLeft: 4 }]}>

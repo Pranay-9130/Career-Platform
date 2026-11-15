@@ -8,7 +8,14 @@ export const projectsApi = {
     search?: string;
   } = {}): Promise<Project[]> => {
     const res = await apiClient.get('/projects', { params });
-    return res.data;
+    // Backend returns ProjectListResponse: { items: Project[], total: number, ... }
+    if (res.data && Array.isArray(res.data.items)) {
+      return res.data.items;
+    }
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    return [];
   },
 
   getProjectById: async (id: string): Promise<Project> => {
@@ -27,8 +34,14 @@ export const projectsApi = {
   },
 
   getMyProjects: async (): Promise<Project[]> => {
-    const res = await apiClient.get('/projects/my-projects');
-    return res.data;
+    const res = await apiClient.get('/projects/my/submissions');
+    if (res.data && Array.isArray(res.data.items)) {
+      return res.data.items;
+    }
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    return [];
   },
 };
 

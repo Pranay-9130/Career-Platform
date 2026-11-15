@@ -9,7 +9,14 @@ export const jobsApi = {
     search?: string;
   } = {}): Promise<Job[]> => {
     const res = await apiClient.get('/jobs', { params });
-    return res.data;
+    // Backend returns JobListResponse: { items: Job[], total: number, page: number, ... }
+    if (res.data && Array.isArray(res.data.items)) {
+      return res.data.items;
+    }
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    return [];
   },
 
   getJobById: async (id: string): Promise<Job> => {
@@ -32,7 +39,13 @@ export const jobsApi = {
 
   getMyApplications: async (): Promise<JobApplication[]> => {
     const res = await apiClient.get('/applications');
-    return res.data;
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    if (res.data && Array.isArray(res.data.items)) {
+      return res.data.items;
+    }
+    return [];
   },
 };
 

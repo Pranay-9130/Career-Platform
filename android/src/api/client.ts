@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 
 export const apiClient = axios.create({
   baseURL: APP_CONFIG.API_BASE_URL,
-  timeout: 20000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -28,12 +28,18 @@ apiClient.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error)
 );
 
-// Response Interceptor: Handle Global 401 Logout
+// Response Interceptor: Handle Global 401 Logout only on authenticated sessions
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Clear expired session
+    const url = error.config?.url || '';
+    const isPublicAuth =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/forgot-password');
+
+    if (error.response?.status === 401 && !isPublicAuth) {
+      // Clear expired session only for authenticated resource requests
       await useAuthStore.getState().logout();
     }
     return Promise.reject(error);

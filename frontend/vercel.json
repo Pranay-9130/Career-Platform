@@ -3,6 +3,23 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/downloads/AspirePath.apk",
+      "destination": "https://expo.dev/artifacts/eas/wz3m9jSDvyGmFsaQCXQ1X9kxcpgc_Rp7WIfglOd6kKo.apk",
+      "permanent": false
+    },
+    {
+      "source": "/downloads/AspirePath-production.apk",
+      "destination": "https://expo.dev/artifacts/eas/wz3m9jSDvyGmFsaQCXQ1X9kxcpgc_Rp7WIfglOd6kKo.apk",
+      "permanent": false
+    },
+    {
+      "source": "/downloads/AspirePath-v1.0.0.apk",
+      "destination": "https://expo.dev/artifacts/eas/wz3m9jSDvyGmFsaQCXQ1X9kxcpgc_Rp7WIfglOd6kKo.apk",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",

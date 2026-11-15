@@ -31,12 +31,12 @@ import { Button, Badge } from '@/components/common';
 export default function DownloadAppPage() {
   const [appInfo, setAppInfo] = useState({
     version: '1.0.0',
-    file_size: '2.0 MB',
+    file_size: '65.4 MB',
     release_date: 'November 2026',
-    download_url: '/downloads/AspirePath-v1.0.0.apk',
+    download_url: '/api/download/android-apk',
     direct_api_url: '/api/download/android-apk',
-    min_android_version: 'Android 8.0+',
-    sha256: 'bdb29ad700e5bb8807e98dec3cb9f24938dda1b9e7193296c20de9f2b0389151',
+    min_android_version: 'Android 7.0+',
+    sha256: '6f5a34ad17b2b8e390c58fa036a28185cba799da88b1f4df6cfb99ee5108ec97',
   });
 
   const [faqOpen, setFaqOpen] = useState({ 0: true });
@@ -65,8 +65,8 @@ export default function DownloadAppPage() {
       // Brief feedback delay to allow UI to render spinner & debounce multiple clicks
       await new Promise((resolve) => setTimeout(resolve, 450));
 
-      const downloadUrl = appInfo.download_url || '/downloads/AspirePath-v1.0.0.apk';
-      const targetFilename = 'AspirePath-v1.0.0.apk';
+      const downloadUrl = appInfo.download_url || '/api/download/android-apk';
+      const targetFilename = 'AspirePath.apk';
 
       // Trigger standard browser download
       const link = document.createElement('a');

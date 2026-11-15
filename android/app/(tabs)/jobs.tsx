@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { jobsApi } from '../../src/api/jobsApi';
+import { Job } from '../../src/types';
 import { useThemeStore } from '../../src/store/themeStore';
 import { typography, borderRadius } from '../../src/constants/theme';
 import { Card } from '../../src/components/common/Card';
@@ -59,15 +60,16 @@ export default function JobsScreen() {
   });
 
   const filteredJobs = useMemo(() => {
-    if (!jobs) return [];
-    return jobs.filter((job) => {
+    const list = Array.isArray(jobs) ? jobs : (jobs as any)?.items || [];
+    if (!list.length) return [];
+    return list.filter((job: any) => {
       if (selectedJobType !== 'All Types' && job.job_type !== selectedJobType) return false;
       if (selectedWorkMode !== 'All Modes' && job.work_mode !== selectedWorkMode) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchTitle = job.title.toLowerCase().includes(q);
-        const matchCompany = job.company_name.toLowerCase().includes(q);
-        const matchSkills = job.skills_required?.some((s) => s.toLowerCase().includes(q));
+        const matchTitle = job.title?.toLowerCase().includes(q);
+        const matchCompany = job.company_name?.toLowerCase().includes(q);
+        const matchSkills = job.skills_required?.some((s: string) => s.toLowerCase().includes(q));
         if (!matchTitle && !matchCompany && !matchSkills) return false;
       }
       return true;
@@ -176,7 +178,7 @@ export default function JobsScreen() {
             }}
           />
         ) : (
-          filteredJobs.map((job) => (
+          filteredJobs.map((job: Job) => (
             <TouchableOpacity
               key={job.id}
               activeOpacity={0.85}
@@ -230,7 +232,7 @@ export default function JobsScreen() {
                 {job.eligible_batches && job.eligible_batches.length > 0 && (
                   <View style={styles.eligibilityRow}>
                     <Text style={[typography.tiny, { color: colors.textMuted }]}>Batches:</Text>
-                    {job.eligible_batches.slice(0, 3).map((b) => (
+                    {job.eligible_batches.slice(0, 3).map((b: string) => (
                       <Badge key={b} label={b} variant="neutral" />
                     ))}
                   </View>
@@ -239,7 +241,7 @@ export default function JobsScreen() {
                 {/* Required Skills Chips */}
                 {job.skills_required && job.skills_required.length > 0 && (
                   <View style={styles.skillsRow}>
-                    {job.skills_required.slice(0, 4).map((skill) => (
+                    {job.skills_required.slice(0, 4).map((skill: string) => (
                       <View key={skill} style={[styles.skillChip, { backgroundColor: colors.background }]}>
                         <Text style={[typography.tiny, { color: colors.textSecondary }]}>{skill}</Text>
                       </View>

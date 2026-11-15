@@ -15,6 +15,7 @@ import { useThemeStore } from '../../src/store/themeStore';
 import { typography, borderRadius } from '../../src/constants/theme';
 import { jobsApi } from '../../src/api/jobsApi';
 import { projectsApi } from '../../src/api/projectsApi';
+import { Job, Project } from '../../src/types';
 import { Card } from '../../src/components/common/Card';
 import { Badge } from '../../src/components/common/Badge';
 import { Skeleton } from '../../src/components/common/Skeleton';
@@ -71,7 +72,10 @@ export default function HomeScreen() {
   }, [refetchJobs, refetchProjects, refetchApps]);
 
   const firstName = user?.full_name ? user.full_name.split(' ')[0] : 'Student';
-  const appsCount = applications?.length || 0;
+  const jobsList = Array.isArray(jobs) ? jobs : (jobs as any)?.items || [];
+  const projectsList = Array.isArray(projects) ? projects : (projects as any)?.items || [];
+  const applicationsList = Array.isArray(applications) ? applications : (applications as any)?.items || [];
+  const appsCount = applicationsList.length;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -220,7 +224,7 @@ export default function HomeScreen() {
           </View>
         ) : (
           <View style={{ gap: 8 }}>
-            {(jobs || []).slice(0, 3).map((job) => (
+            {jobsList.slice(0, 3).map((job: Job) => (
               <TouchableOpacity
                 key={job.id}
                 activeOpacity={0.8}
@@ -270,7 +274,7 @@ export default function HomeScreen() {
           </View>
         ) : (
           <View style={{ gap: 8 }}>
-            {(projects || []).slice(0, 2).map((proj) => (
+            {projectsList.slice(0, 2).map((proj: Project) => (
               <TouchableOpacity
                 key={proj.id}
                 activeOpacity={0.8}
