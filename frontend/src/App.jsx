@@ -24,6 +24,7 @@ const JobsPage = lazy(() => import('./pages/public/JobsPage'));
 const JobDetailPage = lazy(() => import('./pages/public/JobDetailPage'));
 const TemplatesPage = lazy(() => import('./pages/public/TemplatesPage'));
 const ContactPage = lazy(() => import('./pages/public/ContactPage'));
+const DownloadAppPage = lazy(() => import('./pages/public/DownloadAppPage'));
 const DesignSystemShowcasePage = lazy(() => import('./pages/public/DesignSystemShowcasePage'));
 const SubmissionGuidelinesPage = lazy(() => import('./pages/public/SubmissionGuidelinesPage'));
 const PublicProfilePage = lazy(() => import('./pages/public/PublicProfilePage'));
@@ -110,6 +111,8 @@ export default function App() {
               />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/download-app" element={<DownloadAppPage />} />
+              <Route path="/download" element={<Navigate to="/download-app" replace />} />
               <Route path="/design-system" element={<DesignSystemShowcasePage />} />
 
               {/* Public Feature Preview Pages */}

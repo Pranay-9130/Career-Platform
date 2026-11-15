@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Linkedin, Instagram, Mail, Sparkles } from 'lucide-react';
+import { Linkedin, Instagram, Mail, Sparkles, Smartphone } from 'lucide-react';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -111,6 +111,12 @@ export default function PublicFooter() {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">Resources</h3>
             <ul className="space-y-2 text-xs">
+              <li>
+                <Link to="/download-app" className="text-brand-primary font-bold hover:text-blue-700 transition-colors flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-brand-primary" />
+                  <span>Download Android App</span>
+                </Link>
+              </li>
               <li>
                 <Link to="/design-system" className="text-brand-muted hover:text-brand-primary transition-colors flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-brand-primary" />

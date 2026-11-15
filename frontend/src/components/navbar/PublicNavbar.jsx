@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Compass,
   BrainCircuit,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
@@ -114,13 +115,19 @@ export default function PublicNavbar() {
   ];
 
   // Primary top-level navigation links in exact required structure:
-  // Home | Features ▼ | About | Jobs | Projects | Templates | Contact
+  // Home | Projects | Jobs | Templates | About | Contact | Download App
   const secondaryNavLinks = [
-    { name: 'About', path: '/about' },
-    { name: 'Jobs', path: '/jobs' },
     { name: 'Projects', path: '/projects' },
+    { name: 'Jobs', path: '/jobs' },
     { name: 'Templates', path: '/templates' },
+    { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
+    {
+      name: 'Download App',
+      path: '/download-app',
+      icon: Download,
+      isDownloadApp: true,
+    },
   ];
 
   const isActive = (path) => {
@@ -277,9 +284,26 @@ export default function PublicNavbar() {
             )}
           </div>
 
-          {/* Secondary Links: About | Jobs | Projects | Templates | Contact */}
+          {/* Secondary Links: Projects | Jobs | Templates | About | Contact | Download App */}
           {secondaryNavLinks.map((link) => {
             const active = isActive(link.path);
+            if (link.isDownloadApp) {
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-1.5 font-bold ${
+                    active
+                      ? 'text-brand-primary bg-blue-100/70 border border-brand-primary/30 shadow-xs'
+                      : 'text-brand-primary bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/70'
+                  }`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{link.name}</span>
+                </Link>
+              );
+            }
             return (
               <Link
                 key={link.path}
@@ -579,6 +603,25 @@ export default function PublicNavbar() {
               {/* Secondary Navigation Links */}
               {secondaryNavLinks.map((link) => {
                 const active = isActive(link.path);
+                if (link.isDownloadApp) {
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={active ? 'page' : undefined}
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold bg-blue-50 text-brand-primary border border-blue-200/60 my-1 transition-colors"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Download className="w-4 h-4 text-brand-primary" />
+                        <span>{link.name}</span>
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-brand-primary text-white">
+                        APK
+                      </span>
+                    </Link>
+                  );
+                }
                 return (
                   <Link
                     key={link.path}
