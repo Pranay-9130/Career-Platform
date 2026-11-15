@@ -69,18 +69,63 @@ npx expo start
 
 ## 📦 Building Standalone Release APK
 
-To generate an installable direct `.apk` package:
+### 1. APK vs AAB Packaging
+- **APK (`.apk`):** Directly installable on Android phones via sideloading/browser download. Required for direct website distribution.
+- **AAB (`.aab`):** Google Play Store upload format. Cannot be installed directly on an Android device without parsing errors.
 
-### Using EAS Build (Recommended):
+`eas.json` is configured with `"android": { "buildType": "apk" }` across `preview` and `production` profiles to ensure Expo EAS outputs a genuine installable APK.
+
+### 2. EAS Build Commands
 ```bash
-npx eas-cli login
-npx eas-cli build --platform android --profile preview
+# Navigate to the Android directory
+cd android
+
+# Install EAS CLI (if not already installed)
+npm install -g eas-cli
+
+# Log in to your Expo account
+eas login
+
+# Trigger direct release APK compilation
+eas build --platform android --profile production
+
+# Or for internal preview APK testing:
+eas build --platform android --profile preview
 ```
-This generates a direct downloadable `.apk` file that can be distributed directly to students.
+
+### 3. Local Gradle Build (Alternative without EAS cloud):
+```bash
+# Generate native Android project files
+npx expo prebuild --platform android
+
+# Compile release APK locally using Gradle
+cd android
+./gradlew assembleRelease
+```
+The resulting signed APK will be generated at:
+`android/app/build/outputs/apk/release/app-release.apk`
 
 ---
 
-## 🔒 Security & Integrity
-- **JWT Storage:** Securely isolated inside hardware-backed Android Keystore via Expo SecureStore.
-- **Permissions:** Standard storage and network access only. No invasive device permissions.
-- **Compatibility:** Optimized for Android 8.0 (API 26) through Android 15 (API 35).
+## 🔒 Security, Play Protect & Integrity
+
+### Why Google Play Protect Displays Warnings on Sideloaded APKs:
+1. **Unrecognized Developer Certificate:** When an app is distributed outside the Google Play Store, its cryptographic signing certificate is not yet in Google's cloud catalog. Play Protect flags unrecognized developer certificates with a cautionary prompt (*"Unrecognized app"* or *"App may be harmful"*).
+2. **Resolution:** Users can safely tap **"More details"** &rarr; **"Install anyway"**.
+3. **Whitelisting:** To permanently eliminate the Play Protect warning, developers can register the APK signature in the [Google Play Protect Developer Portal](https://developers.google.com/android/play-protect) or distribute via Google Play Console.
+
+### Permissions Audit:
+- `android.permission.INTERNET`: Required for API requests to the AspirePath backend.
+- `android.permission.ACCESS_NETWORK_STATE`: Required to monitor offline/online network transitions.
+- **Zero broad storage permissions:** Deprecated `READ_EXTERNAL_STORAGE` and `WRITE_EXTERNAL_STORAGE` have been removed to comply with Android 14/15 Scoped Storage and prevent security flags. Document picking and sharing use Android's native Storage Access Framework (SAF).
+- **Zero sensitive permissions:** No SMS, Contacts, Location, Camera, Microphone, or Background services.
+
+### Compatibility Matrix:
+- **Application ID:** `com.aspirepath.app`
+- **Version Code:** `1`
+- **Version Name:** `1.0.0`
+- **Minimum SDK:** `API 26 (Android 8.0 Oreo)`
+- **Target SDK:** `API 35 (Android 15)`
+- **Supported Architectures:** `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`
+
+

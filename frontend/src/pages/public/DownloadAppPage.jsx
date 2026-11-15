@@ -36,7 +36,7 @@ export default function DownloadAppPage() {
     download_url: '/downloads/AspirePath-v1.0.0.apk',
     direct_api_url: '/api/download/android-apk',
     min_android_version: 'Android 8.0+',
-    sha256: 'b8c635b57fdf0cf20f0b924586986def21be72326aacb3c65ff8d018026aa318',
+    sha256: 'bdb29ad700e5bb8807e98dec3cb9f24938dda1b9e7193296c20de9f2b0389151',
   });
 
   const [faqOpen, setFaqOpen] = useState({ 0: true });

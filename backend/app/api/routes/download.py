@@ -73,7 +73,7 @@ async def get_app_info():
     file_size_mb = f"{file_size_bytes / (1024 * 1024):.1f} MB" if file_size_bytes > 1024 * 1024 else f"{max(1, file_size_bytes // 1024)} KB"
 
     # Compute actual SHA256 checksum
-    sha256_hash = "b8c635b57fdf0cf20f0b924586986def21be72326aacb3c65ff8d018026aa318"
+    sha256_hash = "bdb29ad700e5bb8807e98dec3cb9f24938dda1b9e7193296c20de9f2b0389151"
     if apk_path.exists() and file_size_bytes > 0:
         try:
             with open(apk_path, "rb") as f:
