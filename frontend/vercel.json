@@ -6,17 +6,17 @@
   "redirects": [
     {
       "source": "/downloads/AspirePath.apk",
-      "destination": "https://expo.dev/artifacts/eas/wz3m9jSDvyGmFsaQCXQ1X9kxcpgc_Rp7WIfglOd6kKo.apk",
+      "destination": "https://expo.dev/artifacts/eas/fDgkF_iXlbGOnnxPDAQWI2E2lFH7VfjTxmPUOvOGOcg.apk",
       "permanent": false
     },
     {
       "source": "/downloads/AspirePath-production.apk",
-      "destination": "https://expo.dev/artifacts/eas/wz3m9jSDvyGmFsaQCXQ1X9kxcpgc_Rp7WIfglOd6kKo.apk",
+      "destination": "https://expo.dev/artifacts/eas/fDgkF_iXlbGOnnxPDAQWI2E2lFH7VfjTxmPUOvOGOcg.apk",
       "permanent": false
     },
     {
       "source": "/downloads/AspirePath-v1.0.0.apk",
-      "destination": "https://expo.dev/artifacts/eas/wz3m9jSDvyGmFsaQCXQ1X9kxcpgc_Rp7WIfglOd6kKo.apk",
+      "destination": "https://expo.dev/artifacts/eas/fDgkF_iXlbGOnnxPDAQWI2E2lFH7VfjTxmPUOvOGOcg.apk",
       "permanent": false
     }
   ],
