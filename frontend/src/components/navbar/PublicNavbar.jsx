@@ -293,17 +293,14 @@ export default function PublicNavbar() {
                   key={link.path}
                   to={link.path}
                   aria-current={active ? 'page' : undefined}
-                  className={`relative px-3 py-1.5 rounded-full text-xs transition-all flex items-center gap-1.5 font-bold shadow-xs ${
+                  className={`relative px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-1.5 font-bold ${
                     active
-                      ? 'text-white bg-brand-primary border border-brand-primary'
-                      : 'text-brand-primary bg-blue-50/90 hover:bg-blue-100 hover:text-blue-700 border border-blue-200/90'
+                      ? 'text-brand-primary bg-blue-100/70 border border-brand-primary/30 shadow-xs'
+                      : 'text-brand-primary bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/70'
                   }`}
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download App</span>
-                  <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-semibold">
-                    APK
-                  </span>
+                  <span>{link.name}</span>
                 </Link>
               );
             }

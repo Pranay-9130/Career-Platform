@@ -36,7 +36,7 @@ export default function DownloadAppPage() {
     download_url: '/api/download/android-apk',
     direct_api_url: '/api/download/android-apk',
     min_android_version: 'Android 7.0+',
-    sha256: 'b756a3b644a5a673d886a297b96e9736b895b22b9a47a156533f3670193fc510',
+    sha256: '6f5a34ad17b2b8e390c58fa036a28185cba799da88b1f4df6cfb99ee5108ec97',
   });
 
   const [faqOpen, setFaqOpen] = useState({ 0: true });
