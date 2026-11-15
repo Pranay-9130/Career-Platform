@@ -61,3 +61,61 @@ test('Android application directory structure contains core files and navigation
   assert.ok(fs.existsSync(path.join(androidRoot, 'app/tools/skill-intelligence.tsx')), 'Skill intelligence screen must exist');
   assert.ok(fs.existsSync(path.join(androidRoot, 'app/tools/placement-prep.tsx')), 'Placement prep screen must exist');
 });
+
+test('Valid release APK is hosted in frontend/public/downloads/ and backend/downloads/', () => {
+  const frontendApk = path.resolve('public/downloads/AspirePath-v1.0.0.apk');
+  assert.ok(fs.existsSync(frontendApk), 'frontend/public/downloads/AspirePath-v1.0.0.apk must exist');
+  const frontendStat = fs.statSync(frontendApk);
+  assert.ok(frontendStat.size > 100000, 'Frontend APK must be substantial non-empty file (>100KB)');
+
+  const backendApk = path.resolve('../backend/downloads/AspirePath-v1.0.0.apk');
+  assert.ok(fs.existsSync(backendApk), 'backend/downloads/AspirePath-v1.0.0.apk must exist');
+  const backendStat = fs.statSync(backendApk);
+  assert.ok(backendStat.size > 100000, 'Backend APK must be substantial non-empty file (>100KB)');
+
+  // Verify ZIP header magic bytes: PK (0x50 0x4B 0x03 0x04)
+  const fd = fs.openSync(frontendApk, 'r');
+  const buffer = Buffer.alloc(4);
+  fs.readSync(fd, buffer, 0, 4, 0);
+  fs.closeSync(fd);
+  assert.equal(buffer[0], 0x50, 'Must have zip header byte 0 (P)');
+  assert.equal(buffer[1], 0x4b, 'Must have zip header byte 1 (K)');
+});
+
+test('frontend/vercel.json configures APK content-type and attachment headers', () => {
+  const vercelFile = path.resolve('vercel.json');
+  assert.ok(fs.existsSync(vercelFile), 'vercel.json must exist');
+  const vercelConfig = JSON.parse(fs.readFileSync(vercelFile, 'utf8'));
+
+  const apkHeader = vercelConfig.headers?.find((h) => h.source && h.source.includes('/downloads/'));
+  assert.ok(apkHeader, 'vercel.json must configure headers for /downloads/');
+
+  const ct = apkHeader.headers.find((header) => header.key === 'Content-Type');
+  assert.equal(ct?.value, 'application/vnd.android.package-archive');
+
+  const cd = apkHeader.headers.find((header) => header.key === 'Content-Disposition');
+  assert.match(cd?.value || '', /attachment; filename="AspirePath-v1\.0\.0\.apk"/);
+});
+
+test('DownloadAppPage.jsx implements stateful download and troubleshooting guidance', () => {
+  const pageFile = path.resolve('src/pages/public/DownloadAppPage.jsx');
+  const content = fs.readFileSync(pageFile, 'utf8');
+
+  assert.match(content, /downloadState/, 'Must manage downloadState');
+  assert.match(content, /handleDownload/, 'Must provide handleDownload handler');
+  assert.match(content, /AspirePath-v1\.0\.0\.apk/, 'Must reference official APK package name');
+  assert.match(content, /Download Started|Download started|Download Initiated/, 'Must inform user when download is initiated');
+  assert.match(content, /Install unknown apps|File might be harmful/, 'Must provide Android troubleshooting tips');
+});
+
+test('.gitignore explicitly un-ignores release APK packages so Vercel can bundle them', () => {
+  const gitignoreFile = path.resolve('../.gitignore');
+  assert.ok(fs.existsSync(gitignoreFile), '.gitignore must exist');
+  const content = fs.readFileSync(gitignoreFile, 'utf8');
+
+  assert.match(content, /!frontend\/public\/downloads\//, 'Must un-ignore frontend/public/downloads/');
+  assert.match(content, /!backend\/downloads\//, 'Must un-ignore backend/downloads/');
+});
+
+
+

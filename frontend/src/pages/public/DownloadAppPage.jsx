@@ -19,20 +19,31 @@ import {
   ChevronDown,
   ChevronUp,
   Share2,
+  Loader2,
+  RefreshCw,
+  ExternalLink,
+  HelpCircle,
+  Check,
+  Copy,
 } from 'lucide-react';
 import { Button, Badge } from '@/components/common';
 
 export default function DownloadAppPage() {
   const [appInfo, setAppInfo] = useState({
     version: '1.0.0',
-    file_size: '24.8 MB',
+    file_size: '2.0 MB',
     release_date: 'November 2026',
-    download_url: '/api/download/android-apk',
+    download_url: '/downloads/AspirePath-v1.0.0.apk',
+    direct_api_url: '/api/download/android-apk',
     min_android_version: 'Android 8.0+',
-    sha256: '8f4e2b1c6d3a5e7f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f',
+    sha256: 'b8c635b57fdf0cf20f0b924586986def21be72326aacb3c65ff8d018026aa318',
   });
 
   const [faqOpen, setFaqOpen] = useState({ 0: true });
+  const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'initiating' | 'started' | 'error'
+  const [downloadError, setDownloadError] = useState(null);
+  const [copiedSha, setCopiedSha] = useState(false);
+  const [showTroubleshoot, setShowTroubleshoot] = useState(false);
 
   useEffect(() => {
     fetch('/api/download/app-info')
@@ -42,6 +53,46 @@ export default function DownloadAppPage() {
       })
       .catch((err) => console.log('App info fetch fallback used:', err));
   }, []);
+
+  const handleDownload = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (downloadState === 'initiating') return;
+
+    setDownloadState('initiating');
+    setDownloadError(null);
+
+    try {
+      // Brief feedback delay to allow UI to render spinner & debounce multiple clicks
+      await new Promise((resolve) => setTimeout(resolve, 450));
+
+      const downloadUrl = appInfo.download_url || '/downloads/AspirePath-v1.0.0.apk';
+      const targetFilename = 'AspirePath-v1.0.0.apk';
+
+      // Trigger standard browser download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', targetFilename);
+      link.setAttribute('target', '_self');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setDownloadState('started');
+      setShowTroubleshoot(true);
+    } catch (err) {
+      console.error('Download initiation error:', err);
+      setDownloadState('error');
+      setDownloadError(err?.message || 'Could not initiate download. Please use the direct mirror link below.');
+    }
+  };
+
+  const handleCopySha = () => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(appInfo.sha256);
+      setCopiedSha(true);
+      setTimeout(() => setCopiedSha(false), 2000);
+    }
+  };
 
   const toggleFaq = (index) => {
     setFaqOpen((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -156,17 +207,41 @@ export default function DownloadAppPage() {
               {/* Main Download Action Card */}
               <div className="bg-white p-6 rounded-2xl border border-brand-border shadow-md max-w-xl mx-auto lg:mx-0 space-y-4">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <a
-                    href={appInfo.download_url}
-                    download="AspirePath-v1.0.0.apk"
-                    className="flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 bg-brand-primary hover:bg-blue-600 text-white font-bold text-sm rounded-xl shadow-md hover:shadow-lg transition transform active:scale-[0.98]"
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    disabled={downloadState === 'initiating'}
+                    className={`flex-1 inline-flex items-center justify-center gap-2.5 px-6 py-3.5 font-bold text-sm rounded-xl shadow-md transition transform active:scale-[0.98] ${
+                      downloadState === 'initiating'
+                        ? 'bg-blue-400 text-white cursor-wait'
+                        : downloadState === 'started'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                        : 'bg-brand-primary hover:bg-blue-600 text-white shadow-brand-primary/20 hover:shadow-lg'
+                    }`}
                   >
-                    <Download className="w-5 h-5" />
-                    <span>Download Android APK</span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[11px] font-mono">
-                      v{appInfo.version}
-                    </span>
-                  </a>
+                    {downloadState === 'initiating' ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Preparing Download...</span>
+                      </>
+                    ) : downloadState === 'started' ? (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 text-white" />
+                        <span>Download Initiated</span>
+                        <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[11px] font-mono">
+                          v{appInfo.version}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5" />
+                        <span>Download Android APK</span>
+                        <span className="px-2 py-0.5 rounded-md bg-white/20 text-white text-[11px] font-mono">
+                          v{appInfo.version}
+                        </span>
+                      </>
+                    )}
+                  </button>
 
                   <Link
                     to="/register"
@@ -177,6 +252,72 @@ export default function DownloadAppPage() {
                   </Link>
                 </div>
 
+                {/* Download State Banner: Success / In-progress Notification */}
+                {downloadState === 'started' && (
+                  <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-xl text-left space-y-2 animate-fadeIn">
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-emerald-900">
+                          Download started: <code className="font-mono text-emerald-800">AspirePath-v1.0.0.apk</code>
+                        </p>
+                        <p className="text-[11px] text-emerald-700 leading-relaxed">
+                          Your APK is downloading ({appInfo.file_size}). Check your browser's download bar or your phone's notification drawer.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-emerald-100 text-xs">
+                      <button
+                        type="button"
+                        onClick={handleDownload}
+                        className="inline-flex items-center gap-1.5 text-emerald-800 font-bold hover:text-emerald-950 underline cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Didn't start? Click to restart</span>
+                      </button>
+                      <span className="text-emerald-300">•</span>
+                      <a
+                        href={appInfo.download_url}
+                        download="AspirePath-v1.0.0.apk"
+                        className="text-emerald-800 font-medium hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>Direct static link</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Fallback Banner */}
+                {downloadState === 'error' && (
+                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-left space-y-2">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-rose-900">Download Initiation Failed</p>
+                        <p className="text-[11px] text-rose-700">{downloadError || 'Please try the direct link below.'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 pt-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={handleDownload}
+                        className="inline-flex items-center gap-1.5 text-rose-800 font-bold hover:underline"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Try Again</span>
+                      </button>
+                      <a
+                        href={appInfo.download_url}
+                        download="AspirePath-v1.0.0.apk"
+                        className="text-rose-800 font-bold hover:underline"
+                      >
+                        Download Direct File
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* Metadata Row */}
                 <div className="flex flex-wrap items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 gap-2">
                   <span className="inline-flex items-center gap-1.5">
@@ -185,6 +326,61 @@ export default function DownloadAppPage() {
                   </span>
                   <span>Size: <strong>{appInfo.file_size}</strong></span>
                   <span>Requires: <strong>{appInfo.min_android_version}</strong></span>
+                </div>
+
+                {/* Troubleshooting & Security Help Toggle */}
+                <div className="pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowTroubleshoot(!showTroubleshoot)}
+                    className="w-full flex items-center justify-between text-left text-xs font-semibold text-slate-600 hover:text-brand-primary transition py-1"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <HelpCircle className="w-4 h-4 text-slate-400" />
+                      <span>Android installation tips & warnings</span>
+                    </span>
+                    {showTroubleshoot ? (
+                      <ChevronUp className="w-4 h-4 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    )}
+                  </button>
+
+                  {showTroubleshoot && (
+                    <div className="mt-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-left space-y-2.5 text-xs text-slate-600 animate-fadeIn">
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          Chrome warning: "File might be harmful"?
+                        </div>
+                        <p className="text-[11px] text-slate-500 pl-3">
+                          This is standard Android security for all APKs downloaded outside Google Play. Tap <strong>"Download anyway"</strong> to proceed.
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          "Install unknown apps" prompt?
+                        </div>
+                        <p className="text-[11px] text-slate-500 pl-3">
+                          When you open the APK, tap <strong>Settings</strong> &rarr; toggle on <strong>"Allow from this source"</strong> for your browser or Files app, then return and tap <strong>Install</strong>.
+                        </p>
+                      </div>
+
+                      <div className="pt-1 flex items-center justify-between text-[11px] border-t border-slate-200 text-slate-500">
+                        <span>Package: <strong className="font-mono text-slate-700">com.aspirepath.app</strong></span>
+                        <button
+                          type="button"
+                          onClick={handleCopySha}
+                          className="inline-flex items-center gap-1 text-brand-primary font-bold hover:underline"
+                        >
+                          {copiedSha ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedSha ? 'Copied SHA-256' : 'Copy Checksum'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -355,14 +551,29 @@ export default function DownloadAppPage() {
           </div>
 
           <div className="mt-10 text-center">
-            <a
-              href={appInfo.download_url}
-              download="AspirePath-v1.0.0.apk"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-primary hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-xs transition"
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloadState === 'initiating'}
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-brand-primary hover:bg-blue-600 active:scale-95 disabled:bg-blue-300 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition"
             >
-              <Download className="w-4 h-4" />
-              <span>Download AspirePath APK Now ({appInfo.file_size})</span>
-            </a>
+              {downloadState === 'initiating' ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Preparing AspirePath APK...</span>
+                </>
+              ) : downloadState === 'started' ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+                  <span>Download Initiated ({appInfo.file_size})</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span>Download AspirePath APK Now ({appInfo.file_size})</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </section>
@@ -440,3 +651,4 @@ export default function DownloadAppPage() {
     </div>
   );
 }
+

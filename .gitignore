@@ -20,6 +20,10 @@ build/
 develop-eggs/
 dist/
 downloads/
+!frontend/public/downloads/
+!frontend/public/downloads/*.apk
+!backend/downloads/
+!backend/downloads/*.apk
 eggs/
 .eggs/
 lib/
