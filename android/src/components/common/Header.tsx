@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'between',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -79,3 +79,4 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 });
+

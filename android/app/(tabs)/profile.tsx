@@ -92,7 +92,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Career Tools Shortcuts */}
-        <Text style={[typography.captionBold, { color: colors.textMuted, uppercase: true, marginBottom: 8, paddingHorizontal: 4 }]}>
+        <Text style={[typography.captionBold, { color: colors.textMuted, textTransform: 'uppercase', marginBottom: 8, paddingHorizontal: 4 }]}>
           Career Workspaces
         </Text>
 
@@ -161,7 +161,7 @@ export default function ProfileScreen() {
         </Card>
 
         {/* Preferences & Theme */}
-        <Text style={[typography.captionBold, { color: colors.textMuted, uppercase: true, marginBottom: 8, marginTop: 12, paddingHorizontal: 4 }]}>
+        <Text style={[typography.captionBold, { color: colors.textMuted, textTransform: 'uppercase', marginBottom: 8, marginTop: 12, paddingHorizontal: 4 }]}>
           Appearance & Settings
         </Text>
 
@@ -305,3 +305,4 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
 });
+

@@ -15,6 +15,7 @@ import { useThemeStore } from '../../src/store/themeStore';
 import { typography, borderRadius } from '../../src/constants/theme';
 import { Header } from '../../src/components/common/Header';
 import { Card } from '../../src/components/common/Card';
+import { Button } from '../../src/components/common/Button';
 import { Badge } from '../../src/components/common/Badge';
 import { Skeleton } from '../../src/components/common/Skeleton';
 import { EmptyState } from '../../src/components/common/EmptyState';
@@ -436,3 +437,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
 });
+
