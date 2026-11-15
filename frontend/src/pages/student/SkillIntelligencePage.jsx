@@ -762,14 +762,14 @@ export default function SkillIntelligencePage() {
                 <span>AI Mentor</span>
               </button>
 
-              {/* Button 4: Reassess Fit (White with Slate Text & 2px Border) */}
+              {/* Button 4: Reassess Fit (White with Blue Text & 2px Border) */}
               <button
                 type="button"
                 onClick={handleReassess}
                 disabled={reassessing}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-brand-primary border-2 border-slate-200 hover:border-brand-primary font-bold text-xs shadow-xs transition-all active:scale-[0.98] disabled:opacity-60"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-brand-primary border-2 border-brand-primary/40 hover:border-brand-primary font-bold text-xs shadow-xs transition-all active:scale-[0.98] disabled:opacity-60"
               >
-                <RefreshCw className={`w-4 h-4 shrink-0 ${reassessing ? 'animate-spin text-brand-primary' : 'text-slate-600'}`} />
+                <RefreshCw className={`w-4 h-4 shrink-0 ${reassessing ? 'animate-spin text-brand-primary' : 'text-brand-primary'}`} />
                 <span>{reassessing ? 'Reassessing...' : 'Reassess Fit'}</span>
               </button>
             </div>

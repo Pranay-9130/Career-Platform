@@ -21,3 +21,4 @@ export const APP_CONFIG = {
     THEME_MODE: 'aspirepath_theme_mode',
   },
 };
+

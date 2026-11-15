@@ -38,3 +38,4 @@ export const skillIntelligenceApi = {
     return res.data;
   },
 };
+

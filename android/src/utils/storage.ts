@@ -56,3 +56,4 @@ class StorageAdapter {
 }
 
 export const appStorage = new StorageAdapter();
+

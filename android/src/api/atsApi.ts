@@ -36,3 +36,4 @@ export const resumeApi = {
     await apiClient.delete(`/resumes/${id}`);
   },
 };
+

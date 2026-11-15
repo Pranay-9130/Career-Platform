@@ -31,3 +31,4 @@ export const placementPrepApi = {
     return `${APP_CONFIG.API_BASE_URL}/placement-preparation/materials/${materialId}/download`;
   },
 };
+

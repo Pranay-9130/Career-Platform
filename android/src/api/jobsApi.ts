@@ -35,3 +35,4 @@ export const jobsApi = {
     return res.data;
   },
 };
+

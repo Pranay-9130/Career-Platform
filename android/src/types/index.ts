@@ -137,3 +137,4 @@ export interface StudentDashboardSummary {
   applications_count: number;
   readiness_percentage: number;
 }
+
