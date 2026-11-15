@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -69,6 +70,13 @@ export default function HomeScreen() {
   const projectsList: Project[] = Array.isArray(projects) ? projects : (projects as any)?.items || [];
   const applicationsList = Array.isArray(applications) ? applications : (applications as any)?.items || [];
   const appsCount = applicationsList.length;
+
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 600;
+  const columns = isTablet ? 3 : 2;
+  const gridGap = 12;
+  const horizontalPadding = 32;
+  const cardWidth = Math.floor((windowWidth - horizontalPadding - (gridGap * (columns - 1))) / columns);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right']}>
@@ -196,80 +204,80 @@ export default function HomeScreen() {
         <View style={styles.toolsGrid}>
           {/* Resume Builder */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => router.push('/tools/resume-builder')}
-            style={[styles.toolCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
+            style={[styles.toolCard, { width: cardWidth, backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
           >
             <View style={[styles.toolIconBox, { backgroundColor: '#EFF6FF' }]}>
               <FileText size={22} color="#2563EB" />
             </View>
             <Text style={[typography.bodyBold, { color: colors.text, marginTop: 10 }]}>Resume Builder</Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>ATS-optimized resumes</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]} numberOfLines={1}>ATS-optimized resumes</Text>
           </TouchableOpacity>
 
           {/* ATS Analyzer */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => router.push('/tools/ats-analyzer')}
-            style={[styles.toolCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
+            style={[styles.toolCard, { width: cardWidth, backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
           >
             <View style={[styles.toolIconBox, { backgroundColor: '#ECFEFF' }]}>
               <Sparkles size={22} color="#06B6D4" />
             </View>
             <Text style={[typography.bodyBold, { color: colors.text, marginTop: 10 }]}>ATS Analyzer</Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>Job description match</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]} numberOfLines={1}>Job description match</Text>
           </TouchableOpacity>
 
           {/* Skill Intelligence */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => router.push('/tools/skill-intelligence')}
-            style={[styles.toolCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
+            style={[styles.toolCard, { width: cardWidth, backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
           >
             <View style={[styles.toolIconBox, { backgroundColor: '#EEF2FF' }]}>
               <BrainCircuit size={22} color="#6366F1" />
             </View>
             <Text style={[typography.bodyBold, { color: colors.text, marginTop: 10 }]}>Skill Intelligence</Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>Resume extraction & gaps</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]} numberOfLines={1}>Resume extraction & gaps</Text>
           </TouchableOpacity>
 
           {/* Placement Prep */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => router.push('/tools/placement-prep')}
-            style={[styles.toolCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
+            style={[styles.toolCard, { width: cardWidth, backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
           >
             <View style={[styles.toolIconBox, { backgroundColor: '#ECFDF5' }]}>
               <BookOpen size={22} color="#10B981" />
             </View>
             <Text style={[typography.bodyBold, { color: colors.text, marginTop: 10 }]}>Placement Prep</Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>Role question guides</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]} numberOfLines={1}>Role question guides</Text>
           </TouchableOpacity>
 
           {/* Explore Jobs */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => router.push('/(tabs)/jobs')}
-            style={[styles.toolCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
+            style={[styles.toolCard, { width: cardWidth, backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
           >
             <View style={[styles.toolIconBox, { backgroundColor: '#FFFBEB' }]}>
               <Briefcase size={22} color="#D97706" />
             </View>
             <Text style={[typography.bodyBold, { color: colors.text, marginTop: 10 }]}>Explore Jobs</Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>Verified openings & links</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]} numberOfLines={1}>Verified openings & links</Text>
           </TouchableOpacity>
 
           {/* Peer Projects */}
           <TouchableOpacity
-            activeOpacity={0.8}
+            activeOpacity={0.7}
             onPress={() => router.push('/(tabs)/projects')}
-            style={[styles.toolCard, { backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
+            style={[styles.toolCard, { width: cardWidth, backgroundColor: colors.surfaceCard, borderColor: colors.border }]}
           >
             <View style={[styles.toolIconBox, { backgroundColor: '#F5F3FF' }]}>
               <FolderGit2 size={22} color="#7C3AED" />
             </View>
             <Text style={[typography.bodyBold, { color: colors.text, marginTop: 10 }]}>Peer Projects</Text>
-            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]}>Code reviews & demos</Text>
+            <Text style={[typography.caption, { color: colors.textMuted, marginTop: 2 }]} numberOfLines={1}>Code reviews & demos</Text>
           </TouchableOpacity>
         </View>
 
@@ -485,14 +493,19 @@ const styles = StyleSheet.create({
   toolsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    rowGap: 12,
     marginBottom: 24,
   },
   toolCard: {
-    width: '48.5%',
     padding: 14,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   toolIconBox: {
     width: 42,

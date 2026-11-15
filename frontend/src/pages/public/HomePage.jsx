@@ -23,6 +23,15 @@ import {
   UserCheck,
   Compass,
   Zap,
+  Smartphone,
+  Download,
+  QrCode,
+  Layout,
+  Terminal,
+  Cpu,
+  BarChart3,
+  Star,
+  Users,
 } from 'lucide-react';
 import { Button, Card, Badge, Skeleton } from '@/components/common';
 import { ProjectCard, JobCard } from '@/components/cards';
@@ -45,6 +54,9 @@ export default function HomePage() {
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState(null);
+
+  // Interactive Hero Preview Tab: 'ats' | 'skills' | 'projects'
+  const [activeHeroTab, setActiveHeroTab] = useState('ats');
 
   useEffect(() => {
     let isMounted = true;
@@ -105,7 +117,7 @@ export default function HomePage() {
       />
 
       {/* ========================================================================= */}
-      {/* 1. PREMIUM HERO SECTION (CENTERED, MODERN SAAS AESTHETIC) */}
+      {/* 1. HERO SECTION WITH SAAS DASHBOARD PREVIEW */}
       {/* ========================================================================= */}
       <section className="relative pt-12 sm:pt-20 lg:pt-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Subtle grid background pattern with radial mask */}
@@ -120,14 +132,14 @@ export default function HomePage() {
             <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
             <span>AI-Powered Career Development Platform</span>
             <span className="text-blue-300">•</span>
-            <span className="text-[11px] font-bold text-brand-primary">AspirePath 2.0</span>
+            <span className="text-[11px] font-bold text-brand-primary">Deterministic Tech Pathways</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-extrabold text-slate-900 tracking-tight leading-[1.12]">
-            Your Career Journey{' '}
+            From Your First Project{' '}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text text-transparent inline-block pb-1">
-              Starts Here.
+              to Your First Job.
             </span>
           </h1>
 
@@ -136,7 +148,7 @@ export default function HomePage() {
             Build your resume, discover your strengths, explore opportunities and become career-ready with AspirePath.
           </p>
 
-          {/* Dual CTAs */}
+          {/* Dual CTAs + Mobile App Pill */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
             {isAuthenticated ? (
               <Link to={getDashboardPath(user)} className="w-full sm:w-auto">
@@ -157,12 +169,12 @@ export default function HomePage() {
                   rightIcon={ArrowRight}
                   className="w-full sm:w-auto text-base px-8 py-3.5 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 font-bold transition-all"
                 >
-                  Get Started
+                  Get Started Free
                 </Button>
               </Link>
             )}
 
-            <a href="#career-tools" className="w-full sm:w-auto">
+            <a href="#features" className="w-full sm:w-auto">
               <Button
                 size="lg"
                 variant="outline"
@@ -171,52 +183,208 @@ export default function HomePage() {
                 Explore Features
               </Button>
             </a>
+
+            <Link to="/download-app" className="w-full sm:w-auto">
+              <Button
+                size="lg"
+                variant="outline"
+                leftIcon={Smartphone}
+                className="w-full sm:w-auto text-base px-6 py-3.5 bg-blue-50/70 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 font-semibold shadow-xs"
+              >
+                Download App
+              </Button>
+            </Link>
           </div>
 
-          {/* Clean Floating Feature Ribbon */}
-          <div className="pt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-xs">
-            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/90 border border-slate-200 shadow-xs text-slate-700 font-medium backdrop-blur-xs hover:border-blue-300 transition-colors">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>ATS Resume Analyzer</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/90 border border-slate-200 shadow-xs text-slate-700 font-medium backdrop-blur-xs hover:border-cyan-300 transition-colors">
-              <BrainCircuit className="w-3.5 h-3.5 text-cyan-600" />
-              <span>13-Role Skill Matrix</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/90 border border-slate-200 shadow-xs text-slate-700 font-medium backdrop-blur-xs hover:border-indigo-300 transition-colors">
-              <FileText className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Vector PDF Resume Builder</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/90 border border-slate-200 shadow-xs text-slate-700 font-medium backdrop-blur-xs hover:border-emerald-300 transition-colors">
-              <FolderGit2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Verified Portfolios</span>
+          {/* Interactive Interactive Preview Mockup Window */}
+          <div className="pt-10 max-w-4xl mx-auto">
+            <div className="bg-white/95 rounded-3xl border border-slate-200/90 shadow-2xl shadow-blue-500/10 overflow-hidden backdrop-blur-md">
+              {/* Window Title Bar */}
+              <div className="bg-slate-50 border-b border-slate-200/80 px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-400/80" />
+                  <div className="w-3 h-3 rounded-full bg-amber-400/80" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-400/80" />
+                  <span className="ml-2 text-xs font-semibold text-slate-500 hidden sm:inline">
+                    AspirePath Career Readiness Console
+                  </span>
+                </div>
+
+                {/* Tab switchers */}
+                <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl">
+                  <button
+                    onClick={() => setActiveHeroTab('ats')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      activeHeroTab === 'ats'
+                        ? 'bg-white text-brand-primary shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    ATS Score
+                  </button>
+                  <button
+                    onClick={() => setActiveHeroTab('skills')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      activeHeroTab === 'skills'
+                        ? 'bg-white text-brand-primary shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Skill Matrix
+                  </button>
+                  <button
+                    onClick={() => setActiveHeroTab('projects')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      activeHeroTab === 'projects'
+                        ? 'bg-white text-brand-primary shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Portfolios
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab Content Display */}
+              <div className="p-6 sm:p-8 text-left">
+                {activeHeroTab === 'ats' && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-blue-50/80 to-indigo-50/60 border border-blue-100">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-blue-700">
+                            Resume Analysis
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                            ATS Compliant
+                          </span>
+                        </div>
+                        <h4 className="text-xl font-bold text-slate-900 mt-1">
+                          Frontend Developer Track
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-1">
+                          Evaluated against standard ATS parsing engines and verified keyword matrices.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl border border-blue-100 shadow-xs">
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-blue-600">88%</p>
+                          <p className="text-[10px] text-slate-500 font-semibold">Match Score</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-cyan-400 flex items-center justify-center font-bold text-xs text-blue-600">
+                          ✓
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <p className="font-bold text-slate-700">Verified Technical Skills</p>
+                        <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+                          ✓ React, TypeScript, HTML5, CSS3, REST
+                        </p>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <p className="font-bold text-slate-700">Format & Structure</p>
+                        <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+                          ✓ Vector PDF, Standard Sections, Single Column
+                        </p>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                        <p className="font-bold text-slate-700">Recommended Additions</p>
+                        <p className="text-[11px] text-amber-600 font-semibold mt-1">
+                          + Unit Testing (Jest), CI/CD Workflow
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeHeroTab === 'skills' && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-cyan-50/80 to-blue-50/60 border border-cyan-100">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-800">
+                          13-Role Engineering Framework
+                        </span>
+                        <h4 className="text-xl font-bold text-slate-900 mt-1">
+                          Personalized Skill Gap Roadmaps
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-1">
+                          Real-time extraction from resumes with deterministic curriculum recommendations.
+                        </p>
+                      </div>
+                      <Badge variant="cyan" size="md">Deterministic AI</Badge>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {['Frontend Developer (92%)', 'Full Stack Developer (78%)', 'Software Engineer (65%)', 'Backend Developer (55%)'].map((track, i) => (
+                        <div key={i} className="px-3.5 py-2 rounded-xl bg-white border border-slate-200 shadow-xs flex items-center gap-2 text-xs font-bold text-slate-800">
+                          <span className="w-2 h-2 rounded-full bg-cyan-500" />
+                          <span>{track}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeHeroTab === 'projects' && (
+                  <div className="space-y-6 animate-in fade-in duration-200">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-emerald-50/80 to-teal-50/60 border border-emerald-100">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                          Peer Project Verification
+                        </span>
+                        <h4 className="text-xl font-bold text-slate-900 mt-1">
+                          Architecture Blueprints & Git Proofs
+                        </h4>
+                        <p className="text-xs text-slate-600 mt-1">
+                          Student projects accompanied by architecture diagrams, live demo URLs, and GitHub repos.
+                        </p>
+                      </div>
+                      <Badge variant="success" size="md">Verified Code</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                        <p className="font-bold text-slate-800">Career Development Microservices</p>
+                        <p className="text-slate-500 text-[11px]">FastAPI • PostgreSQL • Redis • Docker</p>
+                      </div>
+                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                        <p className="font-bold text-slate-800">Realtime Collaborative Code Editor</p>
+                        <p className="text-slate-500 text-[11px]">React • WebSockets • Tailwind CSS • Node.js</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ========================================================================= */}
-      {/* 2. MAIN CAREER TOOLS (PREMIUM BENTO FEATURE CARDS) */}
+      {/* 2. CORE FEATURES (6 PREMIUM SAAS CAPABILITIES) */}
       {/* ========================================================================= */}
-      <section id="career-tools" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24">
+      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-24">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <Badge variant="primary" size="sm" className="mb-3">
-            Core AI Capabilities
+            Core Features
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-slate-900 tracking-tight">
-            Three Powerful Tools for Career Preparation
+            Six Powerful Tools for Career Preparation
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">
             Engineered specifically to solve the biggest challenges in entry-level hiring with deterministic rigor.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1: ATS Resume Analyzer */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Feature 1: ATS Resume Analyzer */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-blue-300">
             <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-blue-600 to-cyan-500" />
-
-            <div className="p-7 space-y-6">
+            <div className="p-7 space-y-5">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 text-brand-primary border border-blue-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
                   <Sparkles className="w-6 h-6" />
@@ -225,7 +393,6 @@ export default function HomePage() {
                   ATS Scoring
                 </span>
               </div>
-
               <div>
                 <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
                   ATS Resume Analyzer
@@ -234,46 +401,54 @@ export default function HomePage() {
                   Analyze resumes, evaluate ATS compatibility, identify missing skills and receive improvement suggestions.
                 </p>
               </div>
-
-              {/* Product UI Preview Snippet */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs">
-                <div className="flex justify-between items-center font-bold text-slate-800">
-                  <span>ATS Match Preview</span>
-                  <span className="text-brand-primary font-bold">82% Match</span>
-                </div>
-                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
-                  <div className="bg-gradient-to-r from-blue-600 to-cyan-500 h-full rounded-full w-[82%]" />
-                </div>
-                <div className="flex flex-wrap gap-1 pt-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    ✓ React.js
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    ✓ REST APIs
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-                    ! TypeScript
-                  </span>
-                </div>
-              </div>
             </div>
-
-            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100">
               <Link
                 to="/features/ats-analyzer"
                 className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
               >
-                <span>Explore Feature Details</span>
+                <span>Explore ATS Analyzer</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
 
-          {/* Card 2: Skill Intelligence */}
+          {/* Feature 2: Resume Builder */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-indigo-300">
+            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
+            <div className="p-7 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Vector PDF
+                </span>
+              </div>
+              <div>
+                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  Resume Builder
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Create, edit and customize professional, ATS-friendly resumes with live preview and instant vector export.
+                </p>
+              </div>
+            </div>
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100">
+              <Link
+                to="/features/resume-builder"
+                className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
+              >
+                <span>Build Your Resume</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Feature 3: Skill Intelligence */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-cyan-300">
             <div className="h-1.5 w-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600" />
-
-            <div className="p-7 space-y-6">
+            <div className="p-7 space-y-5">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
                   <BrainCircuit className="w-6 h-6" />
@@ -282,7 +457,6 @@ export default function HomePage() {
                   13-Role Matrix
                 </span>
               </div>
-
               <div>
                 <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-cyan-700 transition-colors">
                   Skill Intelligence
@@ -291,86 +465,109 @@ export default function HomePage() {
                   Extract skills from resumes, identify skill gaps and understand suitability for a target job role.
                 </p>
               </div>
-
-              {/* Product UI Preview Snippet */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs">
-                <div className="flex justify-between items-center font-bold text-slate-800">
-                  <span>Role Fit Simulation</span>
-                  <span className="text-cyan-700 font-bold">78% Frontend</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 text-[10px] font-semibold shadow-2xs">
-                    Frontend
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 text-[10px] font-semibold shadow-2xs">
-                    Full Stack
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 text-[10px] font-semibold shadow-2xs">
-                    Data / ML
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  Ordered learning milestones with official documentation
-                </p>
-              </div>
             </div>
-
-            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100">
               <Link
                 to="/features/skill-intelligence"
                 className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
               >
-                <span>Explore Feature Details</span>
+                <span>Analyze Skill Gaps</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
 
-          {/* Card 3: Resume Builder */}
-          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-indigo-300">
-            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
-
-            <div className="p-7 space-y-6">
+          {/* Feature 4: Job Opportunities */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-amber-300">
+            <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500" />
+            <div className="p-7 space-y-5">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-                  <FileText className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                  <Briefcase className="w-6 h-6" />
                 </div>
-                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Vector PDF Export
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                  Verified Roles
                 </span>
               </div>
-
               <div>
-                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Resume Builder
+                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-amber-700 transition-colors">
+                  Job Opportunities
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Create, edit and customize professional, ATS-friendly resumes.
-                </p>
-              </div>
-
-              {/* Product UI Preview Snippet */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
-                <div className="flex justify-between items-center font-bold text-slate-800">
-                  <span>Split-Screen Live Editor</span>
-                  <span className="text-indigo-600 font-bold">Vector PDF</span>
-                </div>
-                <div className="bg-white p-2.5 rounded-xl border border-slate-200 text-[11px] space-y-1 shadow-2xs">
-                  <p className="font-bold text-slate-900">Alex Rivera • Software Engineer</p>
-                  <p className="text-slate-500 line-clamp-1">Projects: Microservices Platform, Realtime Chat...</p>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  1-click export to ATS-approved vector PDF
+                  Verified entry-level roles and internships from legitimate tech companies with direct official application portals.
                 </p>
               </div>
             </div>
-
-            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100">
               <Link
-                to="/features/resume-builder"
+                to="/jobs"
                 className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
               >
-                <span>Explore Feature Details</span>
+                <span>Browse Job Board</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Feature 5: Project Showcase */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-emerald-300">
+            <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+            <div className="p-7 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                  <FolderGit2 className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Portfolios
+                </span>
+              </div>
+              <div>
+                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  Project Showcase
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Publish architectural blueprints, GitHub repositories, and live demo links to prove hands-on software engineering ability.
+                </p>
+              </div>
+            </div>
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100">
+              <Link
+                to="/projects"
+                className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
+              >
+                <span>View Projects</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Feature 6: Career Readiness Analytics */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-purple-300">
+            <div className="h-1.5 w-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500" />
+            <div className="p-7 space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200">
+                  Readiness Score
+                </span>
+              </div>
+              <div>
+                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-purple-700 transition-colors">
+                  Career Readiness Analytics
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Comprehensive dashboard monitoring ATS scores, technical skills coverage, and active application pipelines.
+                </p>
+              </div>
+            </div>
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100">
+              <Link
+                to={isAuthenticated ? getDashboardPath(user) : "/login"}
+                className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
+              >
+                <span>View Readiness Stats</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -379,147 +576,85 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. WHY ASPIREPATH? */}
-      {/* ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <Badge variant="cyan" size="sm" className="mb-2">
-            Platform Benefits
-          </Badge>
-          <h2 className="text-3xl font-display font-extrabold text-slate-900 tracking-tight">
-            Why AspirePath?
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            A unified engineering ecosystem connecting preparation to verified opportunity.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Benefit 1 */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold">
-              <FileText className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-900">Resume Preparation</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Build ATS-friendly resumes that pass automated screenings with standardized typography, clear section hierarchies, and vector PDF exports.
-            </p>
-          </div>
-
-          {/* Benefit 2 */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-100 flex items-center justify-center font-bold">
-              <BrainCircuit className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-900">Skill Development</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Identify skill gaps with transparent scoring formulas and follow structured roadmaps with verified technical milestones.
-            </p>
-          </div>
-
-          {/* Benefit 3 */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold">
-              <Briefcase className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-900">Career Opportunities</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Explore authentic entry-level positions and internships tailored specifically for college learners, graduates, and junior engineers.
-            </p>
-          </div>
-
-          {/* Benefit 4 */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold">
-              <FolderGit2 className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-base text-slate-900">Project Showcase</h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Publish practical software projects with architectural blueprints, GitHub repositories, and live demo links to prove your skills.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================================= */}
-      {/* 4. HOW ASPIREPATH WORKS (FOUR-STEP STUDENT JOURNEY) */}
+      {/* 3. HOW IT WORKS (5-STEP VISUAL WORKFLOW) */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-slate-50/90 border border-slate-200/90 rounded-3xl p-8 sm:p-12 space-y-12">
           <div className="text-center max-w-2xl mx-auto">
             <Badge variant="primary" size="sm" className="mb-2">
-              Structured Pathway
+              Visual Workflow
             </Badge>
             <h2 className="text-3xl font-display font-extrabold text-slate-900 tracking-tight">
               How AspirePath Works
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Four deliberate steps designed to build tangible engineering evidence and career readiness.
+              Five deliberate steps designed to build tangible engineering evidence and career readiness.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Step 1 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
               <div className="space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                   01
                 </div>
-                <h3 className="font-bold text-base text-slate-900">Create Your Profile</h3>
+                <h3 className="font-bold text-sm text-slate-900">Create your profile</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Students create their profiles and enter their career interests.
+                  Establish your academic and engineering baseline.
                 </p>
-              </div>
-              <div className="pt-2 text-[11px] font-semibold text-brand-primary">
-                Establish Baseline &rarr;
               </div>
             </div>
 
             {/* Step 2 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
               <div className="space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                   02
                 </div>
-                <h3 className="font-bold text-base text-slate-900">Build Your Resume</h3>
+                <h3 className="font-bold text-sm text-slate-900">Build or upload resume</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Students create and improve their resumes.
+                  Generate vector ATS resumes or upload existing PDFs.
                 </p>
-              </div>
-              <div className="pt-2 text-[11px] font-semibold text-brand-primary">
-                ATS Optimization &rarr;
               </div>
             </div>
 
             {/* Step 3 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
               <div className="space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                   03
                 </div>
-                <h3 className="font-bold text-base text-slate-900">Understand Your Skills</h3>
+                <h3 className="font-bold text-sm text-slate-900">Analyze your skills</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Students identify strengths, missing skills and career readiness.
+                  Examine role gaps against 13 engineering tracks.
                 </p>
-              </div>
-              <div className="pt-2 text-[11px] font-semibold text-brand-primary">
-                13-Role Assessment &rarr;
               </div>
             </div>
 
             {/* Step 4 */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
               <div className="space-y-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
                   04
                 </div>
-                <h3 className="font-bold text-base text-slate-900">Explore Opportunities</h3>
+                <h3 className="font-bold text-sm text-slate-900">Explore jobs & projects</h3>
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Students discover jobs, internships and projects.
+                  Discover verified opportunities and architectural projects.
                 </p>
               </div>
-              <div className="pt-2 text-[11px] font-semibold text-brand-primary">
-                Apply with Confidence &rarr;
+            </div>
+
+            {/* Step 5 */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between hover:shadow-sm transition-shadow">
+              <div className="space-y-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                  05
+                </div>
+                <h3 className="font-bold text-sm text-slate-900">Land your first job</h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Apply with confidence backed by verified evidence.
+                </p>
               </div>
             </div>
           </div>
@@ -527,7 +662,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. JOBS AND OPPORTUNITIES */}
+      {/* 4. DYNAMIC OPPORTUNITY BOARD (JOBS & INTERNSHIPS) */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -550,7 +685,6 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Dynamic Jobs Grid / Honest Empty State */}
         {jobsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6" aria-label="Loading opportunities">
             {[1, 2, 3].map((i) => (
@@ -565,10 +699,6 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Skeleton className="h-3.5 w-full rounded-md" />
                   <Skeleton className="h-3.5 w-4/5 rounded-md" />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-20 rounded-full" />
                 </div>
               </div>
             ))}
@@ -603,7 +733,7 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 6. STUDENT PROJECT SHOWCASE */}
+      {/* 5. DYNAMIC STUDENT PROJECT SHOWCASE */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
@@ -626,7 +756,6 @@ export default function HomePage() {
           </Link>
         </div>
 
-        {/* Dynamic Project Grid / Honest Empty State */}
         {projectsLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6" aria-label="Loading project showcases">
             {[1, 2, 3].map((i) => (
@@ -635,11 +764,6 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Skeleton className="h-5 w-3/4 rounded-md" />
                   <Skeleton className="h-3.5 w-full rounded-md" />
-                  <Skeleton className="h-3.5 w-2/3 rounded-md" />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-16 rounded-full" />
                 </div>
               </div>
             ))}
@@ -677,7 +801,202 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 7. FINAL REGISTRATION CTA (PREMIUM GRADIENT BANNER) */}
+      {/* 6. RESUME TEMPLATES PREVIEW */}
+      {/* ========================================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div>
+            <Badge variant="primary" size="sm" className="mb-2">
+              ATS-Optimized Templates
+            </Badge>
+            <h2 className="text-3xl font-display font-extrabold text-slate-900 tracking-tight">
+              Standardized Resume Formats
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 max-w-xl">
+              Clean single-column layouts engineered to pass Taleo, Workday, and Greenhouse automated parsers without formatting loss.
+            </p>
+          </div>
+
+          <Link to="/templates">
+            <Button variant="outline" rightIcon={ArrowRight} className="text-xs font-semibold bg-white border-slate-300 hover:border-slate-400">
+              View All Templates
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {/* Template Card 1 */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 hover:shadow-card hover:-translate-y-1 transition-all group">
+            <div className="h-44 rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2 overflow-hidden flex flex-col justify-between">
+              <div className="space-y-1.5">
+                <div className="h-3 w-1/3 bg-slate-800 rounded" />
+                <div className="h-2 w-1/2 bg-slate-400 rounded" />
+                <div className="h-px w-full bg-slate-200 my-2" />
+                <div className="space-y-1">
+                  <div className="h-2 w-full bg-slate-300 rounded" />
+                  <div className="h-2 w-4/5 bg-slate-300 rounded" />
+                  <div className="h-2 w-2/3 bg-slate-300 rounded" />
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+                Software Engineering Modern
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
+                Classic Tech Minimalist
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Optimized for software engineers, backend specialists, and DevOps candidates.
+              </p>
+            </div>
+            <Link to="/templates" className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary">
+              <span>Preview Template</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Template Card 2 */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 hover:shadow-card hover:-translate-y-1 transition-all group">
+            <div className="h-44 rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2 overflow-hidden flex flex-col justify-between">
+              <div className="space-y-1.5">
+                <div className="h-3 w-2/5 bg-indigo-700 rounded" />
+                <div className="h-2 w-3/5 bg-slate-400 rounded" />
+                <div className="h-px w-full bg-slate-200 my-2" />
+                <div className="space-y-1">
+                  <div className="h-2 w-full bg-slate-300 rounded" />
+                  <div className="h-2 w-5/6 bg-slate-300 rounded" />
+                  <div className="h-2 w-3/4 bg-slate-300 rounded" />
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
+                Executive & Lead Engineer
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                Executive Professional
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Ideal for full-stack leads, cloud architects, and senior engineering roles.
+              </p>
+            </div>
+            <Link to="/templates" className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary">
+              <span>Preview Template</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Template Card 3 */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 hover:shadow-card hover:-translate-y-1 transition-all group">
+            <div className="h-44 rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2 overflow-hidden flex flex-col justify-between">
+              <div className="space-y-1.5">
+                <div className="h-3 w-1/3 bg-cyan-700 rounded" />
+                <div className="h-2 w-1/2 bg-slate-400 rounded" />
+                <div className="h-px w-full bg-slate-200 my-2" />
+                <div className="space-y-1">
+                  <div className="h-2 w-full bg-slate-300 rounded" />
+                  <div className="h-2 w-4/5 bg-slate-300 rounded" />
+                  <div className="h-2 w-2/3 bg-slate-300 rounded" />
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider">
+                Entry-Level & Internships
+              </span>
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 group-hover:text-cyan-700 transition-colors">
+                Campus Graduate Starter
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Emphasizes coursework, academic achievements, and foundational GitHub projects.
+              </p>
+            </div>
+            <Link to="/templates" className="inline-flex items-center gap-1.5 text-xs font-bold text-brand-primary">
+              <span>Preview Template</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 7. ANDROID MOBILE APP SHOWCASE */}
+      {/* ========================================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-8 sm:p-14 text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+            <div className="lg:col-span-7 space-y-6">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold">
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>AspirePath for Android • Official APK v1.0.0</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-5xl font-display font-extrabold tracking-tight">
+                Take Your Career Tools Everywhere.
+              </h2>
+
+              <p className="text-sm sm:text-base text-blue-200 leading-relaxed max-w-xl">
+                Access your career readiness dashboard, upload PDF resumes, explore job openings, and practice placement question banks directly on your Android phone.
+              </p>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Link to="/download-app">
+                  <Button
+                    size="lg"
+                    variant="white"
+                    leftIcon={Download}
+                    className="!bg-white !text-blue-900 hover:!bg-blue-50 font-bold px-7 py-3 text-sm shadow-xl"
+                  >
+                    Download APK (65.4 MB)
+                  </Button>
+                </Link>
+                <Link to="/download-app">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="text-white border-blue-400/50 hover:bg-white/10 px-6 py-3 text-sm"
+                  >
+                    Installation Guide
+                  </Button>
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-6 pt-2 text-xs text-blue-200/90">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Direct FastAPI Integration
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Signed Release Build
+                </span>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="p-6 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 text-center space-y-4 max-w-xs w-full shadow-xl">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 border border-white/30 mx-auto flex items-center justify-center text-white">
+                  <Smartphone className="w-8 h-8 text-cyan-300" />
+                </div>
+                <div>
+                  <p className="font-bold text-white text-base">AspirePath Android</p>
+                  <p className="text-xs text-blue-200 mt-0.5">Version 1.0.0 • Released Nov 2026</p>
+                </div>
+                <div className="p-3 rounded-2xl bg-white text-slate-900 space-y-1">
+                  <p className="text-xs font-bold">100% Free for Students</p>
+                  <p className="text-[11px] text-slate-500">Requires Android 7.0+ (API 24+)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 8. FINAL REGISTRATION CTA */}
       {/* ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-blue-700 via-indigo-600 to-cyan-600 p-8 sm:p-16 text-center text-white shadow-xl">
