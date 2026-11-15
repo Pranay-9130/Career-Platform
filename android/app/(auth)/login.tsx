@@ -41,7 +41,11 @@ export default function LoginScreen() {
       const res = await authApi.login(email.trim().toLowerCase(), password);
       if (res.access_token && res.user) {
         await setAuth(res.user, res.access_token);
-        router.replace('/(tabs)');
+        if (res.user.role === 'ADMIN') {
+          router.replace('/(admin)' as any);
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         setErrorMessage('Unexpected response from server.');
       }

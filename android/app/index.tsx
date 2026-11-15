@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import { appStorage } from '../src/utils/storage';
@@ -10,23 +10,23 @@ import { Sparkles } from 'lucide-react-native';
 
 export default function SplashScreen() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   const { colors } = useThemeStore();
 
-  const scaleAnim = useRef(new Animated.Value(0.7)).current;
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        tension: 40,
-        friction: 6,
+        tension: 50,
+        friction: 7,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
         toValue: 1,
-        duration: 800,
+        duration: 700,
         useNativeDriver: true,
       }),
     ]).start();
@@ -38,17 +38,21 @@ export default function SplashScreen() {
       if (!onboardingDone) {
         router.replace('/onboarding');
       } else if (isAuthenticated) {
-        router.replace('/(tabs)');
+        if (user?.role === 'ADMIN') {
+          router.replace('/(admin)' as any);
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         router.replace('/(auth)/login');
       }
     }, 1800);
 
     return () => clearTimeout(timer);
-  }, [isLoading, isAuthenticated]);
+  }, [isLoading, isAuthenticated, user]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
       <Animated.View
         style={[
           styles.content,
@@ -58,25 +62,22 @@ export default function SplashScreen() {
           },
         ]}
       >
-        {/* Brand Icon */}
-        <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-          <Text style={styles.logoLetter}>A</Text>
-        </View>
+        {/* Authentic AspirePath Brand Logo */}
+        <Image
+          source={require('../assets/logo-original.png')}
+          style={styles.brandLogo}
+          resizeMode="contain"
+        />
 
-        {/* Brand Name */}
-        <Text style={[typography.h1, { color: colors.text, marginTop: 16 }]}>
-          Aspire<Text style={{ color: colors.primary }}>Path</Text>
-        </Text>
-
-        {/* Tagline */}
-        <Text style={[typography.body, { color: colors.textMuted, marginTop: 6, textAlign: 'center' }]}>
+        {/* Official Tagline */}
+        <Text style={[typography.bodyBold, styles.tagline]}>
           From your first project to your first job.
         </Text>
 
         <View style={styles.badge}>
-          <Sparkles size={14} color={colors.primary} />
-          <Text style={[typography.tiny, { color: colors.primary, marginLeft: 4 }]}>
-            AI-Powered Career Intelligence
+          <Sparkles size={14} color="#2563EB" />
+          <Text style={[typography.tiny, styles.badgeText]}>
+            AI-Powered Career & Placement Intelligence
           </Text>
         </View>
       </Animated.View>
@@ -93,32 +94,34 @@ const styles = StyleSheet.create({
   },
   content: {
     alignItems: 'center',
+    width: '100%',
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+  brandLogo: {
+    width: 260,
+    height: 70,
+    marginBottom: 8,
   },
-  logoLetter: {
-    color: '#FFFFFF',
-    fontSize: 44,
-    fontWeight: '900',
+  tagline: {
+    color: '#475569',
+    marginTop: 8,
+    textAlign: 'center',
+    fontSize: 15,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: '#EFF6FF',
-    marginTop: 24,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginTop: 20,
+  },
+  badgeText: {
+    color: '#1D4ED8',
+    marginLeft: 6,
+    fontWeight: '700',
   },
 });
 

@@ -40,6 +40,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
           <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          <Stack.Screen name="(admin)" options={{ animation: 'fade' }} />
           <Stack.Screen name="tools/resume-builder" options={{ presentation: 'card' }} />
           <Stack.Screen name="tools/ats-analyzer" options={{ presentation: 'card' }} />
           <Stack.Screen name="tools/skill-intelligence" options={{ presentation: 'card' }} />

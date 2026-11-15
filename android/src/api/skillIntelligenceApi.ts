@@ -41,6 +41,32 @@ export const skillIntelligenceApi = {
     return res.data;
   },
 
+  getRecommendations: async (roleTitle?: string): Promise<any> => {
+    const params: Record<string, string> = {};
+    if (roleTitle) {
+      params.target_role = roleTitle;
+      params.role_title = roleTitle;
+    }
+    const res = await apiClient.get('/skill-intelligence/recommendations', { params });
+    return res.data;
+  },
+
+  extractSkillsFromPdf: async (fileUri: string, fileName: string): Promise<any> => {
+    const formData = new FormData();
+    formData.append('file', {
+      uri: fileUri,
+      name: fileName || 'resume.pdf',
+      type: 'application/pdf',
+    } as any);
+
+    const res = await apiClient.post('/skill-intelligence/extract-skills-from-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
+
   getDashboardSummary: async (): Promise<any> => {
     const res = await apiClient.get('/skill-intelligence/dashboard-summary');
     return res.data;
