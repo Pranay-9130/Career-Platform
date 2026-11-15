@@ -26,6 +26,7 @@
     "expo-splash-screen": "~0.29.18",
     "expo-status-bar": "~2.0.0",
     "lucide-react-native": "^0.468.0",
+    "query-string": "^10.0.0",
     "react": "18.3.1",
     "react-hook-form": "^7.54.1",
     "react-native": "0.76.9",
