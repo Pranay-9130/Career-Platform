@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   User,
   Mail,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
-import { getDashboardPath } from '@/utils/navigation';
+import { getDashboardPath, getInternalPath } from '@/utils/navigation';
 import { REGISTRATION_ROLE_OPTIONS, getDefaultHeadline } from '@/utils/registration';
 
 const roleIcons = {
@@ -26,6 +26,7 @@ const roleIcons = {
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { registerUser, isAuthenticated, user, logout } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -136,7 +137,8 @@ export default function RegisterPage() {
         headline: formData.headline.trim() || getDefaultHeadline(formData.role),
       });
 
-      const targetPath = getDashboardPath(response.user);
+      const requestedRedirect = getInternalPath(new URLSearchParams(location.search).get('redirect'));
+      const targetPath = requestedRedirect || getDashboardPath(response.user);
       navigate(targetPath, { replace: true });
     } catch (err) {
       const rawDetail = err.response?.data?.detail;

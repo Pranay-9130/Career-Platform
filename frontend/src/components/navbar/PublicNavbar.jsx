@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ShieldCheck,
   Compass,
+  BrainCircuit,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
@@ -25,13 +26,21 @@ import { getDashboardPath } from '@/utils/navigation';
 export default function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [featuresMenuOpen, setFeaturesMenuOpen] = useState(false);
+  const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
+
   const userMenuRef = useRef(null);
+  const featuresMenuRef = useRef(null);
+  const featuresTimeoutRef = useRef(null);
+
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserMenuOpen(false);
+    setFeaturesMenuOpen(false);
+    setMobileFeaturesOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -50,29 +59,89 @@ export default function PublicNavbar() {
     };
   }, [mobileMenuOpen]);
 
-  // Handle click outside user menu
+  // Handle click outside dropdowns and Escape key navigation
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setUserMenuOpen(false);
       }
+      if (featuresMenuRef.current && !featuresMenuRef.current.contains(e.target)) {
+        setFeaturesMenuOpen(false);
+      }
     };
+
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setUserMenuOpen(false);
+        setFeaturesMenuOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
   }, []);
 
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Projects', path: '/projects' },
-    { name: 'Jobs', path: '/jobs' },
-    { name: 'Templates', path: '/templates' },
+  // Features mega-menu list — STRICTLY only the three core career tools
+  const featureTools = [
+    {
+      name: 'ATS Resume Analyzer',
+      description: 'Analyze resumes, evaluate ATS compatibility, identify missing skills and receive improvement suggestions.',
+      path: '/features/ats-analyzer',
+      icon: Sparkles,
+      iconBg: 'bg-blue-50 text-brand-primary',
+      badge: 'ATS Scoring',
+    },
+    {
+      name: 'Skill Intelligence',
+      description: 'Extract skills from resumes, identify skill gaps and understand suitability for a target job role.',
+      path: '/features/skill-intelligence',
+      icon: BrainCircuit,
+      iconBg: 'bg-cyan-50 text-brand-cyan',
+      badge: '13-Role Matrix',
+    },
+    {
+      name: 'Resume Builder',
+      description: 'Create, edit and customize professional, ATS-friendly resumes.',
+      path: '/features/resume-builder',
+      icon: FileText,
+      iconBg: 'bg-indigo-50 text-indigo-600',
+      badge: 'PDF Export',
+    },
+  ];
+
+  // Primary top-level navigation links in exact required structure:
+  // Home | Features ▼ | About | Jobs | Projects | Templates | Contact
+  const secondaryNavLinks = [
     { name: 'About', path: '/about' },
+    { name: 'Jobs', path: '/jobs' },
+    { name: 'Projects', path: '/projects' },
+    { name: 'Templates', path: '/templates' },
     { name: 'Contact', path: '/contact' },
   ];
 
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
+
+  const isFeaturesActive = location.pathname.startsWith('/features') ||
+    location.pathname === '/ats-analyzer' ||
+    location.pathname === '/skill-intelligence' ||
+    location.pathname === '/resume-builder';
+
+  const handleFeaturesMouseEnter = () => {
+    if (featuresTimeoutRef.current) clearTimeout(featuresTimeoutRef.current);
+    setFeaturesMenuOpen(true);
+  };
+
+  const handleFeaturesMouseLeave = () => {
+    featuresTimeoutRef.current = setTimeout(() => {
+      setFeaturesMenuOpen(false);
+    }, 180);
   };
 
   const getInitials = (name) => {
@@ -90,7 +159,7 @@ export default function PublicNavbar() {
   const workspaceLabel = user?.role === 'CONTRIBUTOR' ? 'Job Seeker' : 'Student';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-brand-border transition-all">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
         <Link
@@ -110,19 +179,113 @@ export default function PublicNavbar() {
           </picture>
         </Link>
 
-        {/* Desktop Navigation Links */}
+        {/* Desktop Navigation Links: Home | Features ▼ | About | Jobs | Projects | Templates | Contact */}
         <nav
           aria-label="Primary Public Navigation"
-          className="hidden md:flex items-center gap-1 lg:gap-2"
+          className="hidden md:flex items-center gap-1 lg:gap-1.5"
         >
-          {navLinks.map((link) => {
+          {/* Home Link */}
+          <Link
+            to="/"
+            aria-current={isActive('/') ? 'page' : undefined}
+            className={`relative px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 ${
+              isActive('/')
+                ? 'text-brand-primary font-bold bg-brand-veryLight ring-1 ring-brand-primary/20 shadow-xs'
+                : 'text-slate-600 hover:text-brand-primary hover:bg-slate-50 font-medium'
+            }`}
+          >
+            <span>Home</span>
+            {isActive('/') && (
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+            )}
+          </Link>
+
+          {/* Features Mega-Menu Dropdown (Desktop) */}
+          <div
+            className="relative"
+            ref={featuresMenuRef}
+            onMouseEnter={handleFeaturesMouseEnter}
+            onMouseLeave={handleFeaturesMouseLeave}
+          >
+            <button
+              type="button"
+              onClick={() => setFeaturesMenuOpen(!featuresMenuOpen)}
+              aria-expanded={featuresMenuOpen}
+              aria-haspopup="true"
+              className={`relative px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${
+                isFeaturesActive
+                  ? 'text-brand-primary font-bold bg-brand-veryLight ring-1 ring-brand-primary/20 shadow-xs'
+                  : 'text-slate-600 hover:text-brand-primary hover:bg-slate-50 font-medium'
+              }`}
+            >
+              <span>Features</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  featuresMenuOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
+                }`}
+              />
+              {isFeaturesActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+              )}
+            </button>
+
+            {/* Features Mega-Menu Panel */}
+            {featuresMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Career Features Menu"
+                className="absolute top-full left-0 mt-1.5 w-[390px] sm:w-[420px] bg-white rounded-2xl border border-brand-border shadow-modal p-3 z-50 animate-in fade-in zoom-in-95 duration-150"
+              >
+                <div className="px-3 pt-2 pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Core Career Tools
+                  </span>
+                  <span className="text-[10px] font-semibold text-brand-primary bg-blue-50 px-2 py-0.5 rounded-md">
+                    Deterministic AI
+                  </span>
+                </div>
+
+                <div className="py-1.5 space-y-1">
+                  {featureTools.map((tool) => (
+                    <Link
+                      key={tool.path}
+                      to={tool.path}
+                      role="menuitem"
+                      onClick={() => setFeaturesMenuOpen(false)}
+                      className="group flex items-start gap-3.5 p-2.5 rounded-xl hover:bg-brand-veryLight/90 transition-colors"
+                    >
+                      <div className={`w-9 h-9 rounded-xl ${tool.iconBg} flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform shadow-xs`}>
+                        <tool.icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-brand-text group-hover:text-brand-primary transition-colors">
+                            {tool.name}
+                          </span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 group-hover:bg-blue-100 group-hover:text-brand-primary transition-colors">
+                            {tool.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-brand-muted leading-relaxed mt-0.5">
+                          {tool.description}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Secondary Links: About | Jobs | Projects | Templates | Contact */}
+          {secondaryNavLinks.map((link) => {
             const active = isActive(link.path);
             return (
               <Link
                 key={link.path}
                 to={link.path}
                 aria-current={active ? 'page' : undefined}
-                className={`relative px-3.5 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 ${
+                className={`relative px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 ${
                   active
                     ? 'text-brand-primary font-bold bg-brand-veryLight ring-1 ring-brand-primary/20 shadow-xs'
                     : 'text-slate-600 hover:text-brand-primary hover:bg-slate-50 font-medium'
@@ -137,7 +300,7 @@ export default function PublicNavbar() {
           })}
         </nav>
 
-        {/* Desktop Actions */}
+        {/* Desktop Actions: Auth / User Profile */}
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
@@ -147,7 +310,7 @@ export default function PublicNavbar() {
                   size="sm"
                   variant="outline"
                   leftIcon={PlusCircle}
-                  className="border-brand-primary/30 text-brand-primary hover:bg-brand-veryLight font-semibold"
+                  className="border-brand-primary/30 text-brand-primary hover:bg-brand-veryLight font-semibold text-xs px-3"
                 >
                   Submit Project
                 </Button>
@@ -232,6 +395,14 @@ export default function PublicNavbar() {
                           </Link>
 
                           <Link
+                            to="/skill-intelligence"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <BrainCircuit className="w-4 h-4 text-slate-400" />
+                            <span>Skill Intelligence</span>
+                          </Link>
+
+                          <Link
                             to="/applications"
                             className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
                           >
@@ -297,7 +468,7 @@ export default function PublicNavbar() {
                 Log in
               </Link>
               <Link to="/register">
-                <Button size="sm" variant="gradient" rightIcon={ArrowRight}>
+                <Button size="sm" variant="gradient" rightIcon={ArrowRight} className="font-bold text-xs px-4">
                   Get Started
                 </Button>
               </Link>
@@ -341,8 +512,72 @@ export default function PublicNavbar() {
               <Compass className="w-3.5 h-3.5 text-brand-primary" />
               <span>Explore Platform</span>
             </div>
+
             <div className="space-y-0.5">
-              {navLinks.map((link) => {
+              {/* Home */}
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive('/') ? 'page' : undefined}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                  isActive('/')
+                    ? 'text-brand-primary bg-brand-veryLight ring-1 ring-brand-primary/20'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>Home</span>
+                {isActive('/') && <span className="w-2 h-2 rounded-full bg-brand-primary" />}
+              </Link>
+
+              {/* Expandable Features Accordion */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMobileFeaturesOpen(!mobileFeaturesOpen)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    isFeaturesActive
+                      ? 'text-brand-primary bg-brand-veryLight ring-1 ring-brand-primary/20'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-primary" />
+                    <span>Features</span>
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                      mobileFeaturesOpen ? 'rotate-180 text-brand-primary' : ''
+                    }`}
+                  />
+                </button>
+
+                {mobileFeaturesOpen && (
+                  <div className="pl-4 pr-1 py-1.5 space-y-1 bg-slate-50/70 rounded-xl mt-1 border border-slate-100">
+                    {featureTools.map((tool) => (
+                      <Link
+                        key={tool.path}
+                        to={tool.path}
+                        onClick={() => {
+                          setMobileFeaturesOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white transition-colors"
+                      >
+                        <div className={`w-7 h-7 rounded-lg ${tool.iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                          <tool.icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-brand-text">{tool.name}</p>
+                          <p className="text-[10px] text-brand-muted line-clamp-1">{tool.description}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Secondary Navigation Links */}
+              {secondaryNavLinks.map((link) => {
                 const active = isActive(link.path);
                 return (
                   <Link
@@ -422,6 +657,15 @@ export default function PublicNavbar() {
                     >
                       <Sparkles className="w-4 h-4 text-slate-400" />
                       <span>ATS Analyzer</span>
+                    </Link>
+
+                    <Link
+                      to="/skill-intelligence"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-sm text-slate-700 hover:bg-slate-50 font-medium"
+                    >
+                      <BrainCircuit className="w-4 h-4 text-slate-400" />
+                      <span>Skill Intelligence</span>
                     </Link>
 
                     <Link

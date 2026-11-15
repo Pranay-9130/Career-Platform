@@ -17,6 +17,7 @@ import {
   Compass,
   FileCheck,
   BrainCircuit,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { StudentNavbar } from '@/components/navbar';
@@ -129,6 +130,12 @@ export default function StudentLayout() {
           path: '/skill-intelligence',
           icon: BrainCircuit,
           description: 'Gap analysis & roadmap',
+        },
+        {
+          name: 'Placement Preparation',
+          path: '/placement-preparation',
+          icon: BookOpen,
+          description: 'Role-based PDF library',
         },
       ],
     },

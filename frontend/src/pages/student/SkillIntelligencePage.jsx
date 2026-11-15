@@ -608,142 +608,170 @@ export default function SkillIntelligencePage() {
         </div>
       )}
 
-      {/* 1. Header Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-[#0B1528] via-[#0F1E36] to-[#0A192F] border border-white/15 p-6 sm:p-8 lg:p-10 text-white shadow-2xl overflow-hidden">
-        {/* Ambient atmospheric glows */}
-        <div className="absolute -top-24 -right-24 w-[420px] h-[420px] bg-gradient-to-br from-cyan-500/20 via-blue-600/15 to-transparent rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 left-1/4 w-[340px] h-[340px] bg-gradient-to-tr from-indigo-500/15 via-blue-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-60" />
+      {/* 1. Hero Section: Modern SaaS Light-Blue & White Gradient */}
+      <div className="relative rounded-3xl bg-gradient-to-br from-blue-50/90 via-sky-50/40 to-white border border-brand-border p-6 sm:p-8 lg:p-10 text-brand-text shadow-card overflow-hidden">
+        {/* Subtle decorative glow accents */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-cyan-200/30 rounded-full blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-          {/* Left Column: Typography & System Value */}
+          {/* LEFT SIDE – INTRODUCTION */}
           <div className="max-w-2xl space-y-4">
-            {/* Top Eyebrow Pills */}
+            {/* Top Eyebrow Badges */}
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <BrainCircuit className="w-3.5 h-3.5 text-cyan-300" />
-                <span>Skill Intelligence</span>
+              <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-100/90 border border-blue-200 text-brand-primary text-xs font-bold shadow-xs">
+                <BrainCircuit className="w-3.5 h-3.5" />
+                <span>SKILL INTELLIGENCE</span>
               </span>
 
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-blue-100 text-xs font-medium backdrop-blur-md">
-                <Target className="w-3.5 h-3.5 text-cyan-300" />
-                <span>Target Role: <strong className="text-white font-bold">{activeRoleTitle}</strong></span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-brand-border text-slate-700 text-xs font-semibold shadow-xs">
+                <Target className="w-3.5 h-3.5 text-brand-primary" />
+                <span>Target Role: <strong className="text-brand-text font-bold">{activeRoleTitle}</strong></span>
               </span>
             </div>
 
             {/* Main Title */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-display tracking-tight text-white leading-[1.15]">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-display tracking-tight text-brand-text leading-[1.15]">
               Personalized{' '}
-              <span className="bg-gradient-to-r from-cyan-300 via-blue-200 to-indigo-200 bg-clip-text text-transparent">
+              <span className="text-brand-primary">
                 Engineering Competency
               </span>{' '}
               System
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-xl">
-              Bridge the gap between your coursework and commercial job requirements. Track verified progress across ordered milestones, integrate real project showcases, and unlock technical interviews.
+            {/* Subtitle / Description */}
+            <p className="text-xs sm:text-sm text-brand-muted leading-relaxed max-w-xl">
+              Bridge the gap between your coursework and industry requirements. Track verified progress across ordered milestones, integrate real project showcases, and unlock technical interviews.
             </p>
 
-            {/* Micro value badges */}
-            <div className="pt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-              <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-emerald-400" /> Deterministic Math
+            {/* 3 Compact Feature Highlights */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="p-3 bg-white border border-brand-border rounded-2xl shadow-xs space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                  <span>Analyze Skills</span>
+                </div>
+                <p className="text-[11px] text-brand-muted leading-tight">
+                  Match your skills with job roles.
+                </p>
+              </div>
+
+              <div className="p-3 bg-white border border-brand-border rounded-2xl shadow-xs space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
+                  <Clock className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                  <span>Track Progress</span>
+                </div>
+                <p className="text-[11px] text-brand-muted leading-tight">
+                  Monitor your progress across milestones.
+                </p>
+              </div>
+
+              <div className="p-3 bg-white border border-brand-border rounded-2xl shadow-xs space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-brand-text">
+                  <FolderGit2 className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                  <span>Showcase Work</span>
+                </div>
+                <p className="text-[11px] text-brand-muted leading-tight">
+                  Connect your real projects with career requirements.
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom feature badges */}
+            <div className="pt-2 flex flex-wrap items-center gap-2 text-[11px] text-brand-muted">
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-brand-border flex items-center gap-1.5 font-semibold shadow-xs">
+                <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[3]" /> Deterministic Match
               </span>
-              <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-cyan-400" /> ATS-Ready Parsing
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-brand-border flex items-center gap-1.5 font-semibold shadow-xs">
+                <Check className="w-3.5 h-3.5 text-brand-cyan stroke-[3]" /> ATS-Ready Parsing
               </span>
-              <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
-                <Check className="w-3 h-3 text-indigo-400" /> Ordered 4-Stage Roadmap
+              <span className="px-2.5 py-1 rounded-lg bg-white border border-brand-border flex items-center gap-1.5 font-semibold shadow-xs">
+                <Check className="w-3.5 h-3.5 text-indigo-600 stroke-[3]" /> Ordered 4-Stage Roadmap
               </span>
             </div>
           </div>
 
-          {/* Right Column: Glassmorphic Workspace Control Deck */}
-          <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0 bg-white/[0.06] backdrop-blur-xl border border-white/15 rounded-2xl p-5 shadow-2xl space-y-4">
+          {/* RIGHT SIDE – ACTIVE CAREER GOAL CARD */}
+          <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0 bg-white border border-brand-border rounded-3xl p-6 shadow-xl space-y-5">
             {/* Control Deck Header */}
-            <div className="flex items-start justify-between gap-3 pb-3 border-b border-white/10">
+            <div className="flex items-start justify-between gap-3 pb-3 border-b border-brand-border">
               <div className="space-y-0.5">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-300 block">
-                  Active Career Goal
+                <span className="text-[10px] uppercase font-extrabold tracking-wider text-brand-primary block">
+                  ACTIVE CAREER GOAL
                 </span>
-                <h4 className="text-base font-bold text-white truncate max-w-[200px]">
+                <h4 className="text-base font-bold text-brand-text truncate max-w-[200px]">
                   {activeRoleTitle}
                 </h4>
-                <span className="text-[11px] text-slate-400 block">{activeExpTitle}</span>
+                <span className="text-xs text-brand-muted block">{activeExpTitle}</span>
               </div>
 
               {/* Match Coverage Badge */}
               <div className="text-right">
-                <span className="inline-block px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold">
+                <span className="inline-block px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-extrabold">
                   {gapData?.coverage_percentage ?? 0}% Fit
                 </span>
-                <span className="text-[10px] text-slate-400 block mt-1">Deterministic</span>
+                <span className="text-[10px] text-brand-muted block mt-1">Deterministic</span>
               </div>
             </div>
 
             {/* Mini Progress Bar */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-300 font-medium">Competency Baseline</span>
-                <span className="text-cyan-300 font-bold">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-brand-muted font-medium">Competency Baseline</span>
+                <span className="text-brand-primary font-bold">
                   {gapData?.matched_skills_count ?? 0} / {gapData?.total_role_skills ?? 0} verified
                 </span>
               </div>
-              <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-blue-100 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-500"
+                  className="bg-gradient-to-r from-brand-primary to-cyan-500 h-full rounded-full transition-all duration-500"
                   style={{ width: `${Math.min(gapData?.coverage_percentage ?? 0, 100)}%` }}
                 />
               </div>
             </div>
 
-            {/* Interactive Action Grid (2x2) */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <Button
-                variant="white"
-                size="sm"
+            {/* Interactive Action Grid (2x2) - Visible Website Colors (White & Blue) */}
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              {/* Button 1: Extract from CV (Solid Brand Blue) */}
+              <button
+                type="button"
                 onClick={() => setExtractModalOpen(true)}
-                leftIcon={UploadCloud}
-                className="w-full !bg-white !text-blue-700 hover:!bg-blue-50 font-bold shadow-md text-xs py-2.5"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-brand-primary hover:bg-blue-600 text-white font-bold text-xs shadow-sm transition-all active:scale-[0.98]"
               >
-                Extract from CV
-              </Button>
+                <UploadCloud className="w-4 h-4 shrink-0 text-white" />
+                <span>Extract from CV</span>
+              </button>
 
-              <Button
-                variant="outline"
-                size="sm"
+              {/* Button 2: Change Role (White with Blue Text & 2px Border) */}
+              <button
+                type="button"
                 onClick={() => setRoleModalOpen(true)}
-                leftIcon={Sliders}
-                className="w-full text-white border-white/20 hover:bg-white/10 font-semibold text-xs py-2.5"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-brand-primary border-2 border-brand-primary/40 hover:border-brand-primary font-bold text-xs shadow-xs transition-all active:scale-[0.98]"
               >
-                Change Role
-              </Button>
+                <Sliders className="w-4 h-4 shrink-0 text-brand-primary" />
+                <span>Change Role</span>
+              </button>
 
-              <Button
-                variant="outline"
-                size="sm"
+              {/* Button 3: AI Mentor (Light Blue with Brand Blue Text) */}
+              <button
+                type="button"
                 onClick={handleOpenMentorChat}
-                leftIcon={Sparkles}
-                className="w-full text-cyan-200 border-cyan-400/30 hover:bg-cyan-500/15 font-semibold text-xs py-2.5"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-brand-primary border border-blue-200 hover:border-brand-primary font-bold text-xs shadow-xs transition-all active:scale-[0.98]"
               >
-                AI Mentor
-              </Button>
+                <Sparkles className="w-4 h-4 shrink-0 text-brand-primary" />
+                <span>AI Mentor</span>
+              </button>
 
-              <Button
-                variant="outline"
-                size="sm"
+              {/* Button 4: Reassess Fit (White with Slate Text & 2px Border) */}
+              <button
+                type="button"
                 onClick={handleReassess}
-                isLoading={reassessing}
-                leftIcon={RefreshCw}
-                className="w-full text-slate-200 border-white/20 hover:bg-white/10 font-semibold text-xs py-2.5"
+                disabled={reassessing}
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 hover:text-brand-primary border-2 border-slate-200 hover:border-brand-primary font-bold text-xs shadow-xs transition-all active:scale-[0.98] disabled:opacity-60"
               >
-                Reassess Fit
-              </Button>
+                <RefreshCw className={`w-4 h-4 shrink-0 ${reassessing ? 'animate-spin text-brand-primary' : 'text-slate-600'}`} />
+                <span>{reassessing ? 'Reassessing...' : 'Reassess Fit'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -797,11 +825,13 @@ export default function SkillIntelligencePage() {
 
       {/* 2. Top Metric KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Role Coverage */}
-        <div className="p-5 bg-white rounded-card border border-brand-border shadow-card flex flex-col justify-between">
+        {/* Metric 1: OVERALL CAREER MATCH */}
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-brand-border dark:border-slate-700 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-muted uppercase tracking-wider">Role Coverage</span>
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center">
+            <span className="text-xs font-bold text-brand-muted dark:text-slate-400 uppercase tracking-wider">
+              Overall Career Match
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-brand-primary dark:text-cyan-400 flex items-center justify-center">
               <Award className="w-4 h-4" />
             </div>
           </div>
@@ -810,23 +840,25 @@ export default function SkillIntelligencePage() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold font-display text-brand-text">
+                <span className="text-3xl font-extrabold font-display text-brand-text dark:text-white">
                   {gapData?.coverage_percentage ?? 0}%
                 </span>
-                <span className="text-xs font-semibold text-brand-muted">covered</span>
+                <span className="text-xs font-semibold text-brand-muted dark:text-slate-400">match</span>
               </div>
             )}
-            <p className="text-[11px] text-brand-muted mt-1">
-              {gapData?.matched_skills_count ?? 0} of {gapData?.total_role_skills ?? 0} competencies confirmed
+            <p className="text-[11px] text-brand-muted dark:text-slate-400 mt-1">
+              {gapData?.matched_skills_count ?? 0} of {gapData?.total_role_skills ?? 0} competencies matched
             </p>
           </div>
         </div>
 
-        {/* Metric 2: Essential Requirements */}
-        <div className="p-5 bg-white rounded-card border border-brand-border shadow-card flex flex-col justify-between">
+        {/* Metric 2: ESSENTIAL SKILLS COVERAGE */}
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-brand-border dark:border-slate-700 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-muted uppercase tracking-wider">Core Requirements</span>
-            <div className="w-9 h-9 rounded-xl bg-cyan-50 text-brand-cyan flex items-center justify-center">
+            <span className="text-xs font-bold text-brand-muted dark:text-slate-400 uppercase tracking-wider">
+              Essential Skills Coverage
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 text-brand-cyan dark:text-cyan-400 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
@@ -835,23 +867,25 @@ export default function SkillIntelligencePage() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold font-display text-brand-text">
+                <span className="text-3xl font-extrabold font-display text-brand-text dark:text-white">
                   {gapData?.essential_coverage_percentage ?? 0}%
                 </span>
-                <span className="text-xs font-semibold text-brand-muted">essential</span>
+                <span className="text-xs font-semibold text-brand-muted dark:text-slate-400">essential</span>
               </div>
             )}
-            <p className="text-[11px] text-brand-muted mt-1">
+            <p className="text-[11px] text-brand-muted dark:text-slate-400 mt-1">
               {gapData?.missing_skills_count ?? 0} skills remaining to complete role baseline
             </p>
           </div>
         </div>
 
-        {/* Metric 3: Roadmap Progress */}
-        <div className="p-5 bg-white rounded-card border border-brand-border shadow-card flex flex-col justify-between">
+        {/* Metric 3: SKILLS MASTERED */}
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-brand-border dark:border-slate-700 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-muted uppercase tracking-wider">Roadmap Progress</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-brand-muted dark:text-slate-400 uppercase tracking-wider">
+              Skills Mastered
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
               <Clock className="w-4 h-4" />
             </div>
           </div>
@@ -860,23 +894,25 @@ export default function SkillIntelligencePage() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold font-display text-brand-text">
+                <span className="text-3xl font-extrabold font-display text-brand-text dark:text-white">
                   {roadmapData?.overall_progress_percentage ?? 0}%
                 </span>
-                <span className="text-xs font-semibold text-brand-muted">completed</span>
+                <span className="text-xs font-semibold text-brand-muted dark:text-slate-400">progress</span>
               </div>
             )}
-            <p className="text-[11px] text-brand-muted mt-1">
+            <p className="text-[11px] text-brand-muted dark:text-slate-400 mt-1">
               {roadmapData?.overall_completed_count ?? 0} of {roadmapData?.overall_total_skills ?? 0} skills mastered
             </p>
           </div>
         </div>
 
-        {/* Metric 4: Platform Projects Available */}
-        <div className="p-5 bg-white rounded-card border border-brand-border shadow-card flex flex-col justify-between">
+        {/* Metric 4: PROJECTS MATCHING YOUR ROLE */}
+        <div className="p-5 bg-white dark:bg-slate-800 rounded-3xl border border-brand-border dark:border-slate-700 shadow-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-brand-muted uppercase tracking-wider">Practice Projects</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-brand-muted dark:text-slate-400 uppercase tracking-wider">
+              Projects Matching Your Role
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
               <FolderGit2 className="w-4 h-4" />
             </div>
           </div>
@@ -885,136 +921,158 @@ export default function SkillIntelligencePage() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold font-display text-brand-text">
+                <span className="text-3xl font-extrabold font-display text-brand-text dark:text-white">
                   {projectSuggestions.length}
                 </span>
-                <span className="text-xs font-semibold text-brand-muted">projects</span>
+                <span className="text-xs font-semibold text-brand-muted dark:text-slate-400">projects</span>
               </div>
             )}
-            <p className="text-[11px] text-brand-muted mt-1">
-              Showcases in platform matching your target stack
+            <p className="text-[11px] text-brand-muted dark:text-slate-400 mt-1">
+              Production blueprints aligned with your target tech stack
             </p>
           </div>
         </div>
       </div>
 
       {/* 3. Navigation Tabs Bar */}
-      <div className="border-b border-brand-border bg-white rounded-2xl p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto">
-        <button
-          onClick={() => handleTabChange('fit')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'fit'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <Award className="w-4 h-4" />
-          <span>Career Fit & Analysis</span>
-        </button>
+      <div className="space-y-2">
+        <div className="border border-brand-border dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => handleTabChange('fit')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'fit'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>Career Fit & Analysis</span>
+          </button>
 
-        <button
-          onClick={() => handleTabChange('gaps')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'gaps'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <Target className="w-4 h-4" />
-          <span>Skill Gaps</span>
-          {gapData?.missing_skills_count ? (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'gaps' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700 font-bold'}`}>
-              {gapData.missing_skills_count}
+          <button
+            onClick={() => handleTabChange('gaps')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'gaps'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Target className="w-4 h-4" />
+            <span>Skill Gaps</span>
+            {gapData?.missing_skills_count ? (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'gaps' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700 font-bold'}`}>
+                {gapData.missing_skills_count}
+              </span>
+            ) : null}
+          </button>
+
+          <button
+            onClick={() => handleTabChange('roadmap')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'roadmap'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Learning Roadmap</span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('resources')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'resources'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Learning Resources</span>
+            {allLearningResources.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'resources' ? 'bg-white/20 text-white' : 'bg-blue-100 text-brand-primary font-bold'}`}>
+                {allLearningResources.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => handleTabChange('recommendations')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'recommendations'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Prioritized Recs</span>
+            {recommendationsData?.high_priority_count ? (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'recommendations' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700 font-bold'}`}>
+                {recommendationsData.high_priority_count} High
+              </span>
+            ) : null}
+          </button>
+
+          <button
+            onClick={() => handleTabChange('projects')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'projects'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <FolderGit2 className="w-4 h-4" />
+            <span>Platform Projects</span>
+            {projectSuggestions.length > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'projects' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800 font-bold'}`}>
+                {projectSuggestions.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => handleTabChange('mentor')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'mentor'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <BrainCircuit className="w-4 h-4" />
+            <span>AI Mentor</span>
+          </button>
+
+          <button
+            onClick={() => handleTabChange('skills')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'skills'
+                ? 'bg-brand-primary text-white shadow-xs'
+                : 'text-brand-muted dark:text-slate-400 hover:text-brand-text dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>My Skills ({confirmedSkills.length})</span>
+          </button>
+        </div>
+
+        {/* Section Guide Subtitle */}
+        <div className="px-2 py-1 text-xs text-brand-muted dark:text-slate-400 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Info className="w-3.5 h-3.5 text-brand-primary dark:text-cyan-400 shrink-0" />
+            <span className="font-medium">
+              {activeTab === 'fit' && 'Understand how your skills match your selected career.'}
+              {activeTab === 'gaps' && 'Discover the skills you still need to develop.'}
+              {activeTab === 'roadmap' && 'Follow your recommended learning journey.'}
+              {activeTab === 'resources' && 'Explore resources to improve your skills.'}
+              {activeTab === 'recommendations' && 'Identify which skills deserve your attention first.'}
+              {activeTab === 'projects' && 'Showcase production-grade projects aligned with your target tech stack.'}
+              {activeTab === 'mentor' && 'Interactive engineering guidance tailored to your career milestones.'}
+              {activeTab === 'skills' && 'Manage your verified competencies and self-evaluations.'}
             </span>
-          ) : null}
-        </button>
-
-        <button
-          onClick={() => handleTabChange('roadmap')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'roadmap'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          <span>Learning Roadmap</span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('resources')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'resources'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <BookOpen className="w-4 h-4" />
-          <span>Learning Resources</span>
-          {allLearningResources.length > 0 && (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'resources' ? 'bg-white/20 text-white' : 'bg-blue-100 text-brand-primary font-bold'}`}>
-              {allLearningResources.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => handleTabChange('recommendations')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'recommendations'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Prioritized Recs</span>
-          {recommendationsData?.high_priority_count ? (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'recommendations' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700 font-bold'}`}>
-              {recommendationsData.high_priority_count} High
-            </span>
-          ) : null}
-        </button>
-
-        <button
-          onClick={() => handleTabChange('projects')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'projects'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <FolderGit2 className="w-4 h-4" />
-          <span>Platform Projects</span>
-          {projectSuggestions.length > 0 && (
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'projects' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800 font-bold'}`}>
-              {projectSuggestions.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => handleTabChange('mentor')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'mentor'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <BrainCircuit className="w-4 h-4" />
-          <span>AI Mentor</span>
-        </button>
-
-        <button
-          onClick={() => handleTabChange('skills')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'skills'
-              ? 'bg-brand-primary text-white shadow-xs'
-              : 'text-brand-muted hover:text-brand-text hover:bg-slate-50'
-          }`}
-        >
-          <CheckCircle2 className="w-4 h-4" />
-          <span>My Skills ({confirmedSkills.length})</span>
-        </button>
+          </div>
+          <span className="hidden sm:inline text-[11px] text-slate-400">
+            Selected Track: <strong className="text-brand-text dark:text-white">{activeRoleTitle}</strong>
+          </span>
+        </div>
       </div>
 
       {/* 4. Tab Content Panels */}
@@ -1029,17 +1087,18 @@ export default function SkillIntelligencePage() {
           {activeTab === 'fit' && (
             <div className="space-y-6">
               {/* Role Match Overview Banner */}
-              <div className="bg-white rounded-3xl border border-brand-border shadow-card p-6 lg:p-8 space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                  <div className="space-y-1">
-                    <span className="text-xs font-bold text-brand-primary uppercase tracking-wider flex items-center gap-1.5">
-                      <Target className="w-4 h-4" /> Role Match Analysis
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-brand-border dark:border-slate-800 shadow-card p-6 lg:p-8 space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+                  <div className="space-y-1.5">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-brand-primary dark:text-cyan-400 text-xs font-bold border border-blue-200 dark:border-blue-800">
+                      <Target className="w-3.5 h-3.5" />
+                      <span>CAREER MATCH ANALYSIS</span>
                     </span>
-                    <h3 className="text-xl font-bold font-display text-brand-text">
-                      {activeRoleTitle} Competency Alignment
+                    <h3 className="text-xl sm:text-2xl font-bold font-display text-brand-text dark:text-white">
+                      Selected Role: <span className="text-brand-primary dark:text-cyan-400">{activeRoleTitle}</span>
                     </h3>
-                    <p className="text-xs text-brand-muted">
-                      Evaluated level: <strong>{activeExpTitle}</strong> • Verified against curated industry requirements and live platform jobs.
+                    <p className="text-xs text-brand-muted dark:text-slate-400">
+                      See how closely your current skills align with the requirements of your selected career. Evaluated level: <strong>{activeExpTitle}</strong>.
                     </p>
                   </div>
 
@@ -1049,6 +1108,7 @@ export default function SkillIntelligencePage() {
                       size="sm"
                       onClick={() => setRoleModalOpen(true)}
                       leftIcon={Sliders}
+                      className="text-xs font-semibold"
                     >
                       Change Role
                     </Button>
@@ -1058,9 +1118,98 @@ export default function SkillIntelligencePage() {
                       onClick={handleReassess}
                       isLoading={reassessing}
                       leftIcon={RefreshCw}
+                      className="text-xs font-bold shadow-xs"
                     >
                       Reassess Fit
                     </Button>
+                  </div>
+                </div>
+
+                {/* SECTION 5: SKILLS YOU ALREADY HAVE & SKILLS TO IMPROVE */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* SKILLS YOU ALREADY HAVE */}
+                  <div className="p-6 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-3xl border border-emerald-200 dark:border-emerald-800 space-y-3.5 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-emerald-200/80 dark:border-emerald-800">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200 uppercase tracking-wider">
+                          Skills You Already Have
+                        </h4>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-200/80 dark:bg-emerald-900 text-emerald-900 dark:text-emerald-200 text-xs font-extrabold">
+                        {gapData?.matched_skills?.length || 0}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                      These skills are already identified in your profile and match your selected career.
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {!gapData?.matched_skills || gapData.matched_skills.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic py-2">
+                          No matched skills identified yet. Scan your resume or add skills in the My Skills tab.
+                        </p>
+                      ) : (
+                        gapData.matched_skills.map((s, idx) => {
+                          const name = s.skill_name || s.name || s;
+                          return (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold shadow-xs"
+                            >
+                              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[3]" />
+                              <span>{name}</span>
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SKILLS TO IMPROVE */}
+                  <div className="p-6 bg-amber-50/50 dark:bg-amber-950/20 rounded-3xl border border-amber-200 dark:border-amber-800 space-y-3.5 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 border-b border-amber-200/80 dark:border-amber-800">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                          Skills to Improve
+                        </h4>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900 text-amber-900 dark:text-amber-200 text-xs font-extrabold">
+                        {gapData?.missing_skills?.length || 0}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                      These are skills required for your selected role that have not yet been identified in your profile.
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {!gapData?.missing_skills || gapData.missing_skills.length === 0 ? (
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold py-2">
+                          🎉 All role requirements met! No missing essential skills for this target role.
+                        </p>
+                      ) : (
+                        gapData.missing_skills.map((s, idx) => {
+                          const name = s.skill_name || s.name || s;
+                          return (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold shadow-xs"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <span>{name}</span>
+                              {s.is_essential && (
+                                <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 uppercase font-black">
+                                  Core
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
 
