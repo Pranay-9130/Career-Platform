@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import { placementPrepService } from '@/services/placementPrepService';
 import { Button, Badge, Modal, Input, Alert, Spinner } from '@/components/common';
-import PdfViewer from '@/components/common/PdfViewer';
 
 export default function AdminPlacementPrepPage() {
   const [activeTab, setActiveTab] = useState('materials'); // 'materials' | 'roles'
@@ -53,11 +52,6 @@ export default function AdminPlacementPrepPage() {
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [topicModalOpen, setTopicModalOpen] = useState(false);
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false);
-
-  // Preview modal
-  const [previewMaterial, setPreviewMaterial] = useState(null);
-  const [previewPdfBlob, setPreviewPdfBlob] = useState(null);
-  const [loadingPdf, setLoadingPdf] = useState(false);
 
   // Active item selections for edit/delete
   const [selectedMaterial, setSelectedMaterial] = useState(null);
@@ -325,31 +319,15 @@ export default function AdminPlacementPrepPage() {
   };
 
   // ---------------------------------------------------------------------------
-  // PREVIEW HANDLER
+  // DOWNLOAD HANDLER
   // ---------------------------------------------------------------------------
-  const handleOpenPreview = async (material) => {
+  const handleDownload = async (material) => {
     try {
-      setPreviewMaterial(material);
-      setLoadingPdf(true);
-      const blob = await placementPrepService.fetchPreviewBlob(material.id);
-      setPreviewPdfBlob(blob);
+      await placementPrepService.downloadMaterial(material.id, material.file_name);
     } catch (err) {
-      console.error('Preview error:', err);
-      try {
-        const previewUrl = placementPrepService.getPreviewUrl(material.id);
-        setPreviewPdfBlob(previewUrl);
-      } catch (_) {
-        alert('Unable to load preview.');
-        setPreviewMaterial(null);
-      }
-    } finally {
-      setLoadingPdf(false);
+      console.error('Download error:', err);
+      alert('Unable to download PDF file.');
     }
-  };
-
-  const handleClosePreview = () => {
-    setPreviewPdfBlob(null);
-    setPreviewMaterial(null);
   };
 
   // ---------------------------------------------------------------------------
@@ -743,11 +721,11 @@ export default function AdminPlacementPrepPage() {
                         <td className="py-3.5 px-4 text-right whitespace-nowrap">
                           <div className="inline-flex items-center gap-1">
                             <button
-                              onClick={() => handleOpenPreview(mat)}
-                              className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100"
-                              title="Preview PDF"
+                              onClick={() => handleDownload(mat)}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition"
+                              title="Download PDF File"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Download className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => openEditMaterial(mat)}
@@ -1495,53 +1473,6 @@ export default function AdminPlacementPrepPage() {
               >
                 Delete
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --------------------------------------------------------------------- */}
-      {/* EMBEDDED PDF PREVIEW MODAL */}
-      {/* --------------------------------------------------------------------- */}
-      {previewMaterial && (
-        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white w-full max-w-5xl h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
-            <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-xs">
-                  PDF
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white truncate max-w-md">{previewMaterial.title}</h3>
-                  <div className="text-[11px] text-slate-400">
-                    {previewMaterial.role_name} • {previewMaterial.file_size_formatted}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleClosePreview}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 bg-slate-100 overflow-hidden relative">
-              {loadingPdf ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-white">
-                  <Spinner size="lg" />
-                  <p className="text-xs font-semibold text-slate-600">Loading PDF document...</p>
-                </div>
-              ) : previewPdfBlob ? (
-                <PdfViewer
-                  pdfData={previewPdfBlob}
-                  fileName={previewMaterial.file_name}
-                  title={previewMaterial.title}
-                  downloadLabel="Download PDF File"
-                  className="h-full w-full"
-                />
-              ) : null}
             </div>
           </div>
         </div>

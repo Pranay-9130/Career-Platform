@@ -57,20 +57,70 @@ export const placementPrepService = {
 
   /**
    * Downloads a PDF file programmatically with accurate filename and download counter trigger.
+   * Employs dual-layer strategy: Axios in-memory blob trigger + direct browser download fallback.
    */
   downloadMaterial: async (materialId, fileName = 'preparation-guide.pdf') => {
-    const response = await api.get(`/placement-preparation/materials/${materialId}/download`, {
-      responseType: 'blob',
-    });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const downloadUrl = `/api/placement-preparation/materials/${materialId}/download`;
+
+    try {
+      // 1. Try fetching via Axios to handle authenticated requests and catch errors
+      const response = await api.get(downloadUrl, {
+        responseType: 'blob',
+      });
+
+      // Verify that response is valid and non-empty
+      if (response && response.data) {
+        // If content-type is json, it might be an error encoded as blob
+        if (response.data.type === 'application/json') {
+          const text = await response.data.text();
+          let errorDetail = 'Download error';
+          try {
+            const parsed = JSON.parse(text);
+            errorDetail = parsed.detail || errorDetail;
+          } catch (_) {}
+          throw new Error(errorDetail);
+        }
+
+        const blob = response.data instanceof Blob
+          ? response.data
+          : new Blob([response.data], { type: 'application/pdf' });
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = url;
+        link.setAttribute('download', fileName);
+        document.body.appendChild(link);
+        link.click();
+
+        // Delay revoke so browser has ample time to stream/save the file
+        setTimeout(() => {
+          if (link.parentNode) link.parentNode.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 60000);
+        return true;
+      }
+    } catch (apiErr) {
+      console.warn('Axios blob download failed, falling back to direct navigation:', apiErr);
+    }
+
+    // 2. Direct browser navigation fallback using server Content-Disposition: attachment
+    try {
+      const fallbackLink = document.createElement('a');
+      fallbackLink.style.display = 'none';
+      fallbackLink.href = downloadUrl;
+      fallbackLink.setAttribute('download', fileName);
+      fallbackLink.setAttribute('target', '_blank');
+      document.body.appendChild(fallbackLink);
+      fallbackLink.click();
+      setTimeout(() => {
+        if (fallbackLink.parentNode) fallbackLink.parentNode.removeChild(fallbackLink);
+      }, 5000);
+      return true;
+    } catch (fallbackErr) {
+      console.error('All download methods failed:', fallbackErr);
+      throw fallbackErr;
+    }
   },
 
   // =========================================================================

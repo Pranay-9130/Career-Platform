@@ -4,15 +4,12 @@ import {
   ChevronLeft,
   FileText,
   Download,
-  Eye,
   Search,
   BookOpen,
   Calendar,
   HardDrive,
   Layers,
   Sparkles,
-  X,
-  Maximize2,
   Terminal,
   Code,
   Layout,
@@ -27,7 +24,6 @@ import {
 } from 'lucide-react';
 import { placementPrepService } from '@/services/placementPrepService';
 import { Spinner, Alert, Badge, Button } from '@/components/common';
-import PdfViewer from '@/components/common/PdfViewer';
 
 function RoleIcon({ name, className = 'w-6 h-6 text-brand-primary' }) {
   switch ((name || '').toLowerCase()) {
@@ -71,11 +67,9 @@ export default function PlacementPrepRolePage() {
   const [selectedTopicId, setSelectedTopicId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // PDF Preview Modal State
-  const [previewMaterial, setPreviewMaterial] = useState(null);
-  const [previewPdfBlob, setPreviewPdfBlob] = useState(null);
-  const [loadingPdf, setLoadingPdf] = useState(false);
-  const [previewError, setPreviewError] = useState(null);
+  // Download feedback states
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [downloadError, setDownloadError] = useState(null);
 
   const loadRoleAndMaterials = useCallback(async () => {
     try {
@@ -98,37 +92,10 @@ export default function PlacementPrepRolePage() {
     loadRoleAndMaterials();
   }, [loadRoleAndMaterials]);
 
-  // Clean up preview state when modal closes
-  const handleClosePreview = () => {
-    setPreviewPdfBlob(null);
-    setPreviewMaterial(null);
-    setPreviewError(null);
-  };
-
-  const handleOpenPreview = async (material) => {
-    try {
-      setPreviewMaterial(material);
-      setLoadingPdf(true);
-      setPreviewError(null);
-
-      // Fetch the verified PDF blob via Axios api client to ensure correct auth headers & in-memory blob handling
-      const blob = await placementPrepService.fetchPreviewBlob(material.id);
-      setPreviewPdfBlob(blob);
-    } catch (err) {
-      console.error('Failed to stream PDF for preview:', err);
-      try {
-        const previewUrl = placementPrepService.getPreviewUrl(material.id);
-        setPreviewPdfBlob(previewUrl);
-      } catch (_) {
-        setPreviewError('Unable to preview PDF document. You can still download the file directly below.');
-      }
-    } finally {
-      setLoadingPdf(false);
-    }
-  };
-
   const handleDownload = async (material) => {
     try {
+      setDownloadingId(material.id);
+      setDownloadError(null);
       await placementPrepService.downloadMaterial(material.id, material.file_name);
       // Optimistically update local download count
       setMaterials((prev) =>
@@ -136,6 +103,9 @@ export default function PlacementPrepRolePage() {
       );
     } catch (err) {
       console.error('Download failed:', err);
+      setDownloadError(`Failed to download ${material.title}. Please try again.`);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -305,6 +275,15 @@ export default function PlacementPrepRolePage() {
               </div>
             </div>
 
+            {/* Error banner if download fails */}
+            {downloadError && (
+              <div className="mb-6">
+                <Alert variant="danger" dismissible onDismiss={() => setDownloadError(null)}>
+                  {downloadError}
+                </Alert>
+              </div>
+            )}
+
             {/* Materials List / Cards */}
             {filteredMaterials.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-12 shadow-xs">
@@ -379,22 +358,24 @@ export default function PlacementPrepRolePage() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenPreview(material)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Preview PDF</span>
-                      </button>
-
+                    {/* Action Button */}
+                    <div className="p-4 bg-slate-50/70 border-t border-slate-100">
                       <button
                         onClick={() => handleDownload(material)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold bg-brand-primary hover:bg-blue-600 text-white shadow-xs transition"
+                        disabled={downloadingId === material.id}
+                        className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-brand-primary hover:bg-blue-600 active:scale-[0.98] text-white shadow-xs transition-all disabled:opacity-75 disabled:cursor-wait"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download</span>
+                        {downloadingId === material.id ? (
+                          <>
+                            <Spinner size="sm" className="border-white" />
+                            <span>Downloading PDF...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            <span>Download PDF Guide</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -404,85 +385,6 @@ export default function PlacementPrepRolePage() {
           </div>
         )}
       </div>
-
-      {/* Embedded PDF Preview Modal */}
-      {previewMaterial && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleClosePreview();
-          }}
-        >
-          <div className="bg-white w-full max-w-5xl h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                  PDF
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-white truncate">
-                    {previewMaterial.title}
-                  </h3>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                    <span>{previewMaterial.topic_name || role?.name}</span>
-                    <span>•</span>
-                    <span>{previewMaterial.file_size_formatted}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => handleDownload(previewMaterial)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary hover:bg-blue-600 text-white transition"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Download</span>
-                </button>
-                <button
-                  onClick={handleClosePreview}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                  aria-label="Close preview"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: PdfViewer */}
-            <div className="flex-1 bg-slate-100 overflow-hidden relative">
-              {loadingPdf ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-white/80">
-                  <Spinner size="lg" />
-                  <p className="text-xs font-semibold text-slate-600">Rendering document pages...</p>
-                </div>
-              ) : previewError ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                  <Alert variant="warning" className="max-w-md">
-                    {previewError}
-                  </Alert>
-                  <button
-                    onClick={() => handleDownload(previewMaterial)}
-                    className="mt-4 px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition"
-                  >
-                    Download PDF File
-                  </button>
-                </div>
-              ) : previewPdfBlob ? (
-                <PdfViewer
-                  pdfData={previewPdfBlob}
-                  fileName={previewMaterial.file_name}
-                  title={previewMaterial.title}
-                  downloadLabel="Download PDF File"
-                  onDownload={() => handleDownload(previewMaterial)}
-                  className="h-full w-full"
-                />
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
