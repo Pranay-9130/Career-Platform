@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, Integer, ForeignKey, Uuid
+from sqlalchemy import Column, String, Text, Boolean, Integer, ForeignKey, Uuid, LargeBinary
 from sqlalchemy.orm import relationship
 from app.models.base import BaseUUIDModel
 
@@ -80,6 +80,7 @@ class PreparationMaterial(BaseUUIDModel):
     description = Column(Text, nullable=True)
     file_path = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
+    file_content = Column(LargeBinary, nullable=True)
     file_size_bytes = Column(Integer, nullable=False, default=0)
     page_count = Column(Integer, nullable=False, default=1, server_default="1")
     is_published = Column(Boolean, default=True, server_default="true", nullable=False, index=True)

@@ -39,6 +39,16 @@ export const placementPrepService = {
   },
 
   /**
+   * Fetches preview PDF as a direct verified Blob.
+   */
+  fetchPreviewBlob: async (materialId) => {
+    const response = await api.get(`/placement-preparation/materials/${materialId}/preview`, {
+      responseType: 'blob',
+    });
+    return new Blob([response.data], { type: 'application/pdf' });
+  },
+
+  /**
    * Generates direct download URL.
    */
   getDownloadUrl: (materialId) => {
@@ -47,20 +57,81 @@ export const placementPrepService = {
 
   /**
    * Downloads a PDF file programmatically with accurate filename and download counter trigger.
+   * Leverages authenticated Axios client to safely fetch the binary blob and handles errors gracefully.
    */
   downloadMaterial: async (materialId, fileName = 'preparation-guide.pdf') => {
-    const response = await api.get(`/placement-preparation/materials/${materialId}/download`, {
-      responseType: 'blob',
-    });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', fileName);
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    const downloadUrl = `/placement-preparation/materials/${materialId}/download`;
+
+    try {
+      const response = await api.get(downloadUrl, {
+        responseType: 'blob',
+      });
+
+      if (!response || !response.data) {
+        throw new Error('No data received from document server.');
+      }
+
+      // If server returned an error as JSON encoded in blob
+      if (response.data.type === 'application/json' || response.data.type?.includes('json')) {
+        let errorDetail = 'The requested PDF file is not available.';
+        try {
+          const text = await response.data.text();
+          const parsed = JSON.parse(text);
+          errorDetail = parsed.detail || errorDetail;
+        } catch (_) {}
+        throw new Error(errorDetail);
+      }
+
+      const blob = response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], { type: 'application/pdf' });
+
+      if (blob.size === 0) {
+        throw new Error('Downloaded document is empty (0 bytes).');
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.style.display = 'none';
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+
+      // Delay revoke by 60 seconds so browser has ample time to stream and write the file to disk
+      setTimeout(() => {
+        if (link.parentNode) link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 60000);
+      return true;
+    } catch (apiErr) {
+      // Check if error response contains JSON error details inside blob
+      if (
+        apiErr.response?.data instanceof Blob &&
+        (apiErr.response.data.type?.includes('json') || apiErr.response.data.type === 'application/json')
+      ) {
+        try {
+          const text = await apiErr.response.data.text();
+          const parsed = JSON.parse(text);
+          throw new Error(parsed.detail || 'Download failed on document server.');
+        } catch (inner) {
+          if (inner.message && !inner.message.includes('[object')) {
+            throw inner;
+          }
+        }
+      }
+
+      const status = apiErr.response?.status;
+      if (status === 404) {
+        throw new Error(apiErr.response?.data?.detail || 'Document file not found on server.');
+      } else if (status === 403 || status === 401) {
+        throw new Error('Access denied. Please check your credentials.');
+      } else if (status >= 500) {
+        throw new Error('Document server is temporarily unavailable. Please retry shortly.');
+      }
+
+      throw apiErr;
+    }
   },
 
   // =========================================================================

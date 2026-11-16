@@ -64,8 +64,21 @@ async def admin_list_roles(db: AsyncSession = Depends(get_db)):
         .options(selectinload(PreparationRole.topics))
         .order_by(PreparationRole.display_order.asc(), PreparationRole.name.asc())
     )
-    result = await db.execute(stmt)
-    roles = result.scalars().all()
+    try:
+        result = await db.execute(stmt)
+        roles = result.scalars().all()
+    except Exception:
+        await db.rollback()
+        from app.core.database import engine, Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        roles = []
+
+    if not roles:
+        from app.services.placement_prep_service import seed_placement_preparation_defaults
+        await seed_placement_preparation_defaults(db)
+        result = await db.execute(stmt)
+        roles = result.scalars().all()
 
     # Total materials count per role (including unpublished)
     count_stmt = (
@@ -497,6 +510,7 @@ async def admin_upload_material(
         description=description.strip() if description else None,
         file_path=str(file_disk_path.as_posix()),
         file_name=orig_filename,
+        file_content=file_bytes,
         file_size_bytes=len(file_bytes),
         page_count=page_count,
         is_published=is_published,
@@ -640,6 +654,7 @@ async def admin_replace_material_pdf(
 
     material.file_path = str(file_disk_path.as_posix())
     material.file_name = orig_filename
+    material.file_content = file_bytes
     material.file_size_bytes = len(file_bytes)
     material.page_count = page_count
 

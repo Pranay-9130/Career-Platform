@@ -18,17 +18,19 @@ import {
   ShieldCheck,
   Compass,
   BrainCircuit,
-  Download,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
 import { getDashboardPath } from '@/utils/navigation';
+import logoPng from '@/assets/logo.png';
 
 export default function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [featuresMenuOpen, setFeaturesMenuOpen] = useState(false);
   const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const userMenuRef = useRef(null);
   const featuresMenuRef = useRef(null);
@@ -86,59 +88,63 @@ export default function PublicNavbar() {
     };
   }, []);
 
-  // Features mega-menu list — STRICTLY only the three core career tools
+  // Features mega-menu list — 4 Core Career Tools
   const featureTools = [
     {
+      name: 'Resume Builder',
+      description: 'Create professional resumes with ATS-optimized templates and live export.',
+      path: '/features/resume-builder',
+      icon: FileText,
+      iconBg: 'bg-blue-50 text-brand-primary',
+      badge: 'PDF Export',
+    },
+    {
       name: 'ATS Resume Analyzer',
-      description: 'Analyze resumes, evaluate ATS compatibility, identify missing skills and receive improvement suggestions.',
+      description: 'Analyze resumes against job descriptions with deterministic match scoring.',
       path: '/features/ats-analyzer',
       icon: Sparkles,
-      iconBg: 'bg-blue-50 text-brand-primary',
+      iconBg: 'bg-indigo-50 text-indigo-600',
       badge: 'ATS Scoring',
     },
     {
       name: 'Skill Intelligence',
-      description: 'Extract skills from resumes, identify skill gaps and understand suitability for a target job role.',
+      description: 'Discover skill gaps and track career readiness across engineering roles.',
       path: '/features/skill-intelligence',
       icon: BrainCircuit,
-      iconBg: 'bg-cyan-50 text-brand-cyan',
+      iconBg: 'bg-cyan-50 text-cyan-600',
       badge: '13-Role Matrix',
     },
     {
-      name: 'Resume Builder',
-      description: 'Create, edit and customize professional, ATS-friendly resumes.',
-      path: '/features/resume-builder',
-      icon: FileText,
-      iconBg: 'bg-indigo-50 text-indigo-600',
-      badge: 'PDF Export',
+      name: 'Placement Preparation',
+      description: 'Prepare for technical interviews and placement assessments with curated guides.',
+      path: '/placement-preparation',
+      icon: BookOpen,
+      iconBg: 'bg-emerald-50 text-emerald-600',
+      badge: 'Interview Prep',
     },
   ];
 
   // Primary top-level navigation links in exact required structure:
-  // Home | Projects | Jobs | Templates | About | Contact | Download App
+  // Home | Features ▼ | Projects | Jobs | Templates | About | Contact
   const secondaryNavLinks = [
     { name: 'Projects', path: '/projects' },
     { name: 'Jobs', path: '/jobs' },
     { name: 'Templates', path: '/templates' },
     { name: 'About', path: '/about' },
     { name: 'Contact', path: '/contact' },
-    {
-      name: 'Download App',
-      path: '/download-app',
-      icon: Download,
-      isDownloadApp: true,
-    },
   ];
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/') return location.pathname === '';
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
-  const isFeaturesActive = location.pathname.startsWith('/features') ||
+  const isFeaturesActive =
+    location.pathname.startsWith('/features') ||
     location.pathname === '/ats-analyzer' ||
     location.pathname === '/skill-intelligence' ||
-    location.pathname === '/resume-builder';
+    location.pathname === '/resume-builder' ||
+    location.pathname.startsWith('/placement-preparation');
 
   const handleFeaturesMouseEnter = () => {
     if (featuresTimeoutRef.current) clearTimeout(featuresTimeoutRef.current);
@@ -166,24 +172,33 @@ export default function PublicNavbar() {
   const workspaceLabel = user?.role === 'CONTRIBUTOR' ? 'Job Seeker' : 'Student';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand Logo */}
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Brand Logo with Guaranteed Fallback */}
         <Link
           to="/"
-          className="flex items-center gap-2 group shrink-0"
+          className="flex items-center gap-2.5 group shrink-0"
+          aria-label="AspirePath Home"
         >
-          <picture>
-            <source srcSet="/logo.webp" type="image/webp" />
+          {!logoError ? (
             <img
-              src="/logo.png"
+              src={logoPng}
               alt="AspirePath"
-              width="135"
+              width="140"
               height="36"
-              decoding="async"
-              className="h-9 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+              onError={() => setLogoError(true)}
+              className="h-9 w-auto max-h-9 object-contain transition-transform group-hover:scale-[1.02]"
             />
-          </picture>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-xs">
+                A
+              </div>
+              <span className="font-display font-extrabold text-xl tracking-tight text-slate-900">
+                Aspire<span className="text-brand-primary">Path</span>
+              </span>
+            </div>
+          )}
         </Link>
 
         {/* Desktop Navigation Links: Home | Features ▼ | About | Jobs | Projects | Templates | Contact */}
@@ -284,26 +299,9 @@ export default function PublicNavbar() {
             )}
           </div>
 
-          {/* Secondary Links: Projects | Jobs | Templates | About | Contact | Download App */}
+          {/* Secondary Links: Projects | Jobs | Templates | About | Contact */}
           {secondaryNavLinks.map((link) => {
             const active = isActive(link.path);
-            if (link.isDownloadApp) {
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  aria-current={active ? 'page' : undefined}
-                  className={`relative px-3 py-1.5 rounded-lg text-sm transition-all flex items-center gap-1.5 font-bold ${
-                    active
-                      ? 'text-brand-primary bg-blue-100/70 border border-brand-primary/30 shadow-xs'
-                      : 'text-brand-primary bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200/70'
-                  }`}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>{link.name}</span>
-                </Link>
-              );
-            }
             return (
               <Link
                 key={link.path}
@@ -424,6 +422,14 @@ export default function PublicNavbar() {
                           >
                             <BrainCircuit className="w-4 h-4 text-slate-400" />
                             <span>Skill Intelligence</span>
+                          </Link>
+
+                          <Link
+                            to="/placement-preparation"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <BookOpen className="w-4 h-4 text-slate-400" />
+                            <span>Placement Preparation</span>
                           </Link>
 
                           <Link
@@ -603,25 +609,6 @@ export default function PublicNavbar() {
               {/* Secondary Navigation Links */}
               {secondaryNavLinks.map((link) => {
                 const active = isActive(link.path);
-                if (link.isDownloadApp) {
-                  return (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      onClick={() => setMobileMenuOpen(false)}
-                      aria-current={active ? 'page' : undefined}
-                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-bold bg-blue-50 text-brand-primary border border-blue-200/60 my-1 transition-colors"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Download className="w-4 h-4 text-brand-primary" />
-                        <span>{link.name}</span>
-                      </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-brand-primary text-white">
-                        APK
-                      </span>
-                    </Link>
-                  );
-                }
                 return (
                   <Link
                     key={link.path}

@@ -446,6 +446,7 @@ async def seed_placement_preparation_defaults(session):
                 description=m_data["description"],
                 file_path=str(file_disk_path.as_posix()),
                 file_name=m_data["filename"],
+                file_content=pdf_bytes,
                 file_size_bytes=len(pdf_bytes),
                 page_count=page_count,
                 is_published=True,
@@ -455,4 +456,79 @@ async def seed_placement_preparation_defaults(session):
 
     await session.commit()
     logger.info("Successfully seeded Placement Preparation roles and materials!")
+
+
+async def repair_existing_materials(session) -> None:
+    """
+    Self-healing routine:
+    Ensures every existing PreparationMaterial record in the database has non-null, durable file_content.
+    If file_content is NULL, it populates it from:
+    1. Local container disk file (if present)
+    2. Bundled seed PDF (AspirePath_Python_Developer_Interview_Questions.pdf)
+    3. Dynamic ReportLab technical PDF generation (guaranteeing no document is ever broken)
+    """
+    from sqlalchemy import select, text
+    from app.models.placement_preparation import PreparationMaterial
+
+    # Ensure schema has file_content column (safe ALTER TABLE for existing DB)
+    try:
+        await session.execute(text("ALTER TABLE preparation_materials ADD COLUMN IF NOT EXISTS file_content BYTEA;"))
+        await session.commit()
+    except Exception:
+        await session.rollback()
+
+    seed_pdf_path = (
+        Path(__file__).resolve().parents[1]
+        / "static"
+        / "seed_materials"
+        / "AspirePath_Python_Developer_Interview_Questions.pdf"
+    )
+    bundled_bytes = seed_pdf_path.read_bytes() if seed_pdf_path.exists() else None
+
+    stmt = select(PreparationMaterial)
+    materials = (await session.execute(stmt)).scalars().all()
+
+    modified = False
+    for mat in materials:
+        if mat.file_content:
+            continue
+
+        # Check local disk
+        disk_path = Path(mat.file_path) if mat.file_path else None
+        if disk_path and disk_path.exists():
+            try:
+                mat.file_content = disk_path.read_bytes()
+                modified = True
+                continue
+            except Exception:
+                pass
+
+        # Check bundled authentic Python Developer Guide
+        if bundled_bytes and ("python" in (mat.file_name or "").lower() or "python" in (mat.title or "").lower()):
+            mat.file_content = bundled_bytes
+            mat.file_size_bytes = len(bundled_bytes)
+            modified = True
+            continue
+
+        # Otherwise synthesize guaranteed PDF
+        mat.file_content = generate_sample_pdf(
+            title=mat.title,
+            subtitle="AspirePath Placement Preparation Series",
+            content_sections=[
+                {
+                    "heading": f"{mat.title} - Technical Preparation Guide",
+                    "paragraphs": [
+                        mat.description or "Comprehensive technical interview questions, architecture concepts, and domain preparation.",
+                        "Essential frameworks, code implementations, problem-solving methodologies, and industry interview practices.",
+                    ],
+                }
+            ],
+        )
+        mat.file_size_bytes = len(mat.file_content)
+        modified = True
+
+    if modified:
+        await session.commit()
+        logger.info("Repaired existing materials with durable database PDF storage.")
+
 

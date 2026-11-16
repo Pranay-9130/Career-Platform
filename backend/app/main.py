@@ -12,17 +12,36 @@ from fastapi.responses import FileResponse
 async def lifespan(app: FastAPI):
     """
     Application startup and shutdown lifecycle management.
-    Initializes database schema. Accounts are registered or provisioned explicitly.
+    Initializes database schema and ensures all application tables exist.
     """
+    from app.core.database import engine, Base, AsyncSessionLocal
+
+    # Ensure tables exist safely across environments
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+        # Ensure file_content column exists if table was previously created
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE preparation_materials ADD COLUMN IF NOT EXISTS file_content BYTEA;"))
+        except Exception:
+            pass
+
+    # Seed placement preparation defaults and repair existing materials
+    try:
+        async with AsyncSessionLocal() as session:
+            from app.services.placement_prep_service import (
+                seed_placement_preparation_defaults,
+                repair_existing_materials,
+            )
+            await seed_placement_preparation_defaults(session)
+            await repair_existing_materials(session)
+    except Exception as e:
+        import logging
+        logging.getLogger("uvicorn.error").warning("Placement preparation seed/repair check: %s", e)
+
     if settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release", "test"}:
         yield
         return
-
-    from app.core.database import engine, Base, AsyncSessionLocal
-    from sqlalchemy import select, func
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
     async with AsyncSessionLocal() as session:
         # Seed demo jobs for jobs & internship discovery if not present

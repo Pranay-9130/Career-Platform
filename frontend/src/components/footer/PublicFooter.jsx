@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Linkedin, Instagram, Mail, Sparkles, Smartphone } from 'lucide-react';
+import logoPng from '@/assets/logo.png';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
+  const [logoError, setLogoError] = useState(false);
 
   return (
     <footer className="bg-white border-t border-brand-border text-brand-text">
@@ -12,19 +14,27 @@ export default function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand Column (Span 2) */}
           <div className="lg:col-span-2 space-y-4">
-            <Link to="/" className="inline-flex items-center gap-2 group">
-              <picture>
-                <source srcSet="/logo.webp" type="image/webp" />
+            <Link to="/" className="inline-flex items-center gap-2 group" aria-label="AspirePath Home">
+              {!logoError ? (
                 <img
-                  src="/logo.png"
+                  src={logoPng}
                   alt="AspirePath"
                   width="150"
                   height="40"
                   loading="lazy"
-                  decoding="async"
+                  onError={() => setLogoError(true)}
                   className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
                 />
-              </picture>
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-xs">
+                    A
+                  </div>
+                  <span className="font-display font-extrabold text-xl tracking-tight text-slate-900">
+                    Aspire<span className="text-brand-primary">Path</span>
+                  </span>
+                </div>
+              )}
             </Link>
 
             <p className="text-sm font-medium text-brand-primary italic">
@@ -90,6 +100,11 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
+                <Link to="/placement-preparation" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  Placement Preparation
+                </Link>
+              </li>
+              <li>
                 <Link to="/templates" className="text-brand-muted hover:text-brand-primary transition-colors">
                   Resume Templates
                 </Link>
@@ -111,12 +126,6 @@ export default function PublicFooter() {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">Resources</h3>
             <ul className="space-y-2 text-xs">
-              <li>
-                <Link to="/download-app" className="text-brand-primary font-bold hover:text-blue-700 transition-colors flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-brand-primary" />
-                  <span>Download Android App</span>
-                </Link>
-              </li>
               <li>
                 <Link to="/design-system" className="text-brand-muted hover:text-brand-primary transition-colors flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-brand-primary" />

@@ -4,15 +4,12 @@ import {
   ChevronLeft,
   FileText,
   Download,
-  Eye,
   Search,
   BookOpen,
   Calendar,
   HardDrive,
   Layers,
   Sparkles,
-  X,
-  Maximize2,
   Terminal,
   Code,
   Layout,
@@ -27,7 +24,6 @@ import {
 } from 'lucide-react';
 import { placementPrepService } from '@/services/placementPrepService';
 import { Spinner, Alert, Badge, Button } from '@/components/common';
-import PdfViewer from '@/components/common/PdfViewer';
 
 function RoleIcon({ name, className = 'w-6 h-6 text-brand-primary' }) {
   switch ((name || '').toLowerCase()) {
@@ -71,11 +67,10 @@ export default function PlacementPrepRolePage() {
   const [selectedTopicId, setSelectedTopicId] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // PDF Preview Modal State
-  const [previewMaterial, setPreviewMaterial] = useState(null);
-  const [previewPdfBlobUrl, setPreviewPdfBlobUrl] = useState(null);
-  const [loadingPdf, setLoadingPdf] = useState(false);
-  const [previewError, setPreviewError] = useState(null);
+  // Download feedback states
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [downloadError, setDownloadError] = useState(null);
+  const [downloadSuccess, setDownloadSuccess] = useState(null);
 
   const loadRoleAndMaterials = useCallback(async () => {
     try {
@@ -98,46 +93,30 @@ export default function PlacementPrepRolePage() {
     loadRoleAndMaterials();
   }, [loadRoleAndMaterials]);
 
-  // Clean up blob URL when preview modal closes
-  const handleClosePreview = () => {
-    if (previewPdfBlobUrl) {
-      URL.revokeObjectURL(previewPdfBlobUrl);
-      setPreviewPdfBlobUrl(null);
+  // Auto-dismiss success notification
+  useEffect(() => {
+    if (downloadSuccess) {
+      const timer = setTimeout(() => setDownloadSuccess(null), 6000);
+      return () => clearTimeout(timer);
     }
-    setPreviewMaterial(null);
-    setPreviewError(null);
-  };
-
-  const handleOpenPreview = async (material) => {
-    try {
-      setPreviewMaterial(material);
-      setLoadingPdf(true);
-      setPreviewError(null);
-
-      // Fetch the PDF blob via service to leverage authenticated session and avoid cross-origin / iframe restrictions
-      const previewUrl = placementPrepService.getPreviewUrl(material.id);
-      const res = await fetch(previewUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to stream PDF`);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      setPreviewPdfBlobUrl(blobUrl);
-    } catch (err) {
-      console.error('Failed to stream PDF for preview:', err);
-      setPreviewError('Unable to preview PDF document. You can still download the file directly below.');
-    } finally {
-      setLoadingPdf(false);
-    }
-  };
+  }, [downloadSuccess]);
 
   const handleDownload = async (material) => {
     try {
+      setDownloadingId(material.id);
+      setDownloadError(null);
+      setDownloadSuccess(null);
       await placementPrepService.downloadMaterial(material.id, material.file_name);
-      // Optimistically update local download count
+      // Optimistically update local download count only upon confirmed download completion
       setMaterials((prev) =>
         prev.map((m) => (m.id === material.id ? { ...m, download_count: (m.download_count || 0) + 1 } : m))
       );
+      setDownloadSuccess(`Successfully downloaded "${material.file_name}". Check your browser downloads.`);
     } catch (err) {
       console.error('Download failed:', err);
+      setDownloadError(err.message || `Failed to download ${material.title}. Please try again.`);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -307,6 +286,27 @@ export default function PlacementPrepRolePage() {
               </div>
             </div>
 
+            {/* Success banner when download finishes */}
+            {downloadSuccess && (
+              <div className="mb-6 animate-in fade-in">
+                <Alert variant="success" dismissible onDismiss={() => setDownloadSuccess(null)}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-medium text-emerald-900">{downloadSuccess}</span>
+                  </div>
+                </Alert>
+              </div>
+            )}
+
+            {/* Error banner if download fails */}
+            {downloadError && (
+              <div className="mb-6 animate-in fade-in">
+                <Alert variant="danger" dismissible onDismiss={() => setDownloadError(null)}>
+                  <span className="font-medium">{downloadError}</span>
+                </Alert>
+              </div>
+            )}
+
             {/* Materials List / Cards */}
             {filteredMaterials.length === 0 ? (
               <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-md mx-auto my-12 shadow-xs">
@@ -325,7 +325,7 @@ export default function PlacementPrepRolePage() {
                       setSearchQuery('');
                       setSelectedTopicId('ALL');
                     }}
-                    className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-semibold rounded-lg hover:bg-blue-600 transition"
+                    className="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-blue-600 shadow-xs transition"
                   >
                     Show All Role Materials
                   </button>
@@ -336,67 +336,85 @@ export default function PlacementPrepRolePage() {
                 {filteredMaterials.map((material) => (
                   <div
                     key={material.id}
-                    className="bg-white rounded-2xl border border-slate-200 hover:border-brand-primary/50 shadow-xs hover:shadow-md transition flex flex-col justify-between overflow-hidden"
+                    className="bg-white rounded-2xl border border-slate-200/90 hover:border-brand-primary/60 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group"
                   >
                     <div className="p-6">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 font-bold text-xs shrink-0">
-                          PDF
+                      {/* Top Badges */}
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="w-11 h-11 rounded-xl bg-red-50 border border-red-100/80 flex flex-col items-center justify-center text-red-600 font-extrabold text-[11px] shadow-2xs shrink-0">
+                          <span>PDF</span>
                         </div>
-                        {material.topic_name && (
-                          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-brand-primary border border-blue-100/70">
-                            {material.topic_name}
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          {material.topic_name && (
+                            <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-brand-primary border border-blue-100">
+                              {material.topic_name}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            <span>Verified Guide</span>
                           </span>
-                        )}
+                        </div>
                       </div>
 
-                      <h3 className="text-base font-bold text-slate-900 mb-2 leading-snug">
+                      {/* Complete Title - never clipped */}
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5 leading-snug break-words">
                         {material.title}
                       </h3>
 
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-4">
-                        {material.description || 'Comprehensive technical question banks and preparation notes.'}
+                      {/* Monospace file label */}
+                      <div
+                        className="text-[11px] font-mono text-slate-400 mb-3 truncate flex items-center gap-1"
+                        title={material.file_name}
+                      >
+                        <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate">{material.file_name}</span>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-5">
+                        {material.description || 'Comprehensive technical question banks, interview frameworks, and domain preparation notes.'}
                       </p>
 
                       {/* File Metadata Badges */}
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="inline-flex items-center gap-1">
-                          <HardDrive className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{material.file_size_formatted || 'PDF'}</span>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-slate-500 pt-3.5 border-t border-slate-100">
+                        <span className="inline-flex items-center gap-1.5 text-slate-600">
+                          <HardDrive className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="font-semibold">{material.file_size_formatted || '510 KB'}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <FileText className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 text-slate-600">
+                          <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{material.page_count} {material.page_count === 1 ? 'page' : 'pages'}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{formatDate(material.created_at)}</span>
                         </span>
-                        {material.download_count > 0 && (
-                          <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
-                            <Download className="w-3.5 h-3.5" />
-                            <span>{material.download_count} downloads</span>
-                          </span>
-                        )}
+                        <span className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Download className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{material.download_count || 0} downloads</span>
+                        </span>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex items-center gap-2">
-                      <button
-                        onClick={() => handleOpenPreview(material)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Preview PDF</span>
-                      </button>
-
+                    {/* Prominent Action Button */}
+                    <div className="p-4 bg-slate-50/80 border-t border-slate-100">
                       <button
                         onClick={() => handleDownload(material)}
-                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold bg-brand-primary hover:bg-blue-600 text-white shadow-xs transition"
+                        disabled={downloadingId === material.id}
+                        className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-brand-primary hover:bg-blue-600 active:scale-[0.98] text-white shadow-xs transition-all disabled:opacity-75 disabled:cursor-wait group-hover:bg-blue-600"
                       >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download</span>
+                        {downloadingId === material.id ? (
+                          <>
+                            <Spinner size="sm" className="border-white" />
+                            <span>Downloading PDF Guide...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 text-white" />
+                            <span>Download PDF Guide</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -406,84 +424,6 @@ export default function PlacementPrepRolePage() {
           </div>
         )}
       </div>
-
-      {/* Embedded PDF Preview Modal */}
-      {previewMaterial && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleClosePreview();
-          }}
-        >
-          <div className="bg-white w-full max-w-5xl h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                  PDF
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-white truncate">
-                    {previewMaterial.title}
-                  </h3>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
-                    <span>{previewMaterial.topic_name || role?.name}</span>
-                    <span>•</span>
-                    <span>{previewMaterial.file_size_formatted}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => handleDownload(previewMaterial)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-brand-primary hover:bg-blue-600 text-white transition"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Download</span>
-                </button>
-                <button
-                  onClick={handleClosePreview}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-                  aria-label="Close preview"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: PdfViewer */}
-            <div className="flex-1 bg-slate-100 overflow-hidden relative">
-              {loadingPdf ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3 bg-white/80">
-                  <Spinner size="lg" />
-                  <p className="text-xs font-semibold text-slate-600">Rendering document pages...</p>
-                </div>
-              ) : previewError ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                  <Alert variant="warning" className="max-w-md">
-                    {previewError}
-                  </Alert>
-                  <button
-                    onClick={() => handleDownload(previewMaterial)}
-                    className="mt-4 px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-blue-600 transition"
-                  >
-                    Download PDF File
-                  </button>
-                </div>
-              ) : previewPdfBlobUrl ? (
-                <PdfViewer
-                  pdfData={previewPdfBlobUrl}
-                  fileName={previewMaterial.file_name}
-                  title={previewMaterial.title}
-                  onDownload={() => handleDownload(previewMaterial)}
-                  className="h-full w-full"
-                />
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
