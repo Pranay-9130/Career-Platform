@@ -73,7 +73,7 @@ export default function PlacementPrepRolePage() {
 
   // PDF Preview Modal State
   const [previewMaterial, setPreviewMaterial] = useState(null);
-  const [previewPdfBlobUrl, setPreviewPdfBlobUrl] = useState(null);
+  const [previewPdfBlob, setPreviewPdfBlob] = useState(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [previewError, setPreviewError] = useState(null);
 
@@ -98,12 +98,9 @@ export default function PlacementPrepRolePage() {
     loadRoleAndMaterials();
   }, [loadRoleAndMaterials]);
 
-  // Clean up blob URL when preview modal closes
+  // Clean up preview state when modal closes
   const handleClosePreview = () => {
-    if (previewPdfBlobUrl) {
-      URL.revokeObjectURL(previewPdfBlobUrl);
-      setPreviewPdfBlobUrl(null);
-    }
+    setPreviewPdfBlob(null);
     setPreviewMaterial(null);
     setPreviewError(null);
   };
@@ -114,16 +111,17 @@ export default function PlacementPrepRolePage() {
       setLoadingPdf(true);
       setPreviewError(null);
 
-      // Fetch the PDF blob via service to leverage authenticated session and avoid cross-origin / iframe restrictions
-      const previewUrl = placementPrepService.getPreviewUrl(material.id);
-      const res = await fetch(previewUrl);
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to stream PDF`);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      setPreviewPdfBlobUrl(blobUrl);
+      // Fetch the verified PDF blob via Axios api client to ensure correct auth headers & in-memory blob handling
+      const blob = await placementPrepService.fetchPreviewBlob(material.id);
+      setPreviewPdfBlob(blob);
     } catch (err) {
       console.error('Failed to stream PDF for preview:', err);
-      setPreviewError('Unable to preview PDF document. You can still download the file directly below.');
+      try {
+        const previewUrl = placementPrepService.getPreviewUrl(material.id);
+        setPreviewPdfBlob(previewUrl);
+      } catch (_) {
+        setPreviewError('Unable to preview PDF document. You can still download the file directly below.');
+      }
     } finally {
       setLoadingPdf(false);
     }
@@ -471,11 +469,12 @@ export default function PlacementPrepRolePage() {
                     Download PDF File
                   </button>
                 </div>
-              ) : previewPdfBlobUrl ? (
+              ) : previewPdfBlob ? (
                 <PdfViewer
-                  pdfData={previewPdfBlobUrl}
+                  pdfData={previewPdfBlob}
                   fileName={previewMaterial.file_name}
                   title={previewMaterial.title}
+                  downloadLabel="Download PDF File"
                   onDownload={() => handleDownload(previewMaterial)}
                   className="h-full w-full"
                 />

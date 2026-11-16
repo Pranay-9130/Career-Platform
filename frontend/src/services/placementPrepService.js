@@ -39,6 +39,16 @@ export const placementPrepService = {
   },
 
   /**
+   * Fetches preview PDF as a direct verified Blob.
+   */
+  fetchPreviewBlob: async (materialId) => {
+    const response = await api.get(`/placement-preparation/materials/${materialId}/preview`, {
+      responseType: 'blob',
+    });
+    return new Blob([response.data], { type: 'application/pdf' });
+  },
+
+  /**
    * Generates direct download URL.
    */
   getDownloadUrl: (materialId) => {

@@ -446,6 +446,7 @@ async def seed_placement_preparation_defaults(session):
                 description=m_data["description"],
                 file_path=str(file_disk_path.as_posix()),
                 file_name=m_data["filename"],
+                file_content=pdf_bytes,
                 file_size_bytes=len(pdf_bytes),
                 page_count=page_count,
                 is_published=True,

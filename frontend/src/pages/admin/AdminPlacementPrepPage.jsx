@@ -56,7 +56,7 @@ export default function AdminPlacementPrepPage() {
 
   // Preview modal
   const [previewMaterial, setPreviewMaterial] = useState(null);
-  const [previewPdfBlobUrl, setPreviewPdfBlobUrl] = useState(null);
+  const [previewPdfBlob, setPreviewPdfBlob] = useState(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
 
   // Active item selections for edit/delete
@@ -331,26 +331,24 @@ export default function AdminPlacementPrepPage() {
     try {
       setPreviewMaterial(material);
       setLoadingPdf(true);
-      const previewUrl = placementPrepService.getPreviewUrl(material.id);
-      const res = await fetch(previewUrl);
-      if (!res.ok) throw new Error('Failed to stream PDF');
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      setPreviewPdfBlobUrl(blobUrl);
+      const blob = await placementPrepService.fetchPreviewBlob(material.id);
+      setPreviewPdfBlob(blob);
     } catch (err) {
       console.error('Preview error:', err);
-      alert('Unable to load preview.');
-      setPreviewMaterial(null);
+      try {
+        const previewUrl = placementPrepService.getPreviewUrl(material.id);
+        setPreviewPdfBlob(previewUrl);
+      } catch (_) {
+        alert('Unable to load preview.');
+        setPreviewMaterial(null);
+      }
     } finally {
       setLoadingPdf(false);
     }
   };
 
   const handleClosePreview = () => {
-    if (previewPdfBlobUrl) {
-      URL.revokeObjectURL(previewPdfBlobUrl);
-      setPreviewPdfBlobUrl(null);
-    }
+    setPreviewPdfBlob(null);
     setPreviewMaterial(null);
   };
 
@@ -1535,11 +1533,12 @@ export default function AdminPlacementPrepPage() {
                   <Spinner size="lg" />
                   <p className="text-xs font-semibold text-slate-600">Loading PDF document...</p>
                 </div>
-              ) : previewPdfBlobUrl ? (
+              ) : previewPdfBlob ? (
                 <PdfViewer
-                  pdfData={previewPdfBlobUrl}
+                  pdfData={previewPdfBlob}
                   fileName={previewMaterial.file_name}
                   title={previewMaterial.title}
+                  downloadLabel="Download PDF File"
                   className="h-full w-full"
                 />
               ) : null}

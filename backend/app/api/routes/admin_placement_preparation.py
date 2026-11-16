@@ -510,6 +510,7 @@ async def admin_upload_material(
         description=description.strip() if description else None,
         file_path=str(file_disk_path.as_posix()),
         file_name=orig_filename,
+        file_content=file_bytes,
         file_size_bytes=len(file_bytes),
         page_count=page_count,
         is_published=is_published,
@@ -653,6 +654,7 @@ async def admin_replace_material_pdf(
 
     material.file_path = str(file_disk_path.as_posix())
     material.file_name = orig_filename
+    material.file_content = file_bytes
     material.file_size_bytes = len(file_bytes)
     material.page_count = page_count
 

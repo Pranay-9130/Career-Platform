@@ -28,6 +28,7 @@ export default function PdfViewer({
   fileName = 'document.pdf',
   title = 'Document Preview',
   onDownload,
+  downloadLabel = 'Download Document Directly',
   onUseTemplate,
   useTemplateLabel = 'Use in Builder',
   initialScale = 1.0,
@@ -88,7 +89,16 @@ export default function PdfViewer({
         } else if (pdfData instanceof Uint8Array) {
           loadingSource = { data: pdfData };
         } else if (typeof pdfData === 'string') {
-          loadingSource = { url: pdfData };
+          // If string is a blob: URL or relative/absolute URL, pre-fetch ArrayBuffer on the main thread
+          // to bypass Web Worker cross-thread blob: URL and cross-origin security restrictions.
+          try {
+            const res = await fetch(pdfData);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const arrayBuffer = await res.arrayBuffer();
+            loadingSource = { data: new Uint8Array(arrayBuffer) };
+          } catch (_) {
+            loadingSource = { url: pdfData };
+          }
         } else {
           throw new Error('Unsupported PDF data format');
         }
@@ -398,7 +408,7 @@ export default function PdfViewer({
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-900 hover:bg-slate-100 transition inline-flex items-center gap-2"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download Template Directly</span>
+                <span>{downloadLabel}</span>
               </button>
             )}
           </div>

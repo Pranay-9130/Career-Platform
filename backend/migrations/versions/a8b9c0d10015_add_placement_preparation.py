@@ -14,9 +14,17 @@ depends_on = None
 
 
 def upgrade():
-    PreparationRole.__table__.create(op.get_bind(), checkfirst=True)
-    PreparationTopic.__table__.create(op.get_bind(), checkfirst=True)
-    PreparationMaterial.__table__.create(op.get_bind(), checkfirst=True)
+    bind = op.get_bind()
+    PreparationRole.__table__.create(bind, checkfirst=True)
+    PreparationTopic.__table__.create(bind, checkfirst=True)
+    PreparationMaterial.__table__.create(bind, checkfirst=True)
+
+    # Ensure file_content column exists if table was previously created
+    inspector = sa.inspect(bind)
+    if "preparation_materials" in inspector.get_table_names():
+        cols = {col["name"] for col in inspector.get_columns("preparation_materials")}
+        if "file_content" not in cols:
+            op.add_column("preparation_materials", sa.Column("file_content", sa.LargeBinary(), nullable=True))
 
 
 def downgrade():
