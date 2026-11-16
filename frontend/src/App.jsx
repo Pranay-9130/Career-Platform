@@ -27,6 +27,9 @@ const ContactPage = lazy(() => import('./pages/public/ContactPage'));
 const DesignSystemShowcasePage = lazy(() => import('./pages/public/DesignSystemShowcasePage'));
 const SubmissionGuidelinesPage = lazy(() => import('./pages/public/SubmissionGuidelinesPage'));
 const PublicProfilePage = lazy(() => import('./pages/public/PublicProfilePage'));
+const PublicAtsAnalyzerPage = lazy(() => import('./pages/public/features/PublicAtsAnalyzerPage'));
+const PublicSkillIntelligencePage = lazy(() => import('./pages/public/features/PublicSkillIntelligencePage'));
+const PublicResumeBuilderPage = lazy(() => import('./pages/public/features/PublicResumeBuilderPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Lazy Loaded Auth Pages
@@ -108,6 +111,11 @@ export default function App() {
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/design-system" element={<DesignSystemShowcasePage />} />
+
+              {/* Public Feature Preview Pages */}
+              <Route path="/features/ats-analyzer" element={<PublicAtsAnalyzerPage />} />
+              <Route path="/features/skill-intelligence" element={<PublicSkillIntelligencePage />} />
+              <Route path="/features/resume-builder" element={<PublicResumeBuilderPage />} />
 
               {/* Public Student Portfolio Routes */}
               <Route path="/u/:username" element={<PublicProfilePage />} />

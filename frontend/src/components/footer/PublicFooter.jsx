@@ -75,13 +75,18 @@ export default function PublicFooter() {
             <h3 className="text-xs font-bold text-brand-text uppercase tracking-wider">Platform</h3>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link to="/projects" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  Explore Projects
+                <Link to="/features/ats-analyzer" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  ATS Resume Analyzer
                 </Link>
               </li>
               <li>
-                <Link to="/jobs" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  Jobs & Internships
+                <Link to="/features/skill-intelligence" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  Skill Intelligence
+                </Link>
+              </li>
+              <li>
+                <Link to="/features/resume-builder" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  Resume Builder
                 </Link>
               </li>
               <li>
@@ -90,13 +95,13 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/resume-builder" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  Resume Builder
+                <Link to="/projects" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  Explore Projects
                 </Link>
               </li>
               <li>
-                <Link to="/ats-analyzer" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  AI ATS Analyzer
+                <Link to="/jobs" className="text-brand-muted hover:text-brand-primary transition-colors">
+                  Jobs & Internships
                 </Link>
               </li>
             </ul>
