@@ -8,25 +8,32 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-test('PublicNavbar registers Features mega-menu with 3 core career tools', () => {
+test('PublicNavbar registers Features mega-menu with 4 core career tools including Placement Preparation', () => {
   const navbarSource = fs.readFileSync(
     path.join(projectRoot, 'src', 'components', 'navbar', 'PublicNavbar.jsx'),
     'utf-8'
   );
 
+  assert.match(navbarSource, /Resume Builder/, 'Navbar must include Resume Builder');
   assert.match(navbarSource, /ATS Resume Analyzer/, 'Navbar must include ATS Resume Analyzer');
   assert.match(navbarSource, /Skill Intelligence/, 'Navbar must include Skill Intelligence');
-  assert.match(navbarSource, /Resume Builder/, 'Navbar must include Resume Builder');
+  assert.match(navbarSource, /Placement Preparation/, 'Navbar must include Placement Preparation');
+
+  assert.match(navbarSource, /\/features\/resume-builder/, 'Navbar must route to /features/resume-builder');
   assert.match(navbarSource, /\/features\/ats-analyzer/, 'Navbar must route to /features/ats-analyzer');
   assert.match(navbarSource, /\/features\/skill-intelligence/, 'Navbar must route to /features/skill-intelligence');
-  assert.match(navbarSource, /\/features\/resume-builder/, 'Navbar must route to /features/resume-builder');
+  assert.match(navbarSource, /\/placement-preparation/, 'Navbar must route to /placement-preparation');
+
+  // Verify Logo import and fallback handling
+  assert.match(navbarSource, /import logoPng from '@\/assets\/logo\.png'/, 'Navbar must import official logo asset');
+  assert.match(navbarSource, /onError=/, 'Navbar logo must declare onError fallback handler');
 
   // Verify Android APK/download is strictly excluded from main website navbar
   assert.doesNotMatch(navbarSource, /\/download-app/, 'Navbar must not contain /download-app link');
   assert.doesNotMatch(navbarSource, /isDownloadApp/, 'Navbar must not contain isDownloadApp flag');
 });
 
-test('App.jsx registers all 3 public feature routes and lazy loads their pages', () => {
+test('App.jsx registers public feature routes and placement preparation routes', () => {
   const appSource = fs.readFileSync(
     path.join(projectRoot, 'src', 'App.jsx'),
     'utf-8'
@@ -39,6 +46,7 @@ test('App.jsx registers all 3 public feature routes and lazy loads their pages',
   assert.match(appSource, /path="\/features\/ats-analyzer"/, 'App.jsx must register /features/ats-analyzer route');
   assert.match(appSource, /path="\/features\/skill-intelligence"/, 'App.jsx must register /features/skill-intelligence route');
   assert.match(appSource, /path="\/features\/resume-builder"/, 'App.jsx must register /features/resume-builder route');
+  assert.match(appSource, /path="\/placement-preparation"/, 'App.jsx must register /placement-preparation route');
 
   // Verify DownloadAppPage is excluded from main branch
   assert.doesNotMatch(appSource, /DownloadAppPage/, 'App.jsx must not register DownloadAppPage on main branch');
@@ -61,7 +69,7 @@ test('All 3 public feature preview page component files exist and export React c
   }
 });
 
-test('PublicFooter links Platform column to the 3 public feature preview routes', () => {
+test('PublicFooter links Platform column to the core features including Placement Preparation', () => {
   const footerSource = fs.readFileSync(
     path.join(projectRoot, 'src', 'components', 'footer', 'PublicFooter.jsx'),
     'utf-8'
@@ -70,5 +78,6 @@ test('PublicFooter links Platform column to the 3 public feature preview routes'
   assert.match(footerSource, /to="\/features\/ats-analyzer"/, 'Footer must link to /features/ats-analyzer');
   assert.match(footerSource, /to="\/features\/skill-intelligence"/, 'Footer must link to /features/skill-intelligence');
   assert.match(footerSource, /to="\/features\/resume-builder"/, 'Footer must link to /features/resume-builder');
+  assert.match(footerSource, /to="\/placement-preparation"/, 'Footer must link to /placement-preparation');
   assert.doesNotMatch(footerSource, /\/download-app/, 'Footer must not contain /download-app link');
 });

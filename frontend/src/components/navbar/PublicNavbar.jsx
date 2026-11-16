@@ -18,16 +18,19 @@ import {
   ShieldCheck,
   Compass,
   BrainCircuit,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
 import { getDashboardPath } from '@/utils/navigation';
+import logoPng from '@/assets/logo.png';
 
 export default function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [featuresMenuOpen, setFeaturesMenuOpen] = useState(false);
   const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const userMenuRef = useRef(null);
   const featuresMenuRef = useRef(null);
@@ -85,35 +88,44 @@ export default function PublicNavbar() {
     };
   }, []);
 
-  // Features mega-menu list — core career platform tools
+  // Features mega-menu list — 4 Core Career Tools
   const featureTools = [
     {
+      name: 'Resume Builder',
+      description: 'Create professional resumes with ATS-optimized templates and live export.',
+      path: '/features/resume-builder',
+      icon: FileText,
+      iconBg: 'bg-blue-50 text-brand-primary',
+      badge: 'PDF Export',
+    },
+    {
       name: 'ATS Resume Analyzer',
-      description: 'Analyze resumes, evaluate ATS compatibility, identify missing skills and receive improvement suggestions.',
+      description: 'Analyze resumes against job descriptions with deterministic match scoring.',
       path: '/features/ats-analyzer',
       icon: Sparkles,
-      iconBg: 'bg-blue-50 text-brand-primary',
+      iconBg: 'bg-indigo-50 text-indigo-600',
       badge: 'ATS Scoring',
     },
     {
       name: 'Skill Intelligence',
-      description: 'Extract skills from resumes, identify skill gaps and understand suitability for a target job role.',
+      description: 'Discover skill gaps and track career readiness across engineering roles.',
       path: '/features/skill-intelligence',
       icon: BrainCircuit,
-      iconBg: 'bg-cyan-50 text-brand-cyan',
+      iconBg: 'bg-cyan-50 text-cyan-600',
       badge: '13-Role Matrix',
     },
     {
-      name: 'Resume Builder',
-      description: 'Create, edit and customize professional, ATS-friendly resumes.',
-      path: '/features/resume-builder',
-      icon: FileText,
-      iconBg: 'bg-indigo-50 text-indigo-600',
-      badge: 'PDF Export',
+      name: 'Placement Preparation',
+      description: 'Prepare for technical interviews and placement assessments with curated guides.',
+      path: '/placement-preparation',
+      icon: BookOpen,
+      iconBg: 'bg-emerald-50 text-emerald-600',
+      badge: 'Interview Prep',
     },
   ];
 
-  // Primary top-level navigation links: Projects | Jobs | Templates | About | Contact
+  // Primary top-level navigation links in exact required structure:
+  // Home | Features ▼ | Projects | Jobs | Templates | About | Contact
   const secondaryNavLinks = [
     { name: 'Projects', path: '/projects' },
     { name: 'Jobs', path: '/jobs' },
@@ -123,7 +135,7 @@ export default function PublicNavbar() {
   ];
 
   const isActive = (path) => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/') return location.pathname === '';
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
@@ -131,7 +143,8 @@ export default function PublicNavbar() {
     location.pathname.startsWith('/features') ||
     location.pathname === '/ats-analyzer' ||
     location.pathname === '/skill-intelligence' ||
-    location.pathname === '/resume-builder';
+    location.pathname === '/resume-builder' ||
+    location.pathname.startsWith('/placement-preparation');
 
   const handleFeaturesMouseEnter = () => {
     if (featuresTimeoutRef.current) clearTimeout(featuresTimeoutRef.current);
@@ -159,57 +172,72 @@ export default function PublicNavbar() {
   const workspaceLabel = user?.role === 'CONTRIBUTOR' ? 'Job Seeker' : 'Student';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand Logo */}
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        {/* Brand Logo with Guaranteed Fallback */}
         <Link
           to="/"
-          className="flex items-center gap-2 group shrink-0"
+          className="flex items-center gap-2.5 group shrink-0"
+          aria-label="AspirePath Home"
         >
-          <picture>
-            <source srcSet="/brand-logo.svg" type="image/svg+xml" />
+          {!logoError ? (
             <img
-              src="/brand-logo.png"
-              alt="AspirePath Logo"
-              className="h-14 sm:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+              src={logoPng}
+              alt="AspirePath"
+              width="140"
+              height="36"
+              onError={() => setLogoError(true)}
+              className="h-9 w-auto max-h-9 object-contain transition-transform group-hover:scale-[1.02]"
             />
-          </picture>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-xs">
+                A
+              </div>
+              <span className="font-display font-extrabold text-xl tracking-tight text-slate-900">
+                Aspire<span className="text-brand-primary">Path</span>
+              </span>
+            </div>
+          )}
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+        {/* Desktop Navigation Links: Home | Features ▼ | About | Jobs | Projects | Templates | Contact */}
+        <nav
+          aria-label="Primary Public Navigation"
+          className="hidden md:flex items-center gap-1 lg:gap-1.5"
+        >
           {/* Home Link */}
           <Link
             to="/"
             aria-current={isActive('/') ? 'page' : undefined}
-            className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`relative px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 ${
               isActive('/')
-                ? 'text-brand-primary font-bold'
-                : 'text-brand-muted hover:text-brand-primary hover:bg-brand-veryLight/60'
+                ? 'text-brand-primary font-bold bg-brand-veryLight ring-1 ring-brand-primary/20 shadow-xs'
+                : 'text-slate-600 hover:text-brand-primary hover:bg-slate-50 font-medium'
             }`}
           >
-            Home
+            <span>Home</span>
             {isActive('/') && (
-              <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-brand-primary rounded-full" />
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
             )}
           </Link>
 
-          {/* Features Mega Dropdown */}
+          {/* Features Mega-Menu Dropdown (Desktop) */}
           <div
-            ref={featuresMenuRef}
             className="relative"
+            ref={featuresMenuRef}
             onMouseEnter={handleFeaturesMouseEnter}
             onMouseLeave={handleFeaturesMouseLeave}
           >
             <button
               type="button"
-              onClick={() => setFeaturesMenuOpen((prev) => !prev)}
+              onClick={() => setFeaturesMenuOpen(!featuresMenuOpen)}
               aria-expanded={featuresMenuOpen}
               aria-haspopup="true"
-              className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                isFeaturesActive || featuresMenuOpen
-                  ? 'text-brand-primary font-bold bg-brand-veryLight/70'
-                  : 'text-brand-muted hover:text-brand-primary hover:bg-brand-veryLight/60'
+              className={`relative px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${
+                isFeaturesActive
+                  ? 'text-brand-primary font-bold bg-brand-veryLight ring-1 ring-brand-primary/20 shadow-xs'
+                  : 'text-slate-600 hover:text-brand-primary hover:bg-slate-50 font-medium'
               }`}
             >
               <span>Features</span>
@@ -218,27 +246,28 @@ export default function PublicNavbar() {
                   featuresMenuOpen ? 'rotate-180 text-brand-primary' : 'text-slate-400'
                 }`}
               />
-              {isFeaturesActive && !featuresMenuOpen && (
-                <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-brand-primary rounded-full" />
+              {isFeaturesActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
               )}
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Features Mega-Menu Panel */}
             {featuresMenuOpen && (
               <div
                 role="menu"
-                className="absolute left-0 top-full pt-2 w-[340px] z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                aria-label="Career Features Menu"
+                className="absolute top-full left-0 mt-1.5 w-[390px] sm:w-[420px] bg-white rounded-2xl border border-brand-border shadow-modal p-3 z-50 animate-in fade-in zoom-in-95 duration-150"
               >
-                <div className="bg-white rounded-2xl shadow-xl border border-slate-200/80 p-2 space-y-1">
-                  <div className="px-3 pt-2 pb-1.5 border-b border-slate-100 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      Career Intelligence Tools
-                    </span>
-                    <span className="text-[10px] font-semibold text-brand-primary bg-blue-50 px-2 py-0.5 rounded-full">
-                      Free Access
-                    </span>
-                  </div>
+                <div className="px-3 pt-2 pb-2.5 border-b border-slate-100 flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Core Career Tools
+                  </span>
+                  <span className="text-[10px] font-semibold text-brand-primary bg-blue-50 px-2 py-0.5 rounded-md">
+                    Deterministic AI
+                  </span>
+                </div>
 
+                <div className="py-1.5 space-y-1">
                   {featureTools.map((tool) => (
                     <Link
                       key={tool.path}
@@ -278,310 +307,352 @@ export default function PublicNavbar() {
                 key={link.path}
                 to={link.path}
                 aria-current={active ? 'page' : undefined}
-                className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`relative px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-1.5 ${
                   active
-                    ? 'text-brand-primary font-bold'
-                    : 'text-brand-muted hover:text-brand-primary hover:bg-brand-veryLight/60'
+                    ? 'text-brand-primary font-bold bg-brand-veryLight ring-1 ring-brand-primary/20 shadow-xs'
+                    : 'text-slate-600 hover:text-brand-primary hover:bg-slate-50 font-medium'
                 }`}
               >
-                {link.name}
+                <span>{link.name}</span>
                 {active && (
-                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-brand-primary rounded-full" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Right CTA / User Section */}
+        {/* Desktop Actions: Auth / User Profile */}
         <div className="hidden md:flex items-center gap-3">
           {isAuthenticated ? (
-            <div className="relative" ref={userMenuRef}>
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen((prev) => !prev)}
-                aria-expanded={userMenuOpen}
-                aria-haspopup="true"
-                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-brand-veryLight transition-colors"
-              >
-                <div className="w-8 h-8 rounded-full gradient-brand text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                  {getInitials(displayName)}
-                </div>
-                <div className="text-left hidden lg:block">
-                  <p className="text-xs font-bold text-brand-text leading-tight">{displayName}</p>
-                  <p className="text-[10px] text-brand-muted font-medium">{workspaceLabel}</p>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
+            <div className="flex items-center gap-3">
+              {/* Quick Submit Project CTA */}
+              <Link to="/projects/submit">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={PlusCircle}
+                  className="border-brand-primary/30 text-brand-primary hover:bg-brand-veryLight font-semibold text-xs px-3"
+                >
+                  Submit Project
+                </Button>
+              </Link>
 
               {/* User Dropdown Menu */}
-              {userMenuOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-brand-border/60 py-2 z-50 animate-in fade-in zoom-in-95 duration-100"
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-expanded={userMenuOpen}
+                  aria-label="User Account Menu"
+                  className="flex items-center gap-2.5 p-1.5 rounded-xl border border-brand-border bg-slate-50/60 hover:bg-white hover:border-brand-primary/40 hover:shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                 >
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <p className="text-xs font-bold text-brand-text truncate">{displayName}</p>
-                    <p className="text-[11px] text-brand-muted truncate">{displayEmail}</p>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-brand-primary border border-blue-100">
-                      <ShieldCheck className="w-3 h-3 text-brand-primary" />
-                      <span>{workspaceLabel} Workspace</span>
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-primary to-brand-cyan text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                    {getInitials(displayName)}
+                  </div>
+                  <div className="text-left hidden lg:block text-xs pr-1">
+                    <p className="font-semibold text-slate-800 leading-tight truncate max-w-[110px]">
+                      {displayName}
+                    </p>
+                    <p className="text-[10px] text-brand-primary font-medium">
+                      {user?.role === 'ADMIN' ? 'Administrator' : `${workspaceLabel} Workspace`}
+                    </p>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                {userMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl border border-brand-border shadow-modal py-2 z-50 animate-in fade-in zoom-in-95 duration-100 divide-y divide-slate-100">
+                    {/* User summary header */}
+                    <div className="px-4 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-brand-text truncate">{displayName}</p>
+                        {user?.role === 'ADMIN' ? (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                            Admin
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-brand-primary border border-brand-border">
+                            {workspaceLabel}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">{displayEmail}</p>
+                    </div>
+
+                    {/* Primary Workspace Links */}
+                    <div className="py-1 text-xs">
+                      <Link
+                        to={getDashboardPath(user)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-brand-text hover:bg-brand-veryLight hover:text-brand-primary transition-colors font-medium"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-brand-primary" />
+                        <span>Workspace Overview</span>
+                      </Link>
+
+                      {user?.role !== 'ADMIN' && (
+                        <>
+                          <Link
+                            to="/my-projects"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <FolderGit2 className="w-4 h-4 text-slate-400" />
+                            <span>My Projects</span>
+                          </Link>
+
+                          <Link
+                            to="/resume-builder"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <FileText className="w-4 h-4 text-slate-400" />
+                            <span>Resume Builder</span>
+                          </Link>
+
+                          <Link
+                            to="/ats-analyzer"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <Sparkles className="w-4 h-4 text-slate-400" />
+                            <span>ATS Resume Analyzer</span>
+                          </Link>
+
+                          <Link
+                            to="/skill-intelligence"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <BrainCircuit className="w-4 h-4 text-slate-400" />
+                            <span>Skill Intelligence</span>
+                          </Link>
+
+                          <Link
+                            to="/placement-preparation"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <BookOpen className="w-4 h-4 text-slate-400" />
+                            <span>Placement Preparation</span>
+                          </Link>
+
+                          <Link
+                            to="/applications"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <Send className="w-4 h-4 text-slate-400" />
+                            <span>My Applications</span>
+                          </Link>
+
+                          <Link
+                            to="/saved"
+                            className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                          >
+                            <Bookmark className="w-4 h-4 text-slate-400" />
+                            <span>Saved Items</span>
+                          </Link>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Account Settings & Profile */}
+                    <div className="py-1 text-xs">
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                      >
+                        <User className="w-4 h-4 text-slate-400" />
+                        <span>Profile & Settings</span>
+                      </Link>
+                      {user?.username && (
+                        <Link
+                          to={`/u/${user.username}`}
+                          className="flex items-center justify-between px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <ExternalLink className="w-4 h-4 text-slate-400" />
+                            <span>Public Portfolio</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">@{user.username}</span>
+                        </Link>
+                      )}
+                    </div>
+
+                    {/* Sign out */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={logout}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-500" />
+                        <span>Sign Out</span>
+                      </button>
                     </div>
                   </div>
-
-                  <div className="py-1">
-                    <Link
-                      to={getDashboardPath(user)}
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-brand-primary hover:bg-brand-veryLight transition-colors"
-                    >
-                      <LayoutDashboard className="w-4 h-4 text-brand-primary" />
-                      <span>Open Workspace</span>
-                    </Link>
-
-                    <Link
-                      to="/project-submission"
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <PlusCircle className="w-4 h-4 text-slate-400" />
-                      <span>Submit Project</span>
-                    </Link>
-
-                    {user?.role !== 'ADMIN' && (
-                      <>
-                        <Link
-                          to="/my-projects"
-                          role="menuitem"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          <FolderGit2 className="w-4 h-4 text-slate-400" />
-                          <span>My Projects</span>
-                        </Link>
-
-                        <Link
-                          to="/resume-builder"
-                          role="menuitem"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          <FileText className="w-4 h-4 text-slate-400" />
-                          <span>Resume Builder</span>
-                        </Link>
-
-                        <Link
-                          to="/ats-analyzer"
-                          role="menuitem"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          <Sparkles className="w-4 h-4 text-slate-400" />
-                          <span>ATS Analyzer</span>
-                        </Link>
-
-                        <Link
-                          to="/skill-intelligence"
-                          role="menuitem"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          <BrainCircuit className="w-4 h-4 text-slate-400" />
-                          <span>Skill Intelligence</span>
-                        </Link>
-
-                        <Link
-                          to="/applications"
-                          role="menuitem"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          <Send className="w-4 h-4 text-slate-400" />
-                          <span>Applications</span>
-                        </Link>
-
-                        <Link
-                          to="/saved"
-                          role="menuitem"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          <Bookmark className="w-4 h-4 text-slate-400" />
-                          <span>Saved Items</span>
-                        </Link>
-                      </>
-                    )}
-
-                    <Link
-                      to="/profile"
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span>Profile & Settings</span>
-                    </Link>
-                  </div>
-
-                  <div className="pt-1 border-t border-slate-100">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={async () => {
-                        setUserMenuOpen(false);
-                        await logout();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
+            <>
               <Link
                 to="/login"
-                className="text-xs font-semibold text-slate-700 hover:text-brand-primary px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+                className="text-sm font-semibold text-slate-600 hover:text-brand-primary px-3 py-2 rounded-lg transition-colors"
               >
                 Log in
               </Link>
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center px-4 py-2 text-xs font-bold rounded-xl gradient-brand text-white shadow-xs hover:shadow-md active:scale-95 transition-all"
-              >
-                <span>Get Started</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              <Link to="/register">
+                <Button size="sm" variant="gradient" rightIcon={ArrowRight} className="font-bold text-xs px-4">
+                  Get Started
+                </Button>
               </Link>
-            </div>
+            </>
           )}
         </div>
 
         {/* Mobile Hamburger Button */}
         <div className="flex md:hidden items-center gap-2">
+          {isAuthenticated && (
+            <Link
+              to={getDashboardPath(user)}
+              className="p-1.5 rounded-lg bg-brand-veryLight text-brand-primary border border-brand-border"
+              title="Dashboard"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+            </Link>
+          )}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
-            aria-label="Toggle Navigation Menu"
-            className="p-2 rounded-xl text-slate-600 hover:text-brand-primary hover:bg-slate-50 border border-slate-200"
+            aria-controls="mobile-navigation"
+            className="p-2 rounded-lg text-slate-600 hover:text-brand-text hover:bg-slate-100 transition-colors"
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation */}
+      {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-brand-border/80 px-4 pt-3 pb-6 space-y-3 animate-in slide-in-from-top-2 duration-150 shadow-xl">
-          {/* Main Links */}
-          <div className="space-y-1">
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-current={isActive('/') ? 'page' : undefined}
-              className={`block px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                isActive('/')
-                  ? 'bg-brand-primary text-white shadow-xs'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Home
-            </Link>
-
-            {/* Features Accordion for Mobile */}
-            <div className="rounded-xl border border-slate-200/80 overflow-hidden bg-slate-50/60 my-1">
-              <button
-                type="button"
-                onClick={() => setMobileFeaturesOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 text-sm font-semibold text-slate-800"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-brand-primary" />
-                  <span>Features</span>
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-slate-400 transition-transform ${
-                    mobileFeaturesOpen ? 'rotate-180 text-brand-primary' : ''
-                  }`}
-                />
-              </button>
-
-              {mobileFeaturesOpen && (
-                <div className="px-2 pb-2.5 pt-1 space-y-1 bg-slate-50/90 border-t border-slate-200/60">
-                  {featureTools.map((tool) => (
-                    <Link
-                      key={tool.path}
-                      to={tool.path}
-                      onClick={() => {
-                        setMobileFeaturesOpen(false);
-                        setMobileMenuOpen(false);
-                      }}
-                      className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white transition-colors"
-                    >
-                      <div className={`w-7 h-7 rounded-lg ${tool.iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
-                        <tool.icon className="w-3.5 h-3.5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-brand-text">{tool.name}</p>
-                        <p className="text-[10px] text-brand-muted line-clamp-1">{tool.description}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+        <div
+          id="mobile-navigation"
+          className="md:hidden border-b border-brand-border bg-white px-4 pt-3 pb-6 space-y-4 shadow-xl max-h-[85vh] max-h-[85dvh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-150"
+        >
+          {/* Section: Explore Platform */}
+          <div>
+            <div className="px-3 pb-1.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <Compass className="w-3.5 h-3.5 text-brand-primary" />
+              <span>Explore Platform</span>
             </div>
 
-            {/* Secondary Navigation Links */}
-            {secondaryNavLinks.map((link) => {
-              const active = isActive(link.path);
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setMobileMenuOpen(false)}
-                  aria-current={active ? 'page' : undefined}
-                  className={`block px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-blue-50 text-brand-primary font-bold border border-blue-100'
+            <div className="space-y-0.5">
+              {/* Home */}
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-current={isActive('/') ? 'page' : undefined}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                  isActive('/')
+                    ? 'text-brand-primary bg-brand-veryLight ring-1 ring-brand-primary/20'
+                    : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>Home</span>
+                {isActive('/') && <span className="w-2 h-2 rounded-full bg-brand-primary" />}
+              </Link>
+
+              {/* Expandable Features Accordion */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMobileFeaturesOpen(!mobileFeaturesOpen)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    isFeaturesActive
+                      ? 'text-brand-primary bg-brand-veryLight ring-1 ring-brand-primary/20'
                       : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  {link.name}
-                </Link>
-              );
-            })}
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-brand-primary" />
+                    <span>Features</span>
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                      mobileFeaturesOpen ? 'rotate-180 text-brand-primary' : ''
+                    }`}
+                  />
+                </button>
+
+                {mobileFeaturesOpen && (
+                  <div className="pl-4 pr-1 py-1.5 space-y-1 bg-slate-50/70 rounded-xl mt-1 border border-slate-100">
+                    {featureTools.map((tool) => (
+                      <Link
+                        key={tool.path}
+                        to={tool.path}
+                        onClick={() => {
+                          setMobileFeaturesOpen(false);
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white transition-colors"
+                      >
+                        <div className={`w-7 h-7 rounded-lg ${tool.iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                          <tool.icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-brand-text">{tool.name}</p>
+                          <p className="text-[10px] text-brand-muted line-clamp-1">{tool.description}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Secondary Navigation Links */}
+              {secondaryNavLinks.map((link) => {
+                const active = isActive(link.path);
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                      active
+                        ? 'text-brand-primary bg-brand-veryLight ring-1 ring-brand-primary/20'
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{link.name}</span>
+                    {active && <span className="w-2 h-2 rounded-full bg-brand-primary" />}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
 
-          {/* User Section in Mobile Drawer */}
+          {/* Section: Workspace (if authenticated) */}
           {isAuthenticated ? (
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <div className="flex items-center gap-3 px-2 py-1">
-                <div className="w-9 h-9 rounded-full gradient-brand text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0">
-                  {getInitials(displayName)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-brand-text truncate">{displayName}</p>
-                  <p className="text-[10px] text-brand-muted truncate">{displayEmail}</p>
-                </div>
+            <div className="pt-3 border-t border-slate-100">
+              <div className="px-3 pb-2 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  My Workspace
+                </span>
+                <span className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">
+                  {displayName}
+                </span>
               </div>
 
               <div className="space-y-1">
                 <Link
                   to={getDashboardPath(user)}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-brand-primary bg-blue-50/80 border border-blue-100"
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-brand-primary bg-blue-50/60"
                 >
-                  <LayoutDashboard className="w-4 h-4 text-brand-primary" />
-                  <span>Open Workspace</span>
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Dashboard Overview</span>
                 </Link>
 
                 <Link
-                  to="/project-submission"
+                  to="/projects/submit"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-brand-primary hover:bg-brand-veryLight"
                 >

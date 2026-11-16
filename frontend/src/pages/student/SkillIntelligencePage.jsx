@@ -1102,26 +1102,31 @@ export default function SkillIntelligencePage() {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
+                  {/* Role Selector & Reassess Actions with guaranteed contrast & mobile stacking */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                    <button
+                      type="button"
                       onClick={() => setRoleModalOpen(true)}
-                      leftIcon={Sliders}
-                      className="text-xs font-semibold"
+                      className="inline-flex items-center justify-center sm:justify-start gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-blue-50 text-slate-800 hover:text-brand-primary border-2 border-slate-200 hover:border-brand-primary font-bold text-xs shadow-xs transition-all active:scale-[0.98] w-full sm:w-auto min-h-[38px]"
+                      title="Change selected target role"
                     >
-                      Change Role
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
+                      <Sliders className="w-3.5 h-3.5 text-brand-primary shrink-0" />
+                      <span className="text-slate-600 font-medium">Role:</span>
+                      <span className="text-brand-primary font-bold truncate max-w-[140px] sm:max-w-[180px]">
+                        {activeRoleTitle || 'Select Target Role'}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-0.5" />
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={handleReassess}
-                      isLoading={reassessing}
-                      leftIcon={RefreshCw}
-                      className="text-xs font-bold shadow-xs"
+                      disabled={reassessing}
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-brand-primary hover:bg-blue-600 active:scale-[0.98] text-white font-bold text-xs shadow-xs transition-all disabled:opacity-60 disabled:cursor-wait w-full sm:w-auto min-h-[38px]"
                     >
-                      Reassess Fit
-                    </Button>
+                      <RefreshCw className={`w-3.5 h-3.5 text-white shrink-0 ${reassessing ? 'animate-spin' : ''}`} />
+                      <span>{reassessing ? 'Reassessing...' : 'Reassess Fit'}</span>
+                    </button>
                   </div>
                 </div>
 
