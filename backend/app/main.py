@@ -205,6 +205,9 @@ async def lifespan(app: FastAPI):
                 session.add(j)
             await session.commit()
 
+        # Seed Placement Preparation roles, topics, and initial Python PDFs
+        from app.services.placement_prep_service import seed_placement_preparation_defaults
+        await seed_placement_preparation_defaults(session)
 
     yield
 

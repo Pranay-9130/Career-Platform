@@ -45,9 +45,12 @@ const SavedWorkspacePage = lazy(() => import('./pages/student/SavedWorkspacePage
 const ResumeBuilderPage = lazy(() => import('./pages/student/ResumeBuilderPage'));
 const AtsAnalyzerPage = lazy(() => import('./pages/student/AtsAnalyzerPage'));
 const SkillIntelligencePage = lazy(() => import('./pages/student/SkillIntelligencePage'));
+const PlacementPrepLandingPage = lazy(() => import('./pages/student/PlacementPrepLandingPage'));
+const PlacementPrepRolePage = lazy(() => import('./pages/student/PlacementPrepRolePage'));
 
 // Lazy Loaded Admin Pages
 const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage'));
+const AdminPlacementPrepPage = lazy(() => import('./pages/admin/AdminPlacementPrepPage'));
 
 export default function App() {
   return (
@@ -126,6 +129,8 @@ export default function App() {
                 <Route path="/resume-builder" element={<ResumeBuilderPage />} />
                 <Route path="/ats-analyzer" element={<AtsAnalyzerPage />} />
                 <Route path="/skill-intelligence" element={<SkillIntelligencePage />} />
+                <Route path="/placement-preparation" element={<PlacementPrepLandingPage />} />
+                <Route path="/placement-preparation/:roleSlug" element={<PlacementPrepRolePage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
                 <Route path="/saved" element={<SavedWorkspacePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
@@ -142,6 +147,7 @@ export default function App() {
                 <Route path="jobs" element={<AdminDashboardPage />} />
                 <Route path="students" element={<AdminDashboardPage />} />
                 <Route path="templates" element={<AdminDashboardPage />} />
+                <Route path="placement-preparation" element={<AdminPlacementPrepPage />} />
               </Route>
             </Route>
 

@@ -10,6 +10,7 @@ import {
   X,
   ExternalLink,
   GraduationCap,
+  BookOpen,
 } from 'lucide-react';
 import { AdminNavbar } from '@/components/navbar';
 
@@ -42,6 +43,7 @@ export default function AdminLayout() {
         { name: 'Manage Jobs', path: '/admin/jobs', icon: Briefcase },
         { name: 'Students Directory', path: '/admin/students', icon: Users },
         { name: 'Resume Templates', path: '/admin/templates', icon: FileText },
+        { name: 'Placement Preparation', path: '/admin/placement-preparation', icon: BookOpen },
       ],
     },
     {

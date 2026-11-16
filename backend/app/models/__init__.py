@@ -21,6 +21,11 @@ from app.models.skill_intelligence import (
     SkillStatus,
     SkillSource,
 )
+from app.models.placement_preparation import (
+    PreparationRole,
+    PreparationTopic,
+    PreparationMaterial,
+)
 
 __all__ = [
     "Base",
@@ -47,6 +52,9 @@ __all__ = [
     "StudentSkill",
     "SkillStatus",
     "SkillSource",
+    "PreparationRole",
+    "PreparationTopic",
+    "PreparationMaterial",
 ]
 
 
