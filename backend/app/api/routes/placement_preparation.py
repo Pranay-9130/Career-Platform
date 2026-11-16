@@ -37,8 +37,21 @@ async def list_preparation_roles(
         .options(selectinload(PreparationRole.topics))
         .order_by(PreparationRole.display_order.asc(), PreparationRole.name.asc())
     )
-    result = await db.execute(stmt)
-    roles = result.scalars().all()
+    try:
+        result = await db.execute(stmt)
+        roles = result.scalars().all()
+    except Exception:
+        await db.rollback()
+        from app.core.database import engine, Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        roles = []
+
+    if not roles:
+        from app.services.placement_prep_service import seed_placement_preparation_defaults
+        await seed_placement_preparation_defaults(db)
+        result = await db.execute(stmt)
+        roles = result.scalars().all()
 
     # Get published materials count per role and per topic
     count_stmt = (

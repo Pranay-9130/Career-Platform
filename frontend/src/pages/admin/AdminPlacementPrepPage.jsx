@@ -941,6 +941,21 @@ export default function AdminPlacementPrepPage() {
                     </option>
                   ))}
                 </select>
+                {roles.length === 0 && (
+                  <div className="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center justify-between">
+                    <span>No preparation roles found yet.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUploadModalOpen(false);
+                        setActiveTab('roles');
+                      }}
+                      className="font-semibold text-blue-600 hover:underline ml-2"
+                    >
+                      + Create role in Roles tab
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Topic */}
