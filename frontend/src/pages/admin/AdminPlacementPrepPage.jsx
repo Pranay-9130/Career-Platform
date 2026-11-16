@@ -107,12 +107,33 @@ export default function AdminPlacementPrepPage() {
     try {
       setLoading(true);
       setError(null);
-      const [rolesData, materialsData] = await Promise.all([
-        placementPrepService.adminGetRoles(),
-        placementPrepService.adminGetMaterials(),
-      ]);
+      let rolesData = [];
+      let materialsData = [];
+
+      try {
+        rolesData = await placementPrepService.adminGetRoles();
+      } catch (rErr) {
+        console.warn('adminGetRoles failed, falling back to public getRoles:', rErr);
+        try {
+          rolesData = await placementPrepService.getRoles();
+        } catch (_) {
+          rolesData = [];
+        }
+      }
+
+      try {
+        materialsData = await placementPrepService.adminGetMaterials();
+      } catch (mErr) {
+        console.error('adminGetMaterials error:', mErr);
+        materialsData = [];
+      }
+
       setRoles(rolesData || []);
       setMaterials(materialsData || []);
+
+      if (rolesData && rolesData.length > 0 && !uploadRoleId) {
+        setUploadRoleId(rolesData[0].id);
+      }
     } catch (err) {
       console.error('Failed to load placement preparation admin data:', err);
       setError('Failed to load admin data. Please check your admin privileges and refresh.');
@@ -124,6 +145,13 @@ export default function AdminPlacementPrepPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Ensure uploadRoleId stays synchronized whenever roles list updates
+  useEffect(() => {
+    if (roles.length > 0 && (!uploadRoleId || !roles.some((r) => r.id === uploadRoleId))) {
+      setUploadRoleId(roles[0].id);
+    }
+  }, [roles, uploadRoleId]);
 
   // Filtered materials
   const filteredMaterials = useMemo(() => {
