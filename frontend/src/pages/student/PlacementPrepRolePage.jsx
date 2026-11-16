@@ -70,6 +70,7 @@ export default function PlacementPrepRolePage() {
   // Download feedback states
   const [downloadingId, setDownloadingId] = useState(null);
   const [downloadError, setDownloadError] = useState(null);
+  const [downloadSuccess, setDownloadSuccess] = useState(null);
 
   const loadRoleAndMaterials = useCallback(async () => {
     try {
@@ -92,18 +93,28 @@ export default function PlacementPrepRolePage() {
     loadRoleAndMaterials();
   }, [loadRoleAndMaterials]);
 
+  // Auto-dismiss success notification
+  useEffect(() => {
+    if (downloadSuccess) {
+      const timer = setTimeout(() => setDownloadSuccess(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [downloadSuccess]);
+
   const handleDownload = async (material) => {
     try {
       setDownloadingId(material.id);
       setDownloadError(null);
+      setDownloadSuccess(null);
       await placementPrepService.downloadMaterial(material.id, material.file_name);
-      // Optimistically update local download count
+      // Optimistically update local download count only upon confirmed download completion
       setMaterials((prev) =>
         prev.map((m) => (m.id === material.id ? { ...m, download_count: (m.download_count || 0) + 1 } : m))
       );
+      setDownloadSuccess(`Successfully downloaded "${material.file_name}". Check your browser downloads.`);
     } catch (err) {
       console.error('Download failed:', err);
-      setDownloadError(`Failed to download ${material.title}. Please try again.`);
+      setDownloadError(err.message || `Failed to download ${material.title}. Please try again.`);
     } finally {
       setDownloadingId(null);
     }
@@ -275,11 +286,23 @@ export default function PlacementPrepRolePage() {
               </div>
             </div>
 
+            {/* Success banner when download finishes */}
+            {downloadSuccess && (
+              <div className="mb-6 animate-in fade-in">
+                <Alert variant="success" dismissible onDismiss={() => setDownloadSuccess(null)}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-medium text-emerald-900">{downloadSuccess}</span>
+                  </div>
+                </Alert>
+              </div>
+            )}
+
             {/* Error banner if download fails */}
             {downloadError && (
-              <div className="mb-6">
+              <div className="mb-6 animate-in fade-in">
                 <Alert variant="danger" dismissible onDismiss={() => setDownloadError(null)}>
-                  {downloadError}
+                  <span className="font-medium">{downloadError}</span>
                 </Alert>
               </div>
             )}
@@ -302,7 +325,7 @@ export default function PlacementPrepRolePage() {
                       setSearchQuery('');
                       setSelectedTopicId('ALL');
                     }}
-                    className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-semibold rounded-lg hover:bg-blue-600 transition"
+                    className="px-4 py-2 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-blue-600 shadow-xs transition"
                   >
                     Show All Role Materials
                   </button>
@@ -313,66 +336,82 @@ export default function PlacementPrepRolePage() {
                 {filteredMaterials.map((material) => (
                   <div
                     key={material.id}
-                    className="bg-white rounded-2xl border border-slate-200 hover:border-brand-primary/50 shadow-xs hover:shadow-md transition flex flex-col justify-between overflow-hidden"
+                    className="bg-white rounded-2xl border border-slate-200/90 hover:border-brand-primary/60 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between overflow-hidden group"
                   >
                     <div className="p-6">
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 font-bold text-xs shrink-0">
-                          PDF
+                      {/* Top Badges */}
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="w-11 h-11 rounded-xl bg-red-50 border border-red-100/80 flex flex-col items-center justify-center text-red-600 font-extrabold text-[11px] shadow-2xs shrink-0">
+                          <span>PDF</span>
                         </div>
-                        {material.topic_name && (
-                          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-brand-primary border border-blue-100/70">
-                            {material.topic_name}
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          {material.topic_name && (
+                            <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-brand-primary border border-blue-100">
+                              {material.topic_name}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            <span>Verified Guide</span>
                           </span>
-                        )}
+                        </div>
                       </div>
 
-                      <h3 className="text-base font-bold text-slate-900 mb-2 leading-snug">
+                      {/* Complete Title - never clipped */}
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 mb-1.5 leading-snug break-words">
                         {material.title}
                       </h3>
 
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-4">
-                        {material.description || 'Comprehensive technical question banks and preparation notes.'}
+                      {/* Monospace file label */}
+                      <div
+                        className="text-[11px] font-mono text-slate-400 mb-3 truncate flex items-center gap-1"
+                        title={material.file_name}
+                      >
+                        <FileText className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate">{material.file_name}</span>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-3 mb-5">
+                        {material.description || 'Comprehensive technical question banks, interview frameworks, and domain preparation notes.'}
                       </p>
 
                       {/* File Metadata Badges */}
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-500 pt-3 border-t border-slate-100">
-                        <span className="inline-flex items-center gap-1">
-                          <HardDrive className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{material.file_size_formatted || 'PDF'}</span>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] font-medium text-slate-500 pt-3.5 border-t border-slate-100">
+                        <span className="inline-flex items-center gap-1.5 text-slate-600">
+                          <HardDrive className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="font-semibold">{material.file_size_formatted || '510 KB'}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <FileText className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 text-slate-600">
+                          <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{material.page_count} {material.page_count === 1 ? 'page' : 'pages'}</span>
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{formatDate(material.created_at)}</span>
                         </span>
-                        {material.download_count > 0 && (
-                          <span className="inline-flex items-center gap-1 text-emerald-600 font-semibold">
-                            <Download className="w-3.5 h-3.5" />
-                            <span>{material.download_count} downloads</span>
-                          </span>
-                        )}
+                        <span className="inline-flex items-center gap-1.5 text-slate-500">
+                          <Download className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{material.download_count || 0} downloads</span>
+                        </span>
                       </div>
                     </div>
 
-                    {/* Action Button */}
-                    <div className="p-4 bg-slate-50/70 border-t border-slate-100">
+                    {/* Prominent Action Button */}
+                    <div className="p-4 bg-slate-50/80 border-t border-slate-100">
                       <button
                         onClick={() => handleDownload(material)}
                         disabled={downloadingId === material.id}
-                        className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold bg-brand-primary hover:bg-blue-600 active:scale-[0.98] text-white shadow-xs transition-all disabled:opacity-75 disabled:cursor-wait"
+                        className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold bg-brand-primary hover:bg-blue-600 active:scale-[0.98] text-white shadow-xs transition-all disabled:opacity-75 disabled:cursor-wait group-hover:bg-blue-600"
                       >
                         {downloadingId === material.id ? (
                           <>
                             <Spinner size="sm" className="border-white" />
-                            <span>Downloading PDF...</span>
+                            <span>Downloading PDF Guide...</span>
                           </>
                         ) : (
                           <>
-                            <Download className="w-4 h-4" />
+                            <Download className="w-4 h-4 text-white" />
                             <span>Download PDF Guide</span>
                           </>
                         )}

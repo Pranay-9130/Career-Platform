@@ -19,15 +19,25 @@ async def lifespan(app: FastAPI):
     # Ensure tables exist safely across environments
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Ensure file_content column exists if table was previously created
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE preparation_materials ADD COLUMN IF NOT EXISTS file_content BYTEA;"))
+        except Exception:
+            pass
 
-    # Seed placement preparation defaults if catalog is empty
+    # Seed placement preparation defaults and repair existing materials
     try:
         async with AsyncSessionLocal() as session:
-            from app.services.placement_prep_service import seed_placement_preparation_defaults
+            from app.services.placement_prep_service import (
+                seed_placement_preparation_defaults,
+                repair_existing_materials,
+            )
             await seed_placement_preparation_defaults(session)
+            await repair_existing_materials(session)
     except Exception as e:
         import logging
-        logging.getLogger("uvicorn.error").warning("Placement preparation seed check: %s", e)
+        logging.getLogger("uvicorn.error").warning("Placement preparation seed/repair check: %s", e)
 
     if settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release", "test"}:
         yield
