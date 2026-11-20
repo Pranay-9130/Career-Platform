@@ -3,6 +3,23 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/downloads/AspirePath.apk",
+      "destination": "https://expo.dev/artifacts/eas/zVJ-as3Qdp-t5M8h1qzQJb9p7Koe_JRoYa4GdH3gro0.apk",
+      "permanent": false
+    },
+    {
+      "source": "/downloads/AspirePath-production.apk",
+      "destination": "https://expo.dev/artifacts/eas/zVJ-as3Qdp-t5M8h1qzQJb9p7Koe_JRoYa4GdH3gro0.apk",
+      "permanent": false
+    },
+    {
+      "source": "/downloads/AspirePath-v1.0.0.apk",
+      "destination": "https://expo.dev/artifacts/eas/zVJ-as3Qdp-t5M8h1qzQJb9p7Koe_JRoYa4GdH3gro0.apk",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -14,6 +31,23 @@
     }
   ],
   "headers": [
+    {
+      "source": "/downloads/(.*)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"AspirePath-v1.0.0.apk\""
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/assets/(.*)",
       "headers": [

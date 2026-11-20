@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "AspirePath",
+    "slug": "aspirepath",
+    "owner": "pranaykumarrreddys-team",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "aspirepath",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aspirepath.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "androidStatusBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#FFFFFF",
+        "translucent": false
+      },
+      "package": "com.aspirepath.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.DUMP",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c4f2c3e3-80fa-4bfa-8af3-662d09f2f61f"
+      },
+      "apiUrl": "https://careerplatform-api.onrender.com/api"
+    }
+  }
+}
+

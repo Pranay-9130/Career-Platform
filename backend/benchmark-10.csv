@@ -1,0 +1,7 @@
+stage_concurrency,scope,endpoint,requests,rps,avg_ms,median_ms,p90_ms,p95_ms,failure_rate_pct
+10,aggregate,ALL,112,10.38,696.89,692.67,972.78,1200.69,0.0
+10,endpoint,/projects?page=1&limit=12,23,,956.96,,,1370.08,0.0
+10,endpoint,/jobs/facets,21,,504.1,,,1235.87,0.0
+10,endpoint,/jobs?page=1&limit=12,23,,865.53,,,1200.69,0.0
+10,endpoint,/health/ready,22,,716.26,,,951.31,0.0
+10,endpoint,/resumes/templates,23,,425.67,,,514.31,0.0

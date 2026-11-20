@@ -1,0 +1,57 @@
+{
+  "generated_at": "2026-11-12T10:12:08.932172+00:00",
+  "target_url": "https://careerplatform-api.onrender.com/api",
+  "duration_s_per_stage": 15.0,
+  "ramp_up_s_per_stage": 5.0,
+  "stages": [
+    {
+      "concurrency": 25,
+      "total_requests": 514,
+      "wall_s": 20.87,
+      "rps": 24.62,
+      "avg_ms": 781.11,
+      "median_ms": 779.8,
+      "p90_ms": 1241.36,
+      "p95_ms": 1610.36,
+      "failures": 0,
+      "failure_rate_pct": 0.0,
+      "endpoints": [
+        {
+          "endpoint": "/projects?page=1&limit=12",
+          "requests": 102,
+          "avg_ms": 1183.23,
+          "p95_ms": 1931.8,
+          "failure_rate_pct": 0.0
+        },
+        {
+          "endpoint": "/jobs?page=1&limit=12",
+          "requests": 107,
+          "avg_ms": 979.31,
+          "p95_ms": 1636.96,
+          "failure_rate_pct": 0.0
+        },
+        {
+          "endpoint": "/health/ready",
+          "requests": 105,
+          "avg_ms": 897.87,
+          "p95_ms": 1509.74,
+          "failure_rate_pct": 0.0
+        },
+        {
+          "endpoint": "/resumes/templates",
+          "requests": 102,
+          "avg_ms": 413.15,
+          "p95_ms": 768.49,
+          "failure_rate_pct": 0.0
+        },
+        {
+          "endpoint": "/jobs/facets",
+          "requests": 98,
+          "avg_ms": 404.03,
+          "p95_ms": 698.32,
+          "failure_rate_pct": 0.0
+        }
+      ]
+    }
+  ]
+}

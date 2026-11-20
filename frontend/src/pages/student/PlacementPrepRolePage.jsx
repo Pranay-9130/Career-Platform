@@ -106,7 +106,13 @@ export default function PlacementPrepRolePage() {
       setDownloadingId(material.id);
       setDownloadError(null);
       setDownloadSuccess(null);
-      await placementPrepService.downloadMaterial(material.id, material.file_name);
+      await placementPrepService.downloadMaterial(
+        material.id,
+        material.file_name,
+        material.title,
+        material.topic_name,
+        material.description
+      );
       // Optimistically update local download count only upon confirmed download completion
       setMaterials((prev) =>
         prev.map((m) => (m.id === material.id ? { ...m, download_count: (m.download_count || 0) + 1 } : m))
@@ -289,7 +295,7 @@ export default function PlacementPrepRolePage() {
             {/* Success banner when download finishes */}
             {downloadSuccess && (
               <div className="mb-6 animate-in fade-in">
-                <Alert variant="success" dismissible onDismiss={() => setDownloadSuccess(null)}>
+                <Alert variant="success" onClose={() => setDownloadSuccess(null)}>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span className="font-medium text-emerald-900">{downloadSuccess}</span>
@@ -301,7 +307,7 @@ export default function PlacementPrepRolePage() {
             {/* Error banner if download fails */}
             {downloadError && (
               <div className="mb-6 animate-in fade-in">
-                <Alert variant="error" dismissible onDismiss={() => setDownloadError(null)}>
+                <Alert variant="error" onClose={() => setDownloadError(null)}>
                   <span className="font-medium">{downloadError}</span>
                 </Alert>
               </div>
