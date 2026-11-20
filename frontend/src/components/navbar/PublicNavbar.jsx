@@ -117,7 +117,7 @@ export default function PublicNavbar() {
     {
       name: 'Placement Preparation',
       description: 'Prepare for technical interviews and placement assessments with curated guides.',
-      path: '/placement-preparation',
+      path: '/features/placement-preparation',
       icon: BookOpen,
       iconBg: 'bg-emerald-50 text-emerald-600',
       badge: 'Interview Prep',

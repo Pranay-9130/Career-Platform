@@ -30,6 +30,11 @@ export default function Alert({
       iconColor: 'text-brand-error',
       Icon: AlertCircle,
     },
+    danger: {
+      container: 'bg-red-50 border-red-200 text-slate-800',
+      iconColor: 'text-brand-error',
+      Icon: AlertCircle,
+    },
   };
 
   const { container, iconColor, Icon } = configs[variant] || configs.info;

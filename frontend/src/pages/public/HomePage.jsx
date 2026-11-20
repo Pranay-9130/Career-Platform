@@ -204,14 +204,14 @@ export default function HomePage() {
             Core AI Capabilities
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-slate-900 tracking-tight">
-            Three Powerful Tools for Career Preparation
+            Four Powerful Tools for Career Preparation
           </h2>
           <p className="mt-3 text-sm sm:text-base text-slate-600">
             Engineered specifically to solve the biggest challenges in entry-level hiring with deterministic rigor.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1: ATS Resume Analyzer */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-blue-300">
             <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-blue-600 to-cyan-500" />
@@ -368,6 +368,63 @@ export default function HomePage() {
             <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
               <Link
                 to="/features/resume-builder"
+                className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
+              >
+                <span>Explore Feature Details</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 4: Placement Preparation Center */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-emerald-300">
+            <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500" />
+
+            <div className="p-7 space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Interview Prep
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
+                  Placement Preparation
+                </h3>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
+                  Prepare for technical interviews with structured questions and topic-wise learning resources.
+                </p>
+              </div>
+
+              {/* Product UI Preview Snippet */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
+                <div className="flex justify-between items-center font-bold text-slate-800">
+                  <span>Python & SQL Tracks</span>
+                  <span className="text-emerald-700 font-bold">Verified PDFs</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 text-[10px] font-semibold shadow-2xs">
+                    OOP Concepts
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 text-[10px] font-semibold shadow-2xs">
+                    Exception Handling
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white text-slate-700 border border-slate-200 text-[10px] font-semibold shadow-2xs">
+                    SQL Questions
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  High-frequency questions with verified answers
+                </p>
+              </div>
+            </div>
+
+            <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+              <Link
+                to="/features/placement-preparation"
                 className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
               >
                 <span>Explore Feature Details</span>

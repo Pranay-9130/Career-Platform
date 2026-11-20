@@ -31,6 +31,7 @@ const PublicProfilePage = lazy(() => import('./pages/public/PublicProfilePage'))
 const PublicAtsAnalyzerPage = lazy(() => import('./pages/public/features/PublicAtsAnalyzerPage'));
 const PublicSkillIntelligencePage = lazy(() => import('./pages/public/features/PublicSkillIntelligencePage'));
 const PublicResumeBuilderPage = lazy(() => import('./pages/public/features/PublicResumeBuilderPage'));
+const PublicPlacementPrepPage = lazy(() => import('./pages/public/features/PublicPlacementPrepPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Lazy Loaded Auth Pages
@@ -119,6 +120,7 @@ export default function App() {
               <Route path="/features/ats-analyzer" element={<PublicAtsAnalyzerPage />} />
               <Route path="/features/skill-intelligence" element={<PublicSkillIntelligencePage />} />
               <Route path="/features/resume-builder" element={<PublicResumeBuilderPage />} />
+              <Route path="/features/placement-preparation" element={<PublicPlacementPrepPage />} />
 
               {/* Public Student Portfolio Routes */}
               <Route path="/u/:username" element={<PublicProfilePage />} />

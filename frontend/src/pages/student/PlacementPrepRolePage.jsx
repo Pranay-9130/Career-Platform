@@ -214,7 +214,7 @@ export default function PlacementPrepRolePage() {
       {/* Main Body */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {error ? (
-          <Alert variant="danger" className="mb-6">
+          <Alert variant="error" className="mb-6">
             {error}
           </Alert>
         ) : loading ? (
@@ -301,7 +301,7 @@ export default function PlacementPrepRolePage() {
             {/* Error banner if download fails */}
             {downloadError && (
               <div className="mb-6 animate-in fade-in">
-                <Alert variant="danger" dismissible onDismiss={() => setDownloadError(null)}>
+                <Alert variant="error" dismissible onDismiss={() => setDownloadError(null)}>
                   <span className="font-medium">{downloadError}</span>
                 </Alert>
               </div>
