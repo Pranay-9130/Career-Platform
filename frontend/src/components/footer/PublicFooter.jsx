@@ -100,7 +100,7 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/placement-preparation" className="text-brand-muted hover:text-brand-primary transition-colors">
+                <Link to="/features/placement-preparation" className="text-brand-muted hover:text-brand-primary transition-colors">
                   Placement Preparation
                 </Link>
               </li>
