@@ -35,6 +35,17 @@ export default function AboutPage() {
 
   const coreFeatures = [
     {
+      id: 'placement-preparation',
+      title: 'Placement Preparation Center',
+      icon: BookOpen,
+      color: 'bg-emerald-50 text-emerald-600',
+      badge: 'Technical Interview Prep',
+      description:
+        'Prepare for technical interviews with structured questions and topic-wise learning resources covering Python OOP concepts, Exception Handling, Advanced Python, and SQL.',
+      route: '/features/placement-preparation',
+      actionText: 'Explore Guides',
+    },
+    {
       id: 'resume-builder',
       title: 'Resume Builder',
       icon: FileText,
@@ -42,7 +53,7 @@ export default function AboutPage() {
       badge: 'Interactive Editor',
       description:
         'Create clean, structured resumes designed specifically to be readable by Applicant Tracking Systems. Edit personal details, education, experience, and import verified portfolio projects directly with one-click PDF export.',
-      route: '/resume-builder',
+      route: '/features/resume-builder',
       actionText: 'Open Builder',
     },
     {
@@ -53,7 +64,7 @@ export default function AboutPage() {
       badge: 'Semantic Scoring',
       description:
         'Compare your resume against real job descriptions using Google Gemini AI. Receive a breakdown of matched keywords, missing competencies, and concrete advice on how to improve your bullet points before applying.',
-      route: '/ats-analyzer',
+      route: '/features/ats-analyzer',
       actionText: 'Scan a Resume',
     },
     {
@@ -64,7 +75,7 @@ export default function AboutPage() {
       badge: 'Deterministic Math',
       description:
         'Extract skills from your resume, choose from 13 standard engineering career tracks (Frontend, Backend, AI, Cloud, DevOps, etc.), and receive an objective match score evaluated against essential and complementary requirements.',
-      route: '/login',
+      route: '/features/skill-intelligence',
       actionText: 'Explore Roles',
     },
     {

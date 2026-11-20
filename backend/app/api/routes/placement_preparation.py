@@ -274,7 +274,32 @@ async def preview_material_pdf(
             },
         )
 
-    # 3. Fallback: Re-generate verified PDF on the fly so preview never fails
+    # 3. Check bundled authentic seed PDF (e.g. for Python Developer Guide)
+    seed_pdf_path = (
+        Path(__file__).resolve().parents[2]
+        / "static"
+        / "seed_materials"
+        / "AspirePath_Python_Developer_Interview_Questions.pdf"
+    )
+    if seed_pdf_path.exists() and ("python" in (material.file_name or "").lower() or "python" in (material.title or "").lower()):
+        seed_bytes = seed_pdf_path.read_bytes()
+        try:
+            material.file_content = seed_bytes
+            material.file_size_bytes = len(seed_bytes)
+            await db.commit()
+        except Exception:
+            await db.rollback()
+        return Response(
+            content=seed_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{safe_filename}"',
+                "Content-Type": "application/pdf",
+                "Cache-Control": "public, max-age=3600",
+            },
+        )
+
+    # 4. Fallback: Re-generate verified PDF on the fly so preview never fails
     from app.services.placement_prep_service import generate_sample_pdf
     fallback_bytes = generate_sample_pdf(
         title=material.title,

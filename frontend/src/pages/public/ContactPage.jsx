@@ -40,6 +40,7 @@ export default function ContactPage() {
   const [errorMessage, setErrorMessage] = useState(null);
 
   const subjectOptions = [
+    { value: 'Campus Placement & College Inquiries', label: 'College Placement Cell / Institutional Demo' },
     { value: 'General Question', label: 'General Inquiry / Feedback' },
     { value: 'Student Support', label: 'Student Workspace & Profile Support' },
     { value: 'Project Submission', label: 'Project Submission & Review Help' },

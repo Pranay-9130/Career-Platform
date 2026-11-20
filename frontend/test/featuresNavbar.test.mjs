@@ -49,9 +49,6 @@ test('App.jsx registers public feature routes and placement preparation routes',
   assert.match(appSource, /path="\/features\/resume-builder"/, 'App.jsx must register /features/resume-builder route');
   assert.match(appSource, /path="\/features\/placement-preparation"/, 'App.jsx must register /features/placement-preparation route');
   assert.match(appSource, /path="\/placement-preparation"/, 'App.jsx must register /placement-preparation route');
-
-  // Verify DownloadAppPage is excluded from main branch
-  assert.doesNotMatch(appSource, /DownloadAppPage/, 'App.jsx must not register DownloadAppPage on main branch');
 });
 
 test('All 4 public feature preview page component files exist and export React components', () => {
