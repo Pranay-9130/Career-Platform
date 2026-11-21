@@ -1,3 +1,11 @@
+import os
+import sys
+
+# Ensure tests run strictly in test mode with SQLite and console email simulation
+os.environ["ENVIRONMENT"] = "test"
+os.environ["EMAIL_PROVIDER"] = "console"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+
 import pytest
 from app.core.rate_limiter import (
     auth_rate_limiter,

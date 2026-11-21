@@ -99,34 +99,74 @@ class EmailService:
                     logger.error("Render free services block standard SMTP ports. Configure an HTTPS email provider such as Resend or SendGrid, or use a paid service.")
                 return False
 
-        # 2. Resend REST API Provider
+        # 2. Resend Provider (Native Async HTTPS + SDK Fallback)
         elif provider == "resend":
-            if not settings.EMAIL_API_KEY:
-                logger.warning(
-                    "[EMAIL SERVICE] EMAIL_PROVIDER is 'resend' but EMAIL_API_KEY is not set. Falling back to console dispatch."
+            api_key = (settings.RESEND_API_KEY or settings.EMAIL_API_KEY or "").strip()
+            if not api_key:
+                logger.error(
+                    "[EMAIL SERVICE] Resend dispatch failed: RESEND_API_KEY is not configured in environment variables. "
+                    "Configure RESEND_API_KEY in your deployment environment."
                 )
-                return cls._development_dispatch()
+                if cls._development_dispatch():
+                    logger.warning("[EMAIL SERVICE DEV] Simulating delivery in development mode.")
+                    return True
+                return False
+
+            # Configure sender address: use custom verified domain if provided, otherwise default to onboarding@resend.dev
+            configured_sender = (settings.EMAIL_FROM or "").strip()
+            if not configured_sender or "@careerplatform.com" in configured_sender or "@example.com" in configured_sender:
+                sender = "AspirePath <onboarding@resend.dev>"
+            else:
+                sender = configured_sender
+
+            # Primary: Native async HTTPX client to Resend REST API (non-blocking, fast)
             try:
-                async with httpx.AsyncClient(timeout=10.0) as client:
+                async with httpx.AsyncClient(timeout=15.0) as client:
                     resp = await client.post(
                         "https://api.resend.com/emails",
                         headers={
-                            "Authorization": f"Bearer {settings.EMAIL_API_KEY}",
+                            "Authorization": f"Bearer {api_key}",
                             "Content-Type": "application/json",
                         },
                         json={
-                            "from": settings.EMAIL_FROM,
+                            "from": sender,
                             "to": [to_email],
                             "subject": subject,
                             "html": html_body,
                         },
                     )
                     resp.raise_for_status()
-                    logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via Resend API")
+                    data = resp.json()
+                    res_id = data.get("id", "sent")
+                    logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via Resend API (ID: {res_id})")
                     return True
-            except Exception as e:
-                cls._log_api_failure("Resend", e)
+            except httpx.HTTPStatusError as http_err:
+                cls._log_api_failure("Resend HTTP", http_err)
+                try:
+                    err_json = http_err.response.json()
+                    logger.error("[EMAIL SERVICE] Resend Error Detail: %s", err_json)
+                except Exception:
+                    pass
                 return False
+            except Exception as net_err:
+                logger.warning("[EMAIL SERVICE] HTTPX dispatch failed (%s), attempting Resend SDK fallback...", net_err)
+                # Fallback: Official Resend SDK
+                try:
+                    import resend
+                    resend.api_key = api_key
+                    params = {
+                        "from": sender,
+                        "to": [to_email],
+                        "subject": subject,
+                        "html": html_body,
+                    }
+                    result = await asyncio.to_thread(resend.Emails.send, params)
+                    res_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", "sent")
+                    logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via Resend SDK (ID: {res_id})")
+                    return True
+                except Exception as sdk_err:
+                    cls._log_api_failure("Resend SDK", sdk_err)
+                    return False
 
         # 3. SendGrid REST API Provider
         elif provider == "sendgrid":
@@ -226,6 +266,93 @@ class EmailService:
             print(f"\n[EMAIL SERVICE DEV DISPATCH] Recipient: {normalized_email} | OTP: {otp_code} | Purpose: {purpose}\n")
 
         # Provider dispatch
+        return await cls._dispatch_email(
+            to_email=normalized_email,
+            subject=subject,
+            html_body=html_body,
+        )
+
+    @classmethod
+    async def send_password_reset_otp_email(
+        cls,
+        to_email: str,
+        otp_code: str,
+        recipient_name: str = "Student",
+    ) -> bool:
+        """
+        Dispatches a secure 6-digit OTP verification email for AspirePath password reset.
+        Uses exact user-required template and Resend API.
+        """
+        normalized_email = to_email.strip().lower()
+        if cls._development_dispatch():
+            cls._dev_otp_store[normalized_email] = otp_code
+
+        subject = "AspirePath – Your Password Reset OTP"
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{subject}</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8FAFC; color: #0F172A; margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased; }}
+    .container {{ max-width: 520px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; padding: 36px 32px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); }}
+    .brand-header {{ text-align: center; margin-bottom: 28px; }}
+    .brand-logo {{ font-size: 24px; font-weight: 800; color: #2563EB; letter-spacing: -0.5px; text-decoration: none; }}
+    .brand-tagline {{ font-size: 12px; color: #64748B; margin-top: 4px; font-weight: 500; }}
+    .greeting {{ font-size: 15px; color: #1E293B; line-height: 1.6; margin-bottom: 16px; }}
+    .content-text {{ font-size: 15px; color: #334155; line-height: 1.6; margin-bottom: 24px; }}
+    .otp-card {{ background: #F0F7FF; border: 1.5px solid #BFDBFE; border-radius: 12px; padding: 22px 16px; text-align: center; margin: 28px 0; }}
+    .otp-label {{ font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #1D4ED8; margin-bottom: 8px; }}
+    .otp-digits {{ font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #1E40AF; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; padding-left: 10px; }}
+    .expiry-badge {{ display: inline-block; margin-top: 10px; font-size: 12px; font-weight: 600; color: #B45309; background: #FEF3C7; padding: 4px 12px; border-radius: 9999px; }}
+    .security-note {{ font-size: 13px; color: #64748B; line-height: 1.5; margin: 20px 0; padding-top: 16px; border-top: 1px solid #F1F5F9; }}
+    .signature {{ font-size: 14px; font-weight: 600; color: #1E293B; margin-top: 24px; }}
+    .footer {{ font-size: 12px; color: #94A3B8; text-align: center; margin-top: 32px; line-height: 1.5; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="brand-header">
+      <div class="brand-logo">AspirePath</div>
+      <div class="brand-tagline">From your first project to your first job</div>
+    </div>
+
+    <p class="greeting">Hello,</p>
+    
+    <p class="content-text">
+      We received a request to reset your AspirePath account password.
+    </p>
+
+    <div class="otp-card">
+      <div class="otp-label">Your Verification Code</div>
+      <div class="otp-digits">{otp_code}</div>
+      <div class="expiry-badge">Expires in 5 minutes</div>
+    </div>
+
+    <p class="content-text" style="font-size: 13.5px; color: #475569;">
+      This code expires in 5 minutes.
+    </p>
+
+    <p class="security-note">
+      If you did not request this password reset, you can safely ignore this email.<br>
+      <strong>Please do not share this verification code with anyone.</strong>
+    </p>
+
+    <p class="signature">
+      Team AspirePath
+    </p>
+  </div>
+
+  <div class="footer">
+    &copy; AspirePath Career Platform. All rights reserved.<br>
+    This is an automated system notification.
+  </div>
+</body>
+</html>"""
+
+        logger.info(f"[EMAIL SERVICE] Dispatching password reset OTP email to {normalized_email}")
         return await cls._dispatch_email(
             to_email=normalized_email,
             subject=subject,
@@ -372,6 +499,12 @@ class EmailService:
             subject=subject,
             html_body=html_body,
         )
+
+    @classmethod
+    def record_dev_reset_token(cls, email: str, token: str) -> None:
+        """Stores token in development in-memory registry for verification tests."""
+        if cls._development_dispatch():
+            cls._dev_reset_token_store[email.strip().lower()] = token
 
     @classmethod
     def get_last_dev_otp(cls, email: str) -> Optional[str]:

@@ -77,13 +77,13 @@ class Settings(BaseSettings):
             return [str(o).strip().lower() for o in v if o]
         return v
 
-    # Database Configuration (PostgreSQL default, SQLite fallback for unit testing)
+    # Database Configuration (PostgreSQL on Render via env var, SQLite for local dev)
     DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/career_platform",
+        default="sqlite+aiosqlite:///./career_platform.db",
         description="Async database connection string"
     )
     SYNC_DATABASE_URL: str = Field(
-        default="postgresql+psycopg://postgres:postgres@localhost:5432/career_platform",
+        default="sqlite:///./career_platform.db",
         description="Synchronous database connection string for migrations"
     )
 
@@ -166,7 +166,8 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
 
     # Email & OTP
-    EMAIL_PROVIDER: str = "sendgrid"  # "smtp", "sendgrid", "resend", or "console"
+    RESEND_API_KEY: str = Field(default="", description="Official Resend API Key (re_...)")
+    EMAIL_PROVIDER: str = "resend"  # "resend", "smtp", "sendgrid", or "console"
     EMAIL_API_KEY: str = ""
     EMAIL_FROM: str = "noreply@careerplatform.com"
     SMTP_HOST: str = ""
@@ -191,7 +192,7 @@ class Settings(BaseSettings):
     STORAGE_SECRET_KEY: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore"
     )

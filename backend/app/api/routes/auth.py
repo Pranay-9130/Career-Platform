@@ -25,7 +25,7 @@ from app.core.security import (
     decode_token,
 )
 from app.models.user import User, UserRole
-from app.models.password_reset import PasswordResetToken
+from app.models.password_reset import PasswordResetToken, PasswordResetOTP
 from app.models.auth_session import AuthSession
 from app.schemas.user import UserRead, UserCreate, UserLogin, GoogleLoginRequest, AuthResponse
 from app.schemas.otp import (
@@ -36,6 +36,9 @@ from app.schemas.otp import (
 )
 from app.schemas.password_reset import (
     ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    VerifyResetOTPRequest,
+    VerifyResetOTPResponse,
     VerifyResetTokenRequest,
     ResetPasswordRequest,
     PasswordResetResponse,
@@ -613,7 +616,7 @@ async def logout_user(
     "/forgot-password",
     response_model=PasswordResetResponse,
     status_code=status.HTTP_200_OK,
-    summary="Request a password recovery email link",
+    summary="Request a 6-digit password recovery OTP via email",
     dependencies=[Depends(auth_rate_limiter)],
 )
 async def forgot_password(
@@ -621,8 +624,9 @@ async def forgot_password(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Initiates the self-serve password recovery workflow.
-    To prevent account enumeration attacks, always responds with a success message.
+    Step 1: Initiates password recovery by generating a cryptographically secure
+    6-digit OTP, storing its hash (valid for 5 minutes), and dispatching via Resend.
+    To prevent account enumeration, always responds with a generic confirmation message.
     """
     normalized_email = req.email.strip().lower()
 
@@ -634,7 +638,18 @@ async def forgot_password(
     if user and user.is_active:
         now_utc = datetime.now(timezone.utc)
 
-        # Invalidate any previous unexpired reset tokens for this user
+        # 1. Invalidate any previous unexpired OTPs for this user
+        prev_otps_query = await db.execute(
+            select(PasswordResetOTP).where(
+                PasswordResetOTP.email == normalized_email,
+                PasswordResetOTP.invalidated_at.is_(None),
+                PasswordResetOTP.is_used == False,
+            )
+        )
+        for prev_otp in prev_otps_query.scalars().all():
+            prev_otp.invalidated_at = now_utc
+
+        # 2. Invalidate previous legacy reset tokens
         prev_tokens_query = await db.execute(
             select(PasswordResetToken).where(
                 PasswordResetToken.user_id == user.id,
@@ -644,34 +659,151 @@ async def forgot_password(
         for prev in prev_tokens_query.scalars().all():
             prev.invalidated_at = now_utc
 
-        # Generate cryptographically secure URL-safe token (32 bytes = 43 chars base64)
+        # 3. Generate cryptographically secure random 6-digit OTP
+        raw_otp = f"{secrets.randbelow(900000) + 100000:06d}"
+        otp_hash = hashlib.sha256(raw_otp.encode("utf-8")).hexdigest()
+        otp_expires_at = now_utc + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
+
+        otp_record = PasswordResetOTP(
+            user_id=user.id,
+            email=normalized_email,
+            otp_hash=otp_hash,
+            attempt_count=0,
+            max_attempts=settings.OTP_MAX_ATTEMPTS,
+            expires_at=otp_expires_at,
+            is_verified=False,
+            is_used=False,
+        )
+        db.add(otp_record)
+
+        # Also store token for legacy URL links
         raw_token = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
-        expires_at = now_utc + timedelta(minutes=15)
-
+        token_expires_at = now_utc + timedelta(minutes=15)
         reset_record = PasswordResetToken(
             user_id=user.id,
             email=normalized_email,
             token_hash=token_hash,
-            expires_at=expires_at,
+            expires_at=token_expires_at,
         )
         db.add(reset_record)
         await db.flush()
 
-        # Dispatch reset email
-        delivered = await EmailService.send_password_reset_email(
+        if EmailService._development_dispatch():
+            EmailService.record_dev_reset_token(normalized_email, raw_token)
+
+        # 4. Dispatch 6-digit OTP email via Resend
+        delivered = await EmailService.send_password_reset_otp_email(
             to_email=normalized_email,
-            reset_token=raw_token,
-            recipient_name=user.full_name,
+            otp_code=raw_otp,
+            recipient_name=user.full_name or "Student",
         )
         if delivered:
             await db.commit()
         else:
             await db.rollback()
+            logger.error("[AUTH] Failed to dispatch password reset OTP email for %s", normalized_email)
 
-    return PasswordResetResponse(
+    return ForgotPasswordResponse(
         success=True,
-        message="If an account with that email exists, we have sent a password reset link to your inbox. If it does not arrive, please try again later.",
+        message="If an account with that email exists, we have sent a 6-digit verification code to your inbox.",
+        cooldown_seconds=settings.OTP_RESEND_COOLDOWN_SECONDS,
+    )
+
+
+@router.post(
+    "/verify-reset-otp",
+    response_model=VerifyResetOTPResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Step 2: Verify 6-digit OTP and issue a single-purpose password reset token",
+    dependencies=[Depends(auth_rate_limiter)],
+)
+async def verify_reset_otp(
+    req: VerifyResetOTPRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Step 2: Verifies the 6-digit OTP against the stored SHA-256 hash.
+    Enforces maximum 5 attempts, 5-minute expiration, and single-use invalidation.
+    Returns a short-lived single-purpose reset token upon verification.
+    """
+    normalized_email = req.email.strip().lower()
+    now_utc = datetime.now(timezone.utc)
+
+    # Find the most recent active OTP record for this email
+    query = await db.execute(
+        select(PasswordResetOTP)
+        .where(
+            PasswordResetOTP.email == normalized_email,
+            PasswordResetOTP.is_verified == False,
+            PasswordResetOTP.is_used == False,
+            PasswordResetOTP.invalidated_at.is_(None),
+        )
+        .order_by(desc(PasswordResetOTP.created_at))
+    )
+    otp_record = query.scalars().first()
+
+    if not otp_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active verification code found for this email. Please request a new code.",
+        )
+
+    # Check expiration
+    record_expires = otp_record.expires_at
+    if record_expires.tzinfo is None:
+        record_expires = record_expires.replace(tzinfo=timezone.utc)
+
+    if now_utc > record_expires:
+        otp_record.invalidated_at = now_utc
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This verification code has expired. Please request a new code.",
+        )
+
+    # Check attempt limit
+    if otp_record.attempt_count >= otp_record.max_attempts:
+        otp_record.invalidated_at = now_utc
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Maximum verification attempts exceeded. Please request a new code.",
+        )
+
+    # Verify OTP hash
+    provided_hash = hashlib.sha256(req.otp.encode("utf-8")).hexdigest()
+    if provided_hash != otp_record.otp_hash:
+        otp_record.attempt_count += 1
+        remaining = otp_record.max_attempts - otp_record.attempt_count
+        if remaining <= 0:
+            otp_record.invalidated_at = now_utc
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incorrect verification code. Maximum attempts exceeded. Please request a new code.",
+            )
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Incorrect verification code. {remaining} attempt{'s' if remaining != 1 else ''} remaining.",
+        )
+
+    # Verification successful: issue single-purpose reset token
+    otp_record.is_verified = True
+    otp_record.verified_at = now_utc
+
+    raw_reset_token = secrets.token_urlsafe(32)
+    reset_token_hash = hashlib.sha256(raw_reset_token.encode("utf-8")).hexdigest()
+    otp_record.reset_token_hash = reset_token_hash
+    otp_record.reset_token_expires_at = now_utc + timedelta(minutes=15)
+
+    await db.commit()
+
+    return VerifyResetOTPResponse(
+        success=True,
+        reset_token=raw_reset_token,
+        message="Verification code confirmed successfully. Please create your new password.",
     )
 
 
@@ -686,10 +818,38 @@ async def verify_reset_token(
 ):
     """
     Verifies that a password reset link token is valid before rendering the reset form.
+    Checks both modern OTP reset tokens and legacy URL tokens.
     """
     normalized_email = req.email.strip().lower()
     token_hash = hashlib.sha256(req.token.encode("utf-8")).hexdigest()
+    now_utc = datetime.now(timezone.utc)
 
+    # 1. Check PasswordResetOTP reset tokens
+    otp_query = await db.execute(
+        select(PasswordResetOTP).where(
+            PasswordResetOTP.email == normalized_email,
+            PasswordResetOTP.reset_token_hash == token_hash,
+            PasswordResetOTP.is_verified == True,
+            PasswordResetOTP.is_used == False,
+            PasswordResetOTP.invalidated_at.is_(None),
+        )
+    )
+    otp_record = otp_query.scalars().first()
+    if otp_record:
+        if otp_record.is_reset_token_expired:
+            otp_record.invalidated_at = now_utc
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The password reset session has expired. Please request a new verification code.",
+            )
+        return {
+            "valid": True,
+            "email": normalized_email,
+            "message": "Reset token is valid.",
+        }
+
+    # 2. Check legacy PasswordResetToken
     query = await db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.email == normalized_email,
@@ -699,11 +859,10 @@ async def verify_reset_token(
     )
     token_record = query.scalar_one_or_none()
 
-    now_utc = datetime.now(timezone.utc)
     if not token_record:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The password reset link is invalid or has already been used.",
+            detail="The password reset token is invalid or has already been used.",
         )
 
     record_expires = token_record.expires_at
@@ -729,50 +888,79 @@ async def verify_reset_token(
     "/reset-password",
     response_model=PasswordResetResponse,
     status_code=status.HTTP_200_OK,
-    summary="Submit new password with verified reset token",
+    summary="Step 3: Submit new password with verified reset token",
 )
 async def reset_password(
     req: ResetPasswordRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Completes password recovery by hashing the new password, updating the user record,
-    and invalidating the single-use reset token immediately.
+    Step 3: Completes password recovery by hashing the new password, updating the user record,
+    invalidating the single-use reset token and OTP records, and revoking existing sessions.
     """
     normalized_email = req.email.strip().lower()
-    token_hash = hashlib.sha256(req.token.encode("utf-8")).hexdigest()
+    raw_token = req.effective_token
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    now_utc = datetime.now(timezone.utc)
 
-    query = await db.execute(
-        select(PasswordResetToken).where(
-            PasswordResetToken.email == normalized_email,
-            PasswordResetToken.token_hash == token_hash,
-            PasswordResetToken.invalidated_at.is_(None),
+    target_user_id = None
+    matched_otp_record = None
+    matched_token_record = None
+
+    # 1. Check modern PasswordResetOTP record
+    otp_query = await db.execute(
+        select(PasswordResetOTP).where(
+            PasswordResetOTP.email == normalized_email,
+            PasswordResetOTP.reset_token_hash == token_hash,
+            PasswordResetOTP.is_verified == True,
+            PasswordResetOTP.is_used == False,
+            PasswordResetOTP.invalidated_at.is_(None),
         )
     )
-    token_record = query.scalar_one_or_none()
+    matched_otp_record = otp_query.scalars().first()
 
-    now_utc = datetime.now(timezone.utc)
-    if not token_record:
+    if matched_otp_record:
+        if matched_otp_record.is_reset_token_expired:
+            matched_otp_record.invalidated_at = now_utc
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The password reset session has expired. Please request a new verification code.",
+            )
+        target_user_id = matched_otp_record.user_id
+
+    # 2. Fallback to legacy PasswordResetToken
+    if not target_user_id:
+        token_query = await db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.email == normalized_email,
+                PasswordResetToken.token_hash == token_hash,
+                PasswordResetToken.invalidated_at.is_(None),
+            )
+        )
+        matched_token_record = token_query.scalar_one_or_none()
+        if matched_token_record:
+            rec_expires = matched_token_record.expires_at
+            if rec_expires.tzinfo is None:
+                rec_expires = rec_expires.replace(tzinfo=timezone.utc)
+            if now_utc > rec_expires:
+                matched_token_record.invalidated_at = now_utc
+                await db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="The password reset link has expired. Please request a new link.",
+                )
+            target_user_id = matched_token_record.user_id
+
+    if not target_user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The password reset link is invalid or has already been used.",
+            detail="The password reset token is invalid, expired, or has already been used.",
         )
 
-    record_expires = token_record.expires_at
-    if record_expires.tzinfo is None:
-        record_expires = record_expires.replace(tzinfo=timezone.utc)
-
-    if now_utc > record_expires:
-        token_record.invalidated_at = now_utc
-        await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The password reset link has expired. Please request a new link.",
-        )
-
-    # Fetch user
+    # 3. Fetch user and update password
     user_query = await db.execute(
-        select(User).where(User.id == token_record.user_id)
+        select(User).where(User.id == target_user_id)
     )
     user = user_query.scalar_one_or_none()
     if not user:
@@ -781,20 +969,38 @@ async def reset_password(
             detail="User account associated with this token was not found.",
         )
 
-    # Hash new password securely
+    # 4. Hash new password securely with bcrypt
     user.hashed_password = await run_in_threadpool(get_password_hash, req.new_password)
-    await db.execute(update(AuthSession).where(
-        AuthSession.user_id == user.id, AuthSession.invalidated_at.is_(None),
-    ).values(invalidated_at=now_utc))
-    # Single-use consumption
-    token_record.invalidated_at = now_utc
+
+    # 5. Revoke all existing sessions for this user for security
+    await db.execute(
+        update(AuthSession)
+        .where(AuthSession.user_id == user.id, AuthSession.invalidated_at.is_(None))
+        .values(invalidated_at=now_utc)
+    )
+
+    # 6. Mark single-use consumption and invalidate all other OTPs for this user
+    if matched_otp_record:
+        matched_otp_record.is_used = True
+        matched_otp_record.used_at = now_utc
+        matched_otp_record.invalidated_at = now_utc
+
+    if matched_token_record:
+        matched_token_record.invalidated_at = now_utc
+
+    # Invalidate all remaining OTPs for this email
+    await db.execute(
+        update(PasswordResetOTP)
+        .where(PasswordResetOTP.email == normalized_email, PasswordResetOTP.invalidated_at.is_(None))
+        .values(invalidated_at=now_utc)
+    )
 
     await db.commit()
     invalidate_session_cache(user_id=user.id)
 
     return PasswordResetResponse(
         success=True,
-        message="Your password has been successfully reset. You can now sign in with your new password.",
+        message="Your password has been reset successfully!",
     )
 
 

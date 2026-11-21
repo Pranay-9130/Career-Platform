@@ -56,15 +56,22 @@ export const authService = {
     return response.data;
   },
 
+  verifyResetOtp: async ({ email, otp }) => {
+    const response = await api.post('/auth/verify-reset-otp', { email, otp });
+    return response.data;
+  },
+
   verifyResetToken: async ({ email, token }) => {
     const response = await api.post('/auth/verify-reset-token', { email, token });
     return response.data;
   },
 
-  resetPassword: async ({ email, token, new_password }) => {
+  resetPassword: async ({ email, reset_token, token, new_password }) => {
+    const effectiveToken = reset_token || token;
     const response = await api.post('/auth/reset-password', {
       email,
-      token,
+      reset_token: effectiveToken,
+      token: effectiveToken,
       new_password,
     });
     return response.data;

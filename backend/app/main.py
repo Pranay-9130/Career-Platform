@@ -14,6 +14,10 @@ async def lifespan(app: FastAPI):
     Application startup and shutdown lifecycle management.
     Initializes database schema and ensures all application tables exist.
     """
+    if settings.ENVIRONMENT.strip().lower() in {"test"}:
+        yield
+        return
+
     from app.core.database import engine, Base, AsyncSessionLocal
 
     # Ensure tables exist safely across environments
@@ -45,6 +49,7 @@ async def lifespan(app: FastAPI):
 
     async with AsyncSessionLocal() as session:
         # Seed demo jobs for jobs & internship discovery if not present
+        from sqlalchemy import select, func
         from app.models.job import Job
         from datetime import datetime, timezone, timedelta
         stmt_job_count = select(func.count(Job.id))

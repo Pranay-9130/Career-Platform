@@ -6,7 +6,7 @@ from app.models.project_bookmark import ProjectBookmark
 from app.models.project_star import ProjectStar
 from app.models.project_comment import ProjectComment
 from app.models.project_screenshot import ProjectScreenshot
-from app.models.password_reset import PasswordResetToken
+from app.models.password_reset import PasswordResetToken, PasswordResetOTP
 from app.models.job import Job
 from app.models.job_application import JobApplication
 from app.models.job_bookmark import JobBookmark
@@ -40,6 +40,7 @@ __all__ = [
     "ProjectComment",
     "ProjectScreenshot",
     "PasswordResetToken",
+    "PasswordResetOTP",
     "Job",
     "JobApplication",
     "JobBookmark",
