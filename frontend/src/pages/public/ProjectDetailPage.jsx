@@ -43,6 +43,7 @@ import { useAuth } from '@/context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getProjectCreativeWorkSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
 import { resolveMediaUrl } from '@/utils/media';
+import { getSafeExternalUrl } from '@/utils/profileLinks';
 
 /**
  * Premium generative canvas rendered when screenshots fail to load or are not provided.
@@ -1161,37 +1162,42 @@ export default function ProjectDetailPage() {
               )}
 
               {/* Author Social Links */}
-              {(project.author_github || project.author_linkedin || project.author_portfolio) && (
+              {(getSafeExternalUrl(project.author_github, 'github') ||
+                getSafeExternalUrl(project.author_linkedin, 'linkedin') ||
+                getSafeExternalUrl(project.author_portfolio)) && (
                 <div className="flex items-center gap-2 pt-1 border-t border-brand-border/60">
-                  {project.author_github && (
+                  {getSafeExternalUrl(project.author_github, 'github') && (
                     <a
-                      href={project.author_github}
+                      href={getSafeExternalUrl(project.author_github, 'github')}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
                       title="GitHub Profile"
+                      aria-label="GitHub Profile"
                     >
                       <Github className="w-4 h-4" />
                     </a>
                   )}
-                  {project.author_linkedin && (
+                  {getSafeExternalUrl(project.author_linkedin, 'linkedin') && (
                     <a
-                      href={project.author_linkedin}
+                      href={getSafeExternalUrl(project.author_linkedin, 'linkedin')}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
                       title="LinkedIn Profile"
+                      aria-label="LinkedIn Profile"
                     >
                       <Linkedin className="w-4 h-4" />
                     </a>
                   )}
-                  {project.author_portfolio && (
+                  {getSafeExternalUrl(project.author_portfolio) && (
                     <a
-                      href={project.author_portfolio}
+                      href={getSafeExternalUrl(project.author_portfolio)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-2 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
                       title="Personal Website"
+                      aria-label="Personal Website"
                     >
                       <Globe className="w-4 h-4" />
                     </a>

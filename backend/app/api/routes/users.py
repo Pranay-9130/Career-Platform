@@ -9,7 +9,7 @@ from sqlalchemy import select, func, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.profile_links import clean_social_profile_url
+from app.core.profile_links import clean_social_profile_url, normalize_profile_url
 from app.models.user import User
 from app.models.profile import Profile
 from app.models.project import Project
@@ -720,7 +720,7 @@ async def get_my_profile(
         graduation_year=profile.graduation_year,
         github_url=clean_social_profile_url(profile.github_url, "github"),
         linkedin_url=clean_social_profile_url(profile.linkedin_url, "linkedin"),
-        portfolio_url=profile.portfolio_url,
+        portfolio_url=normalize_profile_url(profile.portfolio_url),
         skills=profile.skills or [],
         is_verified=current_user.is_verified,
         completion_percentage=completion,
@@ -797,7 +797,7 @@ async def update_my_profile(
         profile.linkedin_url = clean_social_profile_url(update_data.linkedin_url, "linkedin")
 
     if update_data.portfolio_url is not None:
-        profile.portfolio_url = update_data.portfolio_url.strip() if update_data.portfolio_url else None
+        profile.portfolio_url = normalize_profile_url(update_data.portfolio_url)
 
     if update_data.skills is not None:
         # Deduplicate and trim skills
@@ -827,7 +827,7 @@ async def update_my_profile(
         graduation_year=profile.graduation_year,
         github_url=clean_social_profile_url(profile.github_url, "github"),
         linkedin_url=clean_social_profile_url(profile.linkedin_url, "linkedin"),
-        portfolio_url=profile.portfolio_url,
+        portfolio_url=normalize_profile_url(profile.portfolio_url),
         skills=profile.skills or [],
         is_verified=current_user.is_verified,
         completion_percentage=completion,
@@ -1038,7 +1038,7 @@ async def get_public_profile(
         graduation_year=profile.graduation_year,
         github_url=clean_social_profile_url(profile.github_url, "github"),
         linkedin_url=clean_social_profile_url(profile.linkedin_url, "linkedin"),
-        portfolio_url=profile.portfolio_url,
+        portfolio_url=normalize_profile_url(profile.portfolio_url),
         skills=profile.skills or [],
         is_verified=user.is_verified if user else False,
         projects_count=len(projects_list),

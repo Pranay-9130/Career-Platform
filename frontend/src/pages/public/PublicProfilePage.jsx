@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { userService } from '@/services/userService';
 import Button from '@/components/common/Button';
+import { getSafeExternalUrl } from '@/utils/profileLinks';
 import Badge from '@/components/common/Badge';
 import Skeleton from '@/components/common/Skeleton';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -78,6 +79,10 @@ export default function PublicProfilePage() {
       setTimeout(() => setCopied(false), 2500);
     }
   };
+
+  const safeGithubUrl = getSafeExternalUrl(profile?.github_url, 'github');
+  const safeLinkedinUrl = getSafeExternalUrl(profile?.linkedin_url, 'linkedin');
+  const safePortfolioUrl = getSafeExternalUrl(profile?.portfolio_url);
 
   const getInitials = (name) => {
     if (!name) return 'ST';
@@ -285,41 +290,46 @@ export default function PublicProfilePage() {
           {/* Social Links & Action Buttons */}
           <div className="flex flex-col sm:flex-row md:flex-col items-start md:items-end gap-3 w-full md:w-auto">
             {/* Social Icons */}
-            <div className="flex items-center gap-2">
-              {profile?.github_url && (
-                <a
-                  href={profile.github_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2.5 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
-                  title="GitHub Profile"
-                >
-                  <Github className="w-4 h-4" />
-                </a>
-              )}
-              {profile?.linkedin_url && (
-                <a
-                  href={profile.linkedin_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2.5 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
-                  title="LinkedIn Profile"
-                >
-                  <Linkedin className="w-4 h-4" />
-                </a>
-              )}
-              {profile?.portfolio_url && (
-                <a
-                  href={profile.portfolio_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2.5 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
-                  title="Personal Portfolio"
-                >
-                  <Globe className="w-4 h-4" />
-                </a>
-              )}
-            </div>
+            {(safeGithubUrl || safeLinkedinUrl || safePortfolioUrl) && (
+              <div className="flex items-center gap-2">
+                {safeGithubUrl && (
+                  <a
+                    href={safeGithubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
+                    title="GitHub Profile"
+                    aria-label="GitHub Profile"
+                  >
+                    <Github className="w-4 h-4" />
+                  </a>
+                )}
+                {safeLinkedinUrl && (
+                  <a
+                    href={safeLinkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
+                    title="LinkedIn Profile"
+                    aria-label="LinkedIn Profile"
+                  >
+                    <Linkedin className="w-4 h-4" />
+                  </a>
+                )}
+                {safePortfolioUrl && (
+                  <a
+                    href={safePortfolioUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 rounded-xl border border-brand-border hover:border-brand-primary/40 hover:bg-slate-50 text-slate-600 hover:text-brand-primary transition-all shadow-xs"
+                    title="Personal Website"
+                    aria-label="Personal Website"
+                  >
+                    <Globe className="w-4 h-4" />
+                  </a>
+                )}
+              </div>
+            )}
 
             {/* CTAs */}
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -527,9 +537,9 @@ export default function PublicProfilePage() {
                   )}
 
                   <div className="flex items-center gap-3">
-                    {project.github_url && (
+                    {project.github_url && getSafeExternalUrl(project.github_url, 'github') && (
                       <a
-                        href={project.github_url}
+                        href={getSafeExternalUrl(project.github_url, 'github')}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-slate-500 hover:text-brand-primary font-medium transition-colors"
@@ -538,9 +548,9 @@ export default function PublicProfilePage() {
                         <span>Code</span>
                       </a>
                     )}
-                    {project.demo_url && (
+                    {project.demo_url && getSafeExternalUrl(project.demo_url) && (
                       <a
-                        href={project.demo_url}
+                        href={getSafeExternalUrl(project.demo_url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-emerald-600 font-bold hover:underline"

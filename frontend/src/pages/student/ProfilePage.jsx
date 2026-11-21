@@ -27,6 +27,7 @@ import Input from '@/components/common/Input';
 import Textarea from '@/components/common/Textarea';
 import Badge from '@/components/common/Badge';
 import Skeleton from '@/components/common/Skeleton';
+import { normalizeProfileUrl } from '@/utils/profileLinks';
 
 const POPULAR_SKILLS = [
   'React',
@@ -160,6 +161,34 @@ export default function ProfilePage() {
     setError(null);
     setSuccessMessage(null);
 
+    // Validate and normalize external profile URLs
+    const normalizedGithub = formData.github_url?.trim()
+      ? normalizeProfileUrl(formData.github_url, 'github')
+      : null;
+    if (formData.github_url?.trim() && !normalizedGithub) {
+      setError('Please enter a valid GitHub profile URL (e.g. github.com/username).');
+      setSaving(false);
+      return;
+    }
+
+    const normalizedLinkedin = formData.linkedin_url?.trim()
+      ? normalizeProfileUrl(formData.linkedin_url, 'linkedin')
+      : null;
+    if (formData.linkedin_url?.trim() && !normalizedLinkedin) {
+      setError('Please enter a valid LinkedIn profile URL (e.g. linkedin.com/in/username).');
+      setSaving(false);
+      return;
+    }
+
+    const normalizedPortfolio = formData.portfolio_url?.trim()
+      ? normalizeProfileUrl(formData.portfolio_url)
+      : null;
+    if (formData.portfolio_url?.trim() && !normalizedPortfolio) {
+      setError('Please enter a valid personal website URL (e.g. yourportfolio.dev).');
+      setSaving(false);
+      return;
+    }
+
     try {
       const payload = {
         full_name: formData.full_name,
@@ -170,16 +199,23 @@ export default function ProfilePage() {
         university: formData.university || null,
         degree: formData.degree || null,
         graduation_year: formData.graduation_year ? parseInt(formData.graduation_year, 10) : null,
-        github_url: formData.github_url || null,
-        linkedin_url: formData.linkedin_url || null,
-        portfolio_url: formData.portfolio_url || null,
+        github_url: normalizedGithub,
+        linkedin_url: normalizedLinkedin,
+        portfolio_url: normalizedPortfolio,
         skills: formData.skills,
       };
 
       const updated = await userService.updateProfile(payload);
 
+      const normalizedFormData = {
+        ...formData,
+        github_url: normalizedGithub || '',
+        linkedin_url: normalizedLinkedin || '',
+        portfolio_url: normalizedPortfolio || '',
+      };
+      setFormData(normalizedFormData);
       setCompletionPercentage(updated.completion_percentage || 0);
-      setInitialData(formData);
+      setInitialData(normalizedFormData);
       setSuccessMessage('Profile details successfully updated and saved!');
 
       // Synchronize auth context user state for consistent navbar/sidebar display

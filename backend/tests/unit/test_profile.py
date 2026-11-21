@@ -179,3 +179,61 @@ async def test_get_nonexistent_public_profile_returns_404(client):
     res = await client.get("/api/users/nobody_here_9999")
     assert res.status_code == 404
     assert "not found" in res.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_profile_normalizes_external_urls(client):
+    """Profile external URLs entered without protocol are automatically normalized to https://."""
+    reg = await client.post("/api/auth/register", json={
+        "email": "urls.student@university.edu",
+        "password": "Password123!",
+        "full_name": "URL Tester",
+    })
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    update_payload = {
+        "username": "urltester",
+        "github_url": "github.com/urltester",
+        "linkedin_url": "www.linkedin.com/in/urltester",
+        "portfolio_url": "urltester.dev",
+    }
+    put_res = await client.put("/api/users/me", json=update_payload, headers=headers)
+    assert put_res.status_code == 200
+    data = put_res.json()
+    assert data["github_url"] == "https://github.com/urltester"
+    assert data["linkedin_url"] == "https://www.linkedin.com/in/urltester"
+    assert data["portfolio_url"] == "https://urltester.dev"
+
+    # Verify public profile endpoint returns normalized external URLs
+    pub_res = await client.get("/api/users/urltester")
+    assert pub_res.status_code == 200
+    pub_data = pub_res.json()
+    assert pub_data["github_url"] == "https://github.com/urltester"
+    assert pub_data["linkedin_url"] == "https://www.linkedin.com/in/urltester"
+    assert pub_data["portfolio_url"] == "https://urltester.dev"
+
+
+@pytest.mark.asyncio
+async def test_update_profile_rejects_unsafe_schemes(client):
+    """Dangerous URL schemes such as javascript: and data: are filtered out."""
+    reg = await client.post("/api/auth/register", json={
+        "email": "security.student@university.edu",
+        "password": "Password123!",
+        "full_name": "Security Tester",
+    })
+    token = reg.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    update_payload = {
+        "username": "sectester",
+        "github_url": "javascript:alert(1)",
+        "linkedin_url": "data:text/html,<script>alert(1)</script>",
+        "portfolio_url": "vbscript:msgbox",
+    }
+    put_res = await client.put("/api/users/me", json=update_payload, headers=headers)
+    assert put_res.status_code == 200
+    data = put_res.json()
+    assert data["github_url"] is None
+    assert data["linkedin_url"] is None
+    assert data["portfolio_url"] is None
