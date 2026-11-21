@@ -14,9 +14,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000',
+        target: process.env.VITE_BACKEND_URL || 'https://careerplatform-api.onrender.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
     },
   },

@@ -131,24 +131,22 @@ export default function HomePage() {
 
         <div className="max-w-4xl mx-auto text-center space-y-6 sm:space-y-8">
           {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-700 text-xs font-semibold tracking-wide shadow-xs backdrop-blur-xs transition-all hover:bg-blue-50 hover:border-blue-300">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/80 text-blue-700 text-xs font-bold uppercase tracking-wider shadow-xs backdrop-blur-xs transition-all">
             <span className="flex h-2 w-2 rounded-full bg-blue-600 animate-pulse" />
-            <span>AI-Powered Career Development Platform</span>
-            <span className="text-blue-300">•</span>
-            <span className="text-[11px] font-bold text-brand-primary">AspirePath 2.0</span>
+            <span>YOUR CAREER STARTS HERE</span>
           </div>
 
           {/* Headline featuring the Tagline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-display font-extrabold text-slate-900 tracking-tight leading-[1.12]">
-            From Your First Project{' '}
+            Build Your Skills.{' '}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text text-transparent inline-block pb-1">
-              to Your First Job.
+              Prepare for Placements.
             </span>
           </h1>
 
           {/* Description */}
           <p className="text-base sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed font-normal">
-            The comprehensive career development platform designed for engineering students and campus placement preparation. Benchmark competencies deterministically, prepare for technical interviews, build ATS-optimized resumes, and publish verified projects.
+            Everything you need to prepare for placements, improve your skills, build your resume, and discover opportunities — all in one place.
           </p>
 
           {/* Dual CTAs */}
@@ -172,7 +170,7 @@ export default function HomePage() {
                   rightIcon={ArrowRight}
                   className="w-full sm:w-auto text-base px-8 py-3.5 shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 font-bold transition-all"
                 >
-                  Get Started Free
+                  Get Started
                 </Button>
               </Link>
             )}
@@ -313,7 +311,7 @@ export default function HomePage() {
                   ATS Resume Analyzer
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Compare resumes against target job descriptions with keyword matching, readability scoring, and formatting compliance checks.
+                  Improve your resume with actionable ATS-focused feedback.
                 </p>
               </div>
 
@@ -362,7 +360,7 @@ export default function HomePage() {
                   Resume Builder
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Build clean, modern resumes with split-screen editing, direct template selection, and ATS-friendly typography.
+                  Create a professional resume for your next opportunity.
                 </p>
               </div>
 
@@ -411,7 +409,7 @@ export default function HomePage() {
                   Skill Intelligence
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Extract skills from resumes, benchmark role fit across 13 engineering disciplines, and follow deterministic roadmaps.
+                  Understand your skills and identify areas to improve.
                 </p>
               </div>
 
@@ -457,10 +455,10 @@ export default function HomePage() {
 
               <div>
                 <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                  Placement Preparation Center
+                  Placement Preparation
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Prepare for technical campus interviews with structured question banks, topic-wise guides, and offline PDF study resources.
+                  Practice technical questions and prepare for interviews.
                 </p>
               </div>
 
@@ -506,10 +504,10 @@ export default function HomePage() {
 
               <div>
                 <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-amber-700 transition-colors">
-                  Project Hub & Blueprints
+                  Project Hub
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Discover peer blueprints and publish verified software showcases with architecture diagrams, GitHub repos, and live links.
+                  Discover, create, and showcase projects.
                 </p>
               </div>
 
@@ -558,7 +556,7 @@ export default function HomePage() {
                   Jobs & Internships
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Explore curated entry-level opportunities and track application stages from Applied to Interview and Offer in your student dashboard.
+                  Explore opportunities that match your interests.
                 </p>
               </div>
 
