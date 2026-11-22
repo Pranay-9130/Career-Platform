@@ -51,6 +51,8 @@ const ContactPage = lazyWithRetry(() => import('./pages/public/ContactPage'));
 const DownloadAppPage = lazyWithRetry(() => import('./pages/public/DownloadAppPage'));
 const DesignSystemShowcasePage = lazyWithRetry(() => import('./pages/public/DesignSystemShowcasePage'));
 const SubmissionGuidelinesPage = lazyWithRetry(() => import('./pages/public/SubmissionGuidelinesPage'));
+const TermsPage = lazyWithRetry(() => import('./pages/public/TermsPage'));
+const PrivacyPage = lazyWithRetry(() => import('./pages/public/PrivacyPage'));
 const PublicProfilePage = lazyWithRetry(() => import('./pages/public/PublicProfilePage'));
 const PublicAtsAnalyzerPage = lazyWithRetry(() => import('./pages/public/features/PublicAtsAnalyzerPage'));
 const PublicSkillIntelligencePage = lazyWithRetry(() => import('./pages/public/features/PublicSkillIntelligencePage'));
@@ -136,6 +138,11 @@ export default function App() {
               />
               <Route path="/templates" element={<TemplatesPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/terms-and-conditions" element={<Navigate to="/terms" replace />} />
+              <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
               <Route path="/download-app" element={<DownloadAppPage />} />
               <Route path="/download" element={<Navigate to="/download-app" replace />} />
               <Route path="/design-system" element={<DesignSystemShowcasePage />} />

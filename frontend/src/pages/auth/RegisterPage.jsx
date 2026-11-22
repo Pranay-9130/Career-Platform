@@ -427,16 +427,28 @@ export default function RegisterPage() {
                 />
                 <label
                   htmlFor="agreeTerms"
-                  className="ml-2 block text-xs text-brand-muted cursor-pointer select-none leading-relaxed"
+                  className="ml-2 block text-xs text-brand-muted select-none leading-relaxed"
                 >
                   I agree to the{' '}
-                  <span className="text-brand-primary font-medium hover:underline">
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-primary font-semibold hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     Terms of Service
-                  </span>{' '}
+                  </Link>{' '}
                   and{' '}
-                  <span className="text-brand-primary font-medium hover:underline">
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-brand-primary font-semibold hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     Privacy Policy
-                  </span>
+                  </Link>
                   .
                 </label>
               </div>

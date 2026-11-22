@@ -165,14 +165,14 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <span className="text-slate-500 cursor-not-allowed">
+                <Link to="/privacy" className="text-brand-muted hover:text-brand-primary transition-colors">
                   Privacy Policy
-                </span>
+                </Link>
               </li>
               <li>
-                <span className="text-slate-500 cursor-not-allowed">
+                <Link to="/terms" className="text-brand-muted hover:text-brand-primary transition-colors">
                   Terms of Service
-                </span>
+                </Link>
               </li>
             </ul>
           </div>
