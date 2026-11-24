@@ -42,6 +42,7 @@ from app.services.placement_prep_service import (
     get_pdf_page_count,
     MAX_FILE_SIZE,
 )
+from app.api.routes.placement_preparation import invalidate_placement_roles_cache
 
 router = APIRouter(
     prefix="/admin/placement-preparation",

@@ -101,7 +101,7 @@ class EmailService:
 
         # 2. Resend Provider (Native Async HTTPS + SDK Fallback)
         elif provider == "resend":
-            api_key = (settings.RESEND_API_KEY or settings.EMAIL_API_KEY or "").strip()
+            api_key = (settings.EMAIL_API_KEY or settings.RESEND_API_KEY or "").strip()
             if not api_key:
                 logger.error(
                     "[EMAIL SERVICE] Resend dispatch failed: RESEND_API_KEY is not configured in environment variables. "
@@ -141,12 +141,7 @@ class EmailService:
                     logger.info(f"[EMAIL SERVICE] Successfully dispatched email to {to_email} via Resend API (ID: {res_id})")
                     return True
             except httpx.HTTPStatusError as http_err:
-                cls._log_api_failure("Resend HTTP", http_err)
-                try:
-                    err_json = http_err.response.json()
-                    logger.error("[EMAIL SERVICE] Resend Error Detail: %s", err_json)
-                except Exception:
-                    pass
+                cls._log_api_failure("Resend", http_err)
                 return False
             except Exception as net_err:
                 logger.warning("[EMAIL SERVICE] HTTPX dispatch failed (%s), attempting Resend SDK fallback...", net_err)

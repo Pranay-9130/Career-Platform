@@ -1,3 +1,4 @@
+import time
 import uuid
 from pathlib import Path
 from typing import List, Optional
@@ -7,6 +8,7 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.placement_preparation import (
     PreparationRole,
@@ -22,6 +24,14 @@ from app.services.placement_prep_service import format_file_size
 
 router = APIRouter(prefix="/placement-preparation", tags=["Placement Preparation"])
 
+# In-memory 60s cache for active placement preparation roles
+_ROLES_CACHE = {"expires_at": 0.0, "data": None}
+_ROLES_CACHE_TTL = 60.0
+
+def invalidate_placement_roles_cache():
+    _ROLES_CACHE["expires_at"] = 0.0
+    _ROLES_CACHE["data"] = None
+
 
 @router.get("/roles", response_model=List[RoleRead])
 async def list_preparation_roles(
@@ -31,6 +41,12 @@ async def list_preparation_roles(
     Retrieves all active placement preparation roles along with their topics
     and the count of currently published PDF documents.
     """
+    now = time.time()
+    bind = getattr(db, "bind", None) or getattr(getattr(db, "sync_session", None), "bind", None)
+    is_sqlite = (bind is not None and getattr(getattr(bind, "dialect", None), "name", "") == "sqlite") or ("sqlite" in settings.DATABASE_URL)
+    if not is_sqlite and now < _ROLES_CACHE["expires_at"] and _ROLES_CACHE["data"] is not None:
+        return _ROLES_CACHE["data"]
+
     stmt = (
         select(PreparationRole)
         .where(PreparationRole.is_active == True)
@@ -103,6 +119,9 @@ async def list_preparation_roles(
                 updated_at=r.updated_at,
             )
         )
+    if not is_sqlite:
+        _ROLES_CACHE["data"] = output
+        _ROLES_CACHE["expires_at"] = now + _ROLES_CACHE_TTL
     return output
 
 

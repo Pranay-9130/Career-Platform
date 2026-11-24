@@ -36,6 +36,7 @@ import SEO from '@/components/common/SEO';
 import { getWebsiteSchema, getOrganizationSchema } from '@/utils/seoSchemas';
 import { getDashboardPath } from '@/utils/navigation';
 import { projectService } from '@/services/projectService';
+import { jobService } from '@/services/jobService';
 import HeroProductPreview from '@/components/home/HeroProductPreview';
 
 export default function HomePage() {
@@ -49,64 +50,62 @@ export default function HomePage() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState(null);
 
-  // Fetch initial showcases and jobs
+  // Fetch initial showcases and jobs concurrently
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchProjects() {
+    async function loadShowcaseData() {
       try {
         setProjectsLoading(true);
-        setProjectsError(null);
-        const data = await projectService.getProjects({ limit: 3 });
-        if (isMounted) {
-          const projectList = Array.isArray(data)
-            ? data
-            : Array.isArray(data?.items)
-            ? data.items
-            : Array.isArray(data?.projects)
-            ? data.projects
-            : [];
-          setProjects(projectList.slice(0, 3));
-        }
-      } catch (err) {
-        console.warn('Unable to load live showcase blueprints:', err?.message || err);
-        if (isMounted) {
-          setProjectsError('Unable to load showcase projects. Please browse the project hub directly.');
-        }
-      } finally {
-        if (isMounted) setProjectsLoading(false);
-      }
-    }
-
-    async function fetchJobs() {
-      try {
         setJobsLoading(true);
+        setProjectsError(null);
         setJobsError(null);
-        const response = await fetch('/api/jobs?limit=3');
-        if (!response.ok) throw new Error('Jobs endpoint returned non-200');
-        const data = await response.json();
+
+        const [projectsData, jobsData] = await Promise.allSettled([
+          projectService.getProjects({ limit: 3 }),
+          jobService.getJobs({ limit: 3 }),
+        ]);
+
         if (isMounted) {
-          const jobList = Array.isArray(data)
-            ? data
-            : Array.isArray(data?.items)
-            ? data.items
-            : Array.isArray(data?.jobs)
-            ? data.jobs
-            : [];
-          setJobs(jobList.slice(0, 3));
-        }
-      } catch (err) {
-        console.warn('Unable to load live job opportunities:', err?.message || err);
-        if (isMounted) {
-          setJobsError('Unable to load current job opportunities. Please visit the jobs board directly.');
+          if (projectsData.status === 'fulfilled') {
+            const data = projectsData.value;
+            const projectList = Array.isArray(data)
+              ? data
+              : Array.isArray(data?.items)
+              ? data.items
+              : Array.isArray(data?.projects)
+              ? data.projects
+              : [];
+            setProjects(projectList.slice(0, 3));
+          } else {
+            console.warn('Unable to load live showcase blueprints:', projectsData.reason);
+            setProjectsError('Unable to load showcase projects. Please browse the project hub directly.');
+          }
+
+          if (jobsData.status === 'fulfilled') {
+            const data = jobsData.value;
+            const jobList = Array.isArray(data)
+              ? data
+              : Array.isArray(data?.items)
+              ? data.items
+              : Array.isArray(data?.jobs)
+              ? data.jobs
+              : [];
+            setJobs(jobList.slice(0, 3));
+          } else {
+            console.warn('Unable to load live job opportunities:', jobsData.reason);
+            setJobsError('Unable to load current job opportunities. Please visit the jobs board directly.');
+          }
         }
       } finally {
-        if (isMounted) setJobsLoading(false);
+        if (isMounted) {
+          setProjectsLoading(false);
+          setJobsLoading(false);
+        }
       }
     }
 
-    fetchProjects();
-    fetchJobs();
+    loadShowcaseData();
 
     return () => {
       isMounted = false;

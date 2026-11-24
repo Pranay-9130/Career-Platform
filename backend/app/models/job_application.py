@@ -32,6 +32,7 @@ class JobApplication(BaseUUIDModel):
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
+        index=True,
     )
     next_interview_date = Column(DateTime(timezone=True), nullable=True)
     notes = Column(Text, nullable=True)

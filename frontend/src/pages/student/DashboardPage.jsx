@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FolderGit2,
@@ -40,13 +40,13 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [recFilter, setRecFilter] = useState('all'); // 'all' | 'project' | 'job'
   const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
+  const hasDataRef = useRef(false);
 
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
-    } else {
-      // If we don't have data yet, show skeleton loading
-      setLoading((prev) => (prev ? true : !data));
+    } else if (!hasDataRef.current) {
+      setLoading(true);
     }
     setError(null);
 
@@ -55,6 +55,7 @@ export default function DashboardPage() {
         isRefresh ? { _skipCache: true } : {}
       );
       setData(summary);
+      hasDataRef.current = true;
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
       setError(
@@ -65,7 +66,7 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [data]);
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();

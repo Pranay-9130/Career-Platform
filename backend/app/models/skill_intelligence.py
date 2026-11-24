@@ -57,7 +57,7 @@ class StudentSkill(BaseUUIDModel):
     normalized_name = Column(String(100), nullable=False, index=True)
     category = Column(String(60), nullable=False, default="Technical Skills")
     source = Column(String(30), nullable=False, default="manual")  # 'manual' | 'resume' | 'verified'
-    is_confirmed = Column(Boolean, default=True, nullable=False)
+    is_confirmed = Column(Boolean, default=True, nullable=False, index=True)
     status = Column(
         String(30),
         nullable=False,

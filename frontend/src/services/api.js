@@ -124,8 +124,12 @@ const inFlightRequests = new Map();
 // Keys that benefit from client-side caching (TTL in ms):
 const CACHEABLE_PREFIXES = {
   '/users/dashboard-summary': 20_000, // Personal student dashboard summary
+  '/skill-intelligence/dashboard-summary': 20_000, // Skill intelligence summary card
+  '/skill-intelligence/roles': 60_000, // Static curated roles catalogue
+  '/placement-preparation/roles': 60_000, // Placement preparation curriculum
   '/resumes/templates': 60_000,   // Resume templates rarely change
   '/jobs/facets': 60_000,         // Facets change only when jobs are added/edited
+  '/projects/facets': 60_000,     // Project facets
   '/admin/jobs': 15_000,          // Admin job list (search params included in key)
   '/admin/students': 15_000,      // Student list
   '/admin/stats': 30_000,         // Dashboard stats
@@ -190,9 +194,19 @@ export function invalidateRelatedCache(method, url = '') {
         }
       }
     }
-    if (url.includes('/bookmarks') || url.includes('/users') || url.includes('/skills')) {
+    if (url.includes('/bookmarks') || url.includes('/users') || url.includes('/skills') || url.includes('/skill-intelligence')) {
       for (const key of responseCache.keys()) {
-        if (key.includes('/users/dashboard-summary')) {
+        if (
+          key.includes('/users/dashboard-summary') ||
+          key.includes('/skill-intelligence')
+        ) {
+          responseCache.delete(key);
+        }
+      }
+    }
+    if (url.includes('/placement-preparation')) {
+      for (const key of responseCache.keys()) {
+        if (key.includes('/placement-preparation')) {
           responseCache.delete(key);
         }
       }

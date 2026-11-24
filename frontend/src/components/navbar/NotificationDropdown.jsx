@@ -47,8 +47,28 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     fetchUnreadCount();
-    const timer = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(timer);
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchUnreadCount();
+      }
+    };
+
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      fetchUnreadCount();
+    }, 30000);
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+
+    return () => {
+      clearInterval(timer);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
+    };
   }, [fetchUnreadCount]);
 
   useEffect(() => {
