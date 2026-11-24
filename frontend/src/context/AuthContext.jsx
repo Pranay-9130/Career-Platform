@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authService } from '@/services/authService';
+import { authStorage, isTokenExpired } from '@/services/authStorage';
+import { clearApiCache } from '@/services/api';
 import { isSessionRejection } from '@/services/authErrors';
 
 const AuthContext = createContext(null);
@@ -7,17 +9,22 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const initialToken = authService.getToken();
   const initialUser = initialToken ? authService.getUser() : null;
-  const [user, setUser] = useState(initialUser);
-  const [token, setToken] = useState(initialToken);
-  const [isLoading, setIsLoading] = useState(true);
+  const isInitialValid = Boolean(initialToken && initialUser && !isTokenExpired(initialToken));
+  const [user, setUser] = useState(isInitialValid ? initialUser : null);
+  const [token, setToken] = useState(isInitialValid ? initialToken : null);
+  // Stale-while-revalidate: only render optimistically if stored token is unexpired
+  const [isLoading, setIsLoading] = useState(() => {
+    if (isInitialValid) return false;
+    return authStorage.hasActiveSessionHint();
+  });
 
-  // Validate a restored session before allowing protected content to render.
+  // Revalidate or restore session in the background
   useEffect(() => {
     let active = true;
     const restoredToken = authService.getToken();
 
     const initializeAuth = async () => {
-      if (restoredToken) {
+      if (restoredToken && !isTokenExpired(restoredToken)) {
         try {
           const currentUser = await authService.getCurrentUser();
           if (active) {
@@ -34,7 +41,7 @@ export function AuthProvider({ children }) {
           }
         }
       } else if (authStorage.hasActiveSessionHint()) {
-        // Access token is missing, but an active session hint exists (silent token restoration)
+        // Access token is missing or expired, but an active session hint exists (silent token restoration)
         try {
           const refreshData = await authService.refreshToken();
           if (active && refreshData?.access_token && refreshData?.user) {
@@ -108,14 +115,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await authService.logout();
-    } catch (error) {
+    // 1. Immediately wipe client credentials & cache for instant zero-latency redirect
+    setToken(null);
+    setUser(null);
+    authService.clearAuth();
+    clearApiCache();
+
+    // 2. Revoke server-side session non-blocking in background
+    authService.logout().catch((error) => {
       console.warn('Logout notice:', error);
-    } finally {
-      setToken(null);
-      setUser(null);
-    }
+    });
   }, []);
 
   const updateUser = useCallback((updatedFields) => {

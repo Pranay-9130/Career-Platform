@@ -3,7 +3,7 @@ import time
 import uuid
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,6 +42,19 @@ router = APIRouter(prefix="/users", tags=["User Profile & Workspace"])
 # 60-second in-memory cache for platform-wide public recommendations
 _RECOMMENDATIONS_CACHE: Dict[str, Any] = {"expires_at": 0.0, "items": []}
 _RECOMMENDATIONS_CACHE_TTL = 60.0
+
+# Bounded 15-second in-memory cache for student dashboard summaries to prevent DB stampedes
+_USER_DASHBOARD_CACHE: Dict[uuid.UUID, Tuple[float, Any]] = {}
+_USER_DASHBOARD_CACHE_TTL = 15.0
+_USER_DASHBOARD_CACHE_MAX_SIZE = 512
+
+
+def invalidate_dashboard_summary_cache(user_id: Optional[uuid.UUID] = None) -> None:
+    """Evict student dashboard summary cache immediately on profile or workspace mutation."""
+    if user_id:
+        _USER_DASHBOARD_CACHE.pop(user_id, None)
+    else:
+        _USER_DASHBOARD_CACHE.clear()
 
 
 def calculate_profile_completion(user: User, profile: Profile) -> int:
@@ -198,6 +211,15 @@ async def get_dashboard_summary(
     recent applications, and curated project/job recommendations.
     """
     now = datetime.now(timezone.utc)
+    now_ts = time.time()
+
+    # Fast-path: return cached student dashboard summary if within TTL
+    bind = getattr(db, "bind", None) or getattr(getattr(db, "sync_session", None), "bind", None)
+    is_sqlite = (bind is not None and getattr(getattr(bind, "dialect", None), "name", "") == "sqlite")
+    if not is_sqlite and current_user.id in _USER_DASHBOARD_CACHE:
+        cached_exp, cached_summary = _USER_DASHBOARD_CACHE[current_user.id]
+        if now_ts < cached_exp:
+            return cached_summary
 
     # 1. Project counts by actual status
     projects_count = 0
@@ -674,7 +696,7 @@ async def get_dashboard_summary(
         unread_notifications_count=unread_notifications_count,
     )
 
-    return DashboardSummaryResponse(
+    summary_response = DashboardSummaryResponse(
         user=current_user,
         stats=stats,
         recent_activity=recent_activity,
@@ -687,6 +709,14 @@ async def get_dashboard_summary(
         next_milestone=next_milestone,
         readiness_details=readiness_details,
     )
+
+    if not is_sqlite:
+        if len(_USER_DASHBOARD_CACHE) >= _USER_DASHBOARD_CACHE_MAX_SIZE:
+            oldest_key = next(iter(_USER_DASHBOARD_CACHE))
+            _USER_DASHBOARD_CACHE.pop(oldest_key, None)
+        _USER_DASHBOARD_CACHE[current_user.id] = (now_ts + _USER_DASHBOARD_CACHE_TTL, summary_response)
+
+    return summary_response
 
 
 @router.get(
@@ -810,6 +840,7 @@ async def update_my_profile(
     await db.commit()
     await db.refresh(profile)
     await db.refresh(current_user)
+    invalidate_dashboard_summary_cache(current_user.id)
 
     completion = calculate_profile_completion(current_user, profile)
 

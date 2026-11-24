@@ -1,5 +1,5 @@
-import api, { executeTokenRefresh } from './api';
-import { authStorage } from './authStorage';
+import api, { executeTokenRefresh, clearApiCache } from './api.js';
+import { authStorage } from './authStorage.js';
 
 export const authService = {
   getToken: () => authStorage.getToken(),
@@ -10,15 +10,34 @@ export const authService = {
 
   setUser: (user) => authStorage.setUser(user),
 
-  clearAuth: () => authStorage.clear(),
+  clearAuth: () => {
+    authStorage.clear();
+    clearApiCache();
+  },
 
   logout: async () => {
+    // 1. Instantly wipe client-side auth credentials & cache with zero latency
+    authStorage.clear();
+    clearApiCache();
+
+    // 2. Dispatch server-side session revocation with keepalive transport guarantee
     try {
-      await api.post('/auth/logout');
+      if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        const base = api.defaults.baseURL || '/api';
+        const logoutUrl = base.endsWith('/') ? `${base}auth/logout` : `${base}/auth/logout`;
+        await window
+          .fetch(logoutUrl, {
+            method: 'POST',
+            credentials: 'include',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+          })
+          .catch(() => api.post('/auth/logout'));
+      } else {
+        await api.post('/auth/logout');
+      }
     } catch (error) {
       console.warn('Logout request completed with notice:', error);
-    } finally {
-      authStorage.clear();
     }
   },
 

@@ -38,12 +38,18 @@ export default function DashboardPage() {
   const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
 
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      // If we don't have data yet, show skeleton loading
+      setLoading((prev) => (prev ? true : !data));
+    }
     setError(null);
 
     try {
-      const summary = await dashboardService.getSummary();
+      const summary = await dashboardService.getSummary(
+        isRefresh ? { _skipCache: true } : {}
+      );
       setData(summary);
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
@@ -55,7 +61,7 @@ export default function DashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     fetchDashboardData();

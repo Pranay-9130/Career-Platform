@@ -123,6 +123,7 @@ const inFlightRequests = new Map();
 // Short-lived in-memory response cache for safe read-only GET endpoints.
 // Keys that benefit from client-side caching (TTL in ms):
 const CACHEABLE_PREFIXES = {
+  '/users/dashboard-summary': 20_000, // Personal student dashboard summary
   '/resumes/templates': 60_000,   // Resume templates rarely change
   '/jobs/facets': 60_000,         // Facets change only when jobs are added/edited
   '/admin/jobs': 15_000,          // Admin job list (search params included in key)
@@ -177,7 +178,23 @@ export function invalidateRelatedCache(method, url = '') {
     }
     if (url.includes('/projects')) {
       for (const key of responseCache.keys()) {
-        if (key.includes('/projects')) responseCache.delete(key);
+        if (key.includes('/projects') || key.includes('/users/dashboard-summary')) {
+          responseCache.delete(key);
+        }
+      }
+    }
+    if (url.includes('/resumes') || url.includes('/resume')) {
+      for (const key of responseCache.keys()) {
+        if (key.includes('/resumes') || key.includes('/users/dashboard-summary')) {
+          responseCache.delete(key);
+        }
+      }
+    }
+    if (url.includes('/bookmarks') || url.includes('/users') || url.includes('/skills')) {
+      for (const key of responseCache.keys()) {
+        if (key.includes('/users/dashboard-summary')) {
+          responseCache.delete(key);
+        }
       }
     }
   }
@@ -185,6 +202,7 @@ export function invalidateRelatedCache(method, url = '') {
 
 export function clearApiCache() {
   responseCache.clear();
+  inFlightRequests.clear();
 }
 
 const originalRequest = api.request.bind(api);
