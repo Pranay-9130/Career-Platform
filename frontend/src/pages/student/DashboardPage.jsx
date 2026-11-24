@@ -19,6 +19,10 @@ import {
   BookOpen,
   BrainCircuit,
   Check,
+  GraduationCap,
+  CalendarCheck2,
+  IndianRupee,
+  Percent,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { dashboardService } from '@/services/dashboardService';
@@ -532,6 +536,150 @@ export default function DashboardPage() {
             <p className="text-[11px] text-brand-muted truncate">Technical PDFs</p>
           </div>
         </Link>
+      </div>
+
+      {/* 6.5 College Survival Kit Section */}
+      <div className="bg-white rounded-2xl border border-brand-border shadow-xs p-5 sm:p-6 transition-all hover:border-blue-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-primary border border-blue-100 flex items-center justify-center shrink-0">
+              <GraduationCap className="w-5 h-5 text-brand-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-display font-bold text-base text-slate-900">
+                  College Survival Kit
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                  NEW
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Your everyday college tools, all in one place.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/college-survival-kit"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-brand-primary bg-blue-50 hover:bg-blue-100/80 border border-blue-200/60 shadow-xs transition shrink-0"
+          >
+            <span>View All Tools</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+          {/* Card 1: Attendance Calculator */}
+          <Link
+            to="/college-survival-kit/attendance"
+            className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-blue-50/40 hover:border-blue-200 transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <CalendarCheck2 className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-slate-900 group-hover:text-brand-primary transition">
+                Attendance Calculator
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                Track attendance & plan recovery days.
+              </p>
+            </div>
+            <div className="pt-3 mt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-brand-primary">
+              <span>Open tool</span>
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 2: CGPA / SGPA Calculator */}
+          <Link
+            to="/college-survival-kit/cgpa"
+            className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-blue-50/40 hover:border-blue-200 transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-brand-primary flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-slate-900 group-hover:text-brand-primary transition">
+                CGPA / SGPA Calculator
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                Calculate semester GPA & target scores.
+              </p>
+            </div>
+            <div className="pt-3 mt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-brand-primary">
+              <span>Open tool</span>
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 3: Placement Eligibility Checker */}
+          <Link
+            to="/college-survival-kit/placement-eligibility"
+            className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-blue-50/40 hover:border-blue-200 transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <Briefcase className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-slate-900 group-hover:text-brand-primary transition">
+                Placement Eligibility
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                Check criteria for Product & Tech roles.
+              </p>
+            </div>
+            <div className="pt-3 mt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-brand-primary">
+              <span>Open tool</span>
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 4: CTC to In-Hand Salary */}
+          <Link
+            to="/college-survival-kit/salary"
+            className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-blue-50/40 hover:border-blue-200 transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <IndianRupee className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-slate-900 group-hover:text-brand-primary transition">
+                CTC to In-Hand Salary
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                Estimate monthly take-home salary.
+              </p>
+            </div>
+            <div className="pt-3 mt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-brand-primary">
+              <span>Open tool</span>
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Card 5: Marks & Percentage Calculator */}
+          <Link
+            to="/college-survival-kit/marks"
+            className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-blue-50/40 hover:border-blue-200 transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center mb-2.5 group-hover:scale-105 transition-transform">
+                <Percent className="w-4 h-4" />
+              </div>
+              <p className="text-xs font-bold text-slate-900 group-hover:text-brand-primary transition">
+                Marks & Percentage
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                Convert marks & find target exam scores.
+              </p>
+            </div>
+            <div className="pt-3 mt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-semibold text-brand-primary">
+              <span>Open tool</span>
+              <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* 7. Overview Breakdowns: Projects & Applications */}

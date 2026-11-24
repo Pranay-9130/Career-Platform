@@ -58,6 +58,8 @@ const PublicAtsAnalyzerPage = lazyWithRetry(() => import('./pages/public/feature
 const PublicSkillIntelligencePage = lazyWithRetry(() => import('./pages/public/features/PublicSkillIntelligencePage'));
 const PublicResumeBuilderPage = lazyWithRetry(() => import('./pages/public/features/PublicResumeBuilderPage'));
 const PublicPlacementPrepPage = lazyWithRetry(() => import('./pages/public/features/PublicPlacementPrepPage'));
+const PublicCollegeSurvivalKitPage = lazyWithRetry(() => import('./pages/public/features/PublicCollegeSurvivalKitPage'));
+const CollegeSurvivalKitPage = lazyWithRetry(() => import('./pages/public/CollegeSurvivalKitPage'));
 const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage'));
 
 // Lazy Loaded Auth Pages
@@ -152,6 +154,11 @@ export default function App() {
               <Route path="/features/skill-intelligence" element={<PublicSkillIntelligencePage />} />
               <Route path="/features/resume-builder" element={<PublicResumeBuilderPage />} />
               <Route path="/features/placement-preparation" element={<PublicPlacementPrepPage />} />
+              <Route path="/features/college-survival-kit" element={<PublicCollegeSurvivalKitPage />} />
+
+              {/* College Survival Kit Public Hub & Direct Tools */}
+              <Route path="/college-survival-kit" element={<CollegeSurvivalKitPage />} />
+              <Route path="/college-survival-kit/:toolId" element={<CollegeSurvivalKitPage />} />
 
               {/* Public Student Portfolio Routes */}
               <Route path="/u/:username" element={<PublicProfilePage />} />

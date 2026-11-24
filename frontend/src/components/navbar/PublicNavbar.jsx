@@ -19,6 +19,7 @@ import {
   Compass,
   BrainCircuit,
   BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 import { Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
@@ -122,6 +123,14 @@ export default function PublicNavbar() {
       iconBg: 'bg-emerald-50 text-emerald-600',
       badge: 'Interview Prep',
     },
+    {
+      name: 'College Survival Kit',
+      description: 'Essential tools for everyday college life.',
+      path: '/features/college-survival-kit',
+      icon: GraduationCap,
+      iconBg: 'bg-amber-50 text-amber-600',
+      badge: 'NEW',
+    },
   ];
 
   // Primary top-level navigation links in exact required structure:
@@ -144,7 +153,8 @@ export default function PublicNavbar() {
     location.pathname === '/ats-analyzer' ||
     location.pathname === '/skill-intelligence' ||
     location.pathname === '/resume-builder' ||
-    location.pathname.startsWith('/placement-preparation');
+    location.pathname.startsWith('/placement-preparation') ||
+    location.pathname.startsWith('/college-survival-kit');
 
   const handleFeaturesMouseEnter = () => {
     if (featuresTimeoutRef.current) clearTimeout(featuresTimeoutRef.current);

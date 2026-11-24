@@ -21,6 +21,9 @@ import {
   Search,
   Lock,
   GraduationCap,
+  CalendarCheck2,
+  IndianRupee,
+  Percent,
   Building,
   Target,
   Compass,
@@ -585,6 +588,165 @@ export default function HomePage() {
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3.5 COLLEGE SURVIVAL KIT (ACADEMIC & CAREER CALCULATORS) */}
+      {/* ========================================================================= */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-b from-blue-50/70 via-white to-slate-50/60 border border-blue-100 rounded-3xl p-8 sm:p-12 space-y-10 shadow-xs">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-blue-100/60">
+            <div className="max-w-2xl space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100/70 text-brand-primary text-xs font-bold">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>College Survival Kit</span>
+              </div>
+              <h2 className="text-3xl font-display font-extrabold text-slate-900 tracking-tight">
+                College Survival Kit
+              </h2>
+              <p className="text-base font-semibold text-brand-primary">
+                Your college life, simplified.
+              </p>
+              <p className="text-sm text-slate-600 leading-relaxed pt-1">
+                From tracking attendance and calculating CGPA to checking placement eligibility and understanding salary packages, get the essential tools you need to manage your college journey.
+              </p>
+            </div>
+
+            <div className="shrink-0">
+              <Link to="/features/college-survival-kit">
+                <Button
+                  size="md"
+                  className="bg-brand-primary hover:bg-blue-700 text-white shadow-sm flex items-center gap-2 font-bold px-5"
+                >
+                  <span>Explore College Survival Kit</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Card 1: Attendance Calculator */}
+            <Link
+              to="/college-survival-kit/attendance"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 hover:border-brand-primary/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <CalendarCheck2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
+                    Attendance Calculator
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Track attendance and plan your attendance recovery.
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-brand-primary group-hover:translate-x-0.5 transition-transform">
+                <span>Calculate now</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </div>
+            </Link>
+
+            {/* Card 2: CGPA / SGPA Calculator */}
+            <Link
+              to="/college-survival-kit/cgpa"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 hover:border-brand-primary/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
+                    CGPA / SGPA Calculator
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Calculate academic performance.
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-brand-primary group-hover:translate-x-0.5 transition-transform">
+                <span>Calculate now</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </div>
+            </Link>
+
+            {/* Card 3: Placement Eligibility Checker */}
+            <Link
+              to="/college-survival-kit/placement-eligibility"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 hover:border-brand-primary/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
+                    Placement Eligibility
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Understand whether you meet placement criteria.
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-brand-primary group-hover:translate-x-0.5 transition-transform">
+                <span>Check eligibility</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </div>
+            </Link>
+
+            {/* Card 4: CTC to In-Hand Salary */}
+            <Link
+              to="/college-survival-kit/salary"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 hover:border-brand-primary/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <IndianRupee className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
+                    CTC to In-Hand Salary
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Estimate your monthly take-home salary.
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-brand-primary group-hover:translate-x-0.5 transition-transform">
+                <span>Estimate salary</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </div>
+            </Link>
+
+            {/* Card 5: Marks & Percentage Calculator */}
+            <Link
+              to="/college-survival-kit/marks"
+              className="bg-white p-5 rounded-2xl border border-slate-200/80 hover:border-brand-primary/40 hover:shadow-md transition-all duration-200 flex flex-col justify-between group"
+            >
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Percent className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 group-hover:text-brand-primary transition-colors">
+                    Marks & Percentage
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Calculate marks and academic percentages.
+                  </p>
+                </div>
+              </div>
+              <div className="pt-4 mt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-brand-primary group-hover:translate-x-0.5 transition-transform">
+                <span>Calculate now</span>
+                <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+              </div>
+            </Link>
           </div>
         </div>
       </section>

@@ -18,6 +18,7 @@ import {
   FileCheck,
   BrainCircuit,
   BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { StudentNavbar } from '@/components/navbar';
@@ -136,6 +137,13 @@ export default function StudentLayout() {
           path: '/placement-preparation',
           icon: BookOpen,
           description: 'Role-based PDF library',
+        },
+        {
+          name: 'College Survival Kit',
+          path: '/college-survival-kit',
+          icon: GraduationCap,
+          badge: 'NEW',
+          description: 'Everyday college calculators',
         },
       ],
     },
