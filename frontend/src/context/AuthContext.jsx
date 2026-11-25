@@ -91,15 +91,10 @@ export function AuthProvider({ children }) {
   }, []);
 
   const loginWithCredentials = useCallback(async (email, password, persistent = true) => {
-    setIsLoading(true);
-    try {
-      const data = await authService.login({ email, password }, persistent);
-      setToken(data.access_token);
-      setUser(data.user);
-      return data;
-    } finally {
-      setIsLoading(false);
-    }
+    const data = await authService.login({ email, password }, persistent);
+    setToken(data.access_token);
+    setUser(data.user);
+    return data;
   }, []);
 
   const registerUser = useCallback(async (userData) => {

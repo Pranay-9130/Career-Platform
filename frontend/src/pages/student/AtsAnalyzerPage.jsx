@@ -642,10 +642,10 @@ export default function AtsAnalyzerPage() {
                     <span>Includes: Skills matrix, work history, projects & education.</span>
                     <button
                       type="button"
-                      onClick={() => navigate(`/resume-builder`)}
+                      onClick={() => navigate('/templates')}
                       className="text-brand-primary hover:underline font-semibold"
                     >
-                      Edit in Builder
+                      Browse Templates
                     </button>
                   </div>
                 </div>
@@ -1021,14 +1021,14 @@ export default function AtsAnalyzerPage() {
                 {/* Direct Action Link */}
                 <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <span className="text-xs text-slate-500">
-                    Apply these edits directly in the Live ATS Resume Builder to push your score to 90%+.
+                    Apply these edits directly with our ATS-optimized resume templates to maximize interview shortlists.
                   </span>
                   <button
                     type="button"
-                    onClick={() => navigate('/resume-builder')}
+                    onClick={() => navigate('/templates')}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-semibold hover:bg-brand-primary-hover transition-colors"
                   >
-                    Open In Resume Builder
+                    Browse Templates
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

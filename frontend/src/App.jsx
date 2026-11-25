@@ -92,122 +92,123 @@ export default function App() {
         <ScrollToTop />
         <ErrorBoundary>
           <Suspense fallback={<PageLoadingFallback />}>
-          <Routes>
-            {/* Public Marketing, Discovery & Portfolio Routes */}
-            <Route element={<PublicLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/projects" element={<ProjectsPage />} />
-              <Route
-                path="/projects/submit"
-                element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
-                    <ProjectSubmissionPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/:slug/edit"
-                element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
-                    <ProjectSubmissionPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/edit/:slug"
-                element={
-                  <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
-                    <ProjectSubmissionPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/:slug"
-                element={<ProjectDetailPage />}
-              />
-              <Route path="/submission-guidelines" element={<SubmissionGuidelinesPage />} />
-              <Route path="/guidelines" element={<SubmissionGuidelinesPage />} />
-              <Route path="/projects/submit/guidelines" element={<SubmissionGuidelinesPage />} />
-              <Route path="/jobs" element={<JobsPage />} />
-              <Route
-                path="/jobs/:id"
-                element={
-                  <ProtectedRoute>
-                    <JobDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/templates" element={<TemplatesPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/terms-and-conditions" element={<Navigate to="/terms" replace />} />
-              <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
-              <Route path="/download-app" element={<DownloadAppPage />} />
-              <Route path="/download" element={<Navigate to="/download-app" replace />} />
-              <Route path="/design-system" element={<DesignSystemShowcasePage />} />
+            <Routes>
+              {/* Public Marketing, Discovery & Portfolio Routes */}
+              <Route element={<PublicLayout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/projects" element={<ProjectsPage />} />
+                <Route
+                  path="/projects/submit"
+                  element={
+                    <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
+                      <ProjectSubmissionPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/:slug/edit"
+                  element={
+                    <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
+                      <ProjectSubmissionPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/edit/:slug"
+                  element={
+                    <ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']}>
+                      <ProjectSubmissionPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/projects/:slug"
+                  element={<ProjectDetailPage />}
+                />
+                <Route path="/submission-guidelines" element={<SubmissionGuidelinesPage />} />
+                <Route path="/guidelines" element={<SubmissionGuidelinesPage />} />
+                <Route path="/projects/submit/guidelines" element={<SubmissionGuidelinesPage />} />
+                <Route path="/jobs" element={<JobsPage />} />
+                <Route
+                  path="/jobs/:id"
+                  element={
+                    <ProtectedRoute>
+                      <JobDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/templates" element={<TemplatesPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/terms-and-conditions" element={<Navigate to="/terms" replace />} />
+                <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+                <Route path="/download-app" element={<DownloadAppPage />} />
+                <Route path="/download" element={<Navigate to="/download-app" replace />} />
+                <Route path="/design-system" element={<DesignSystemShowcasePage />} />
 
-              {/* Public Feature Preview Pages */}
-              <Route path="/features/ats-analyzer" element={<PublicAtsAnalyzerPage />} />
-              <Route path="/features/skill-intelligence" element={<PublicSkillIntelligencePage />} />
-              <Route path="/features/resume-builder" element={<PublicResumeBuilderPage />} />
-              <Route path="/features/placement-preparation" element={<PublicPlacementPrepPage />} />
-              <Route path="/features/college-survival-kit" element={<PublicCollegeSurvivalKitPage />} />
+                {/* Public Feature Preview Pages */}
+                <Route path="/features/ats-analyzer" element={<PublicAtsAnalyzerPage />} />
+                <Route path="/features/skill-intelligence" element={<PublicSkillIntelligencePage />} />
+                <Route path="/features/resume-builder" element={<Navigate to="/templates" replace />} />
+                <Route path="/placement-preparation" element={<PublicPlacementPrepPage />} />
+                <Route path="/features/placement-preparation" element={<PublicPlacementPrepPage />} />
+                <Route path="/features/college-survival-kit" element={<PublicCollegeSurvivalKitPage />} />
 
-              {/* College Survival Kit Public Hub & Direct Tools */}
-              <Route path="/college-survival-kit" element={<CollegeSurvivalKitPage />} />
-              <Route path="/college-survival-kit/:toolId" element={<CollegeSurvivalKitPage />} />
+                {/* College Survival Kit Public Hub & Direct Tools */}
+                <Route path="/college-survival-kit" element={<CollegeSurvivalKitPage />} />
+                <Route path="/college-survival-kit/:toolId" element={<CollegeSurvivalKitPage />} />
 
-              {/* Public Student Portfolio Routes */}
-              <Route path="/u/:username" element={<PublicProfilePage />} />
-              <Route path="/profile/:username" element={<PublicProfilePage />} />
-              <Route path="/portfolio/:username" element={<PublicProfilePage />} />
+                {/* Public Student Portfolio Routes */}
+                <Route path="/u/:username" element={<PublicProfilePage />} />
+                <Route path="/profile/:username" element={<PublicProfilePage />} />
+                <Route path="/portfolio/:username" element={<PublicProfilePage />} />
 
-              {/* Auth Flow */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-            </Route>
-
-            {/* Student Workspace Routes: Protected by Session */}
-            <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']} />}>
-              <Route element={<StudentLayout />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/my-projects" element={<MyProjectsPage />} />
-                <Route path="/resume-builder" element={<ResumeBuilderPage />} />
-                <Route path="/ats-analyzer" element={<AtsAnalyzerPage />} />
-                <Route path="/skill-intelligence" element={<SkillIntelligencePage />} />
-                <Route path="/placement-preparation" element={<PlacementPrepLandingPage />} />
-                <Route path="/placement-preparation/:roleSlug" element={<PlacementPrepRolePage />} />
-                <Route path="/applications" element={<ApplicationsPage />} />
-                <Route path="/saved" element={<SavedWorkspacePage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/settings" element={<Navigate to="/profile" replace />} />
+                {/* Auth Flow */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
               </Route>
-            </Route>
 
-            {/* Admin Console Routes: Protected by Admin RoleGuard */}
-            <Route element={<RoleGuard allowedRoles={['ADMIN']} />}>
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Navigate to="/admin/dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboardPage />} />
-                <Route path="projects" element={<AdminDashboardPage />} />
-                <Route path="jobs" element={<AdminDashboardPage />} />
-                <Route path="students" element={<AdminDashboardPage />} />
-                <Route path="templates" element={<AdminDashboardPage />} />
-                <Route path="placement-preparation" element={<AdminPlacementPrepPage />} />
+              {/* Student Workspace Routes: Protected by Session */}
+              <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']} />}>
+                <Route element={<StudentLayout />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/my-projects" element={<MyProjectsPage />} />
+                  <Route path="/resume-builder" element={<Navigate to="/templates" replace />} />
+                  <Route path="/ats-analyzer" element={<AtsAnalyzerPage />} />
+                  <Route path="/skill-intelligence" element={<SkillIntelligencePage />} />
+                  <Route path="/placement-preparation" element={<PlacementPrepLandingPage />} />
+                  <Route path="/placement-preparation/:roleSlug" element={<PlacementPrepRolePage />} />
+                  <Route path="/applications" element={<ApplicationsPage />} />
+                  <Route path="/saved" element={<SavedWorkspacePage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/settings" element={<Navigate to="/profile" replace />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* 404 Fallback */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </Suspense>
-      </ErrorBoundary>
-    </BrowserRouter>
+              {/* Admin Console Routes: Protected by Admin RoleGuard */}
+              <Route element={<RoleGuard allowedRoles={['ADMIN']} />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                  <Route path="dashboard" element={<AdminDashboardPage />} />
+                  <Route path="projects" element={<AdminDashboardPage />} />
+                  <Route path="jobs" element={<AdminDashboardPage />} />
+                  <Route path="students" element={<AdminDashboardPage />} />
+                  <Route path="templates" element={<AdminDashboardPage />} />
+                  <Route path="placement-preparation" element={<AdminPlacementPrepPage />} />
+                </Route>
+              </Route>
+
+              {/* 404 Fallback */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
+      </BrowserRouter>
     </AuthProvider>
   );
 }

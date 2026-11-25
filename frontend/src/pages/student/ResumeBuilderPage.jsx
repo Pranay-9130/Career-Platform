@@ -28,6 +28,7 @@ import { resumeService } from '../../services/resumeService';
 import { userService } from '../../services/userService';
 import { useAuth } from '../../context/AuthContext';
 import { cleanSocialProfileUrl } from '@/utils/profileLinks';
+import { categorizeSkills } from '@/utils/skillCategorizer';
 
 export default function ResumeBuilderPage() {
   const [searchParams] = useSearchParams();
@@ -438,9 +439,19 @@ export default function ResumeBuilderPage() {
   const handleAddSkill = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      const val = skillInput.trim();
-      if (val && !skills.includes(val)) {
-        setSkills([...skills, val]);
+      const raw = skillInput.trim();
+      if (!raw) return;
+      const newItems = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      const existingLower = new Set(skills.map((s) => s.toLowerCase()));
+      const toAdd = [];
+      for (const item of newItems) {
+        if (!existingLower.has(item.toLowerCase())) {
+          existingLower.add(item.toLowerCase());
+          toAdd.push(item);
+        }
+      }
+      if (toAdd.length > 0) {
+        setSkills([...skills, ...toAdd]);
       }
       setSkillInput('');
     }
@@ -886,6 +897,28 @@ export default function ResumeBuilderPage() {
                     <div className="text-xs text-slate-400 italic">No skills added yet.</div>
                   )}
                 </div>
+
+                {skills.length > 0 && (
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                      Categorized ATS Preview:
+                    </span>
+                    <div className="space-y-1 text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                      {categorizeSkills(skills).map((group, idx) => (
+                        <div key={idx} className="leading-relaxed">
+                          {group.category ? (
+                            <>
+                              <strong className="text-slate-900 font-semibold">{group.category}:</strong>{' '}
+                              <span>{group.skills.join(', ')}</span>
+                            </>
+                          ) : (
+                            <span>{group.skills.join(', ')}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1278,9 +1311,19 @@ export default function ResumeBuilderPage() {
                 >
                   Technical Skills
                 </h2>
-                <div className="text-[11px] text-slate-700">
-                  <span className="font-semibold text-slate-900">Languages & Tools: </span>
-                  {skills.join(', ')}
+                <div className="text-[11px] text-slate-700 space-y-1">
+                  {categorizeSkills(skills).map((group, idx) => (
+                    <div key={idx} className="leading-tight">
+                      {group.category ? (
+                        <>
+                          <span className="font-semibold text-slate-900">{group.category}: </span>
+                          <span>{group.skills.join(', ')}</span>
+                        </>
+                      ) : (
+                        <span>{group.skills.join(', ')}</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

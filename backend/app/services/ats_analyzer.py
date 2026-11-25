@@ -58,12 +58,13 @@ def extract_resume_text_from_dict(resume_data: Dict[str, Any]) -> str:
     skills = resume_data.get("skills")
     if skills:
         lines.append("\nTECHNICAL SKILLS:")
-        if isinstance(skills, list):
-            lines.append(", ".join(str(s) for s in skills))
-        elif isinstance(skills, dict):
-            for k, v in skills.items():
-                items_str = ", ".join(str(i) for i in v) if isinstance(v, list) else str(v)
-                lines.append(f"{k}: {items_str}")
+        from app.services.skill_categorizer import categorize_skills
+        for cat_name, cat_items in categorize_skills(skills):
+            items_str = ", ".join(str(i) for i in cat_items)
+            if cat_name:
+                lines.append(f"{cat_name}: {items_str}")
+            else:
+                lines.append(items_str)
 
     experience = resume_data.get("experience") or []
     if experience:

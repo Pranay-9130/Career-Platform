@@ -115,12 +115,6 @@ export default function StudentLayout() {
       title: 'Career Tools',
       items: [
         {
-          name: 'Resume Builder',
-          path: '/resume-builder',
-          icon: FileText,
-          description: 'Tailored tech resumes',
-        },
-        {
           name: 'ATS Analyzer',
           path: '/ats-analyzer',
           icon: Sparkles,

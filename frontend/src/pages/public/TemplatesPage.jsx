@@ -20,6 +20,60 @@ import SEO from '@/components/common/SEO';
 import { getSoftwareApplicationSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
 import PdfViewer from '@/components/common/PdfViewer';
 
+const getSampleResumePayload = (templateId = 'template-1') => ({
+  title: 'ATS Professional Resume',
+  template_id: templateId,
+  personal_info: {
+    full_name: 'MOUNIKA RAYOTH',
+    headline: 'Software Engineer',
+    email: 'mounika.rayoth@example.com',
+    phone: '+91 9876543210',
+    location: 'Hyderabad, India',
+    github: 'github.com/mounika',
+    linkedin: 'linkedin.com/in/mounika',
+  },
+  summary:
+    'Proactive software engineer skilled in building scalable web platforms, REST APIs, and responsive web user interfaces. Passionate about clean code, automated testing, and agile team workflows.',
+  education: [
+    {
+      institution: 'Osmania University, Hyderabad',
+      degree: 'B.Tech in Computer Science and Engineering',
+      end_date: '2024',
+      gpa: '8.2 / 10.0',
+      highlights: 'Data Structures, Database Systems, Web Technologies',
+    },
+  ],
+  experience: [
+    {
+      role: 'Software Developer Intern',
+      company: 'Tech Solutions Inc',
+      start_date: 'Jan 2024',
+      end_date: 'Jul 2024',
+      location: 'Hyderabad',
+      bullets: [
+        'Contributed to development of internal admin portal using React and Python REST services.',
+        'Optimized database queries reducing search response latency by 32%.',
+        'Participated in sprint reviews and automated integration tests.',
+      ],
+    },
+  ],
+  projects: [
+    {
+      name: 'Career & Hiring Platform',
+      tech_stack: 'React, Tailwind CSS, Python, SQLite',
+      link: 'github.com/mounika/hiring-platform',
+      bullets: [
+        'Built student portfolio and resume templates supporting instant vector PDF generation.',
+        'Implemented role-based admin moderation and real-time job application tracking.',
+      ],
+    },
+  ],
+  skills: ['Python', 'JavaScript', 'React', 'HTML/CSS', 'MySQL', 'Git', 'Docker'],
+  certifications: [
+    { name: 'Full Stack Web Development', issuer: 'Coursera', date: '2023' },
+  ],
+});
+
 export default function TemplatesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -47,18 +101,6 @@ export default function TemplatesPage() {
         return;
       }
 
-      const isPdf =
-        previewTemplate.download_url &&
-        (previewTemplate.download_url.toLowerCase().includes('.pdf') ||
-          previewTemplate.uploaded_file_name?.toLowerCase().endsWith('.pdf') ||
-          previewTemplate.file_type === '.pdf');
-
-      if (!isPdf || previewTemplate.preview_image_url) {
-        setPreviewBlob(null);
-        setPreviewLoading(false);
-        return;
-      }
-
       // 1. Check in-memory cache first to avoid redundant downloads
       if (templateBlobCacheRef.current[previewTemplate.id]) {
         setPreviewBlob(templateBlobCacheRef.current[previewTemplate.id]);
@@ -70,12 +112,26 @@ export default function TemplatesPage() {
       try {
         setPreviewLoading(true);
         setPreviewError(false);
-        const rawEndpoint = previewTemplate.download_url || '';
-        const endpoint = rawEndpoint.startsWith('/api/') ? rawEndpoint.slice(4) : rawEndpoint;
-        const response = await api.get(endpoint, {
-          responseType: 'blob',
-        });
-        const blob = new Blob([response.data], { type: 'application/pdf' });
+
+        const isDownloadablePdf =
+          previewTemplate.download_url &&
+          (previewTemplate.download_url.toLowerCase().includes('.pdf') ||
+            previewTemplate.uploaded_file_name?.toLowerCase().endsWith('.pdf') ||
+            previewTemplate.file_type === '.pdf');
+
+        let blob;
+        if (isDownloadablePdf) {
+          const rawEndpoint = previewTemplate.download_url || '';
+          const endpoint = rawEndpoint.startsWith('/api/') ? rawEndpoint.slice(4) : rawEndpoint;
+          const response = await api.get(endpoint, {
+            responseType: 'blob',
+          });
+          blob = new Blob([response.data], { type: 'application/pdf' });
+        } else {
+          // Dynamic vector PDF generation for built-in or custom templates
+          blob = await resumeService.previewPdf(getSampleResumePayload(previewTemplate.id));
+        }
+
         templateBlobCacheRef.current[previewTemplate.id] = blob;
         if (active) {
           setPreviewBlob(blob);
@@ -97,6 +153,18 @@ export default function TemplatesPage() {
     return () => {
       active = false;
     };
+  }, [previewTemplate]);
+
+  // Handle Escape key to cleanly dismiss preview modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && previewTemplate) {
+        setPreviewTemplate(null);
+        setIsFullscreenModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [previewTemplate]);
 
   useEffect(() => {
@@ -290,11 +358,11 @@ export default function TemplatesPage() {
             </p>
           </div>
           <Link
-            to="/resume-builder"
+            to="/ats-analyzer"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-brand-primary to-brand-cyan hover:opacity-95 shadow-sm transition-all shrink-0 self-start sm:self-center"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Open Resume Builder</span>
+            <span>Check ATS Score</span>
           </Link>
         </div>
 
@@ -489,7 +557,15 @@ export default function TemplatesPage() {
 
         {/* ViewFull Live Preview Modal */}
         {previewTemplate && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setPreviewTemplate(null);
+                setIsFullscreenModal(false);
+              }
+            }}
+          >
             <div
               className={`bg-white rounded-3xl w-full border border-brand-border shadow-2xl overflow-hidden my-auto flex flex-col transition-all duration-200 ${
                 isFullscreenModal
@@ -533,11 +609,12 @@ export default function TemplatesPage() {
 
                   <button
                     type="button"
-                    onClick={() => handleUseTemplate(previewTemplate.id)}
+                    onClick={() => handleDownloadTemplate(previewTemplate)}
+                    disabled={downloadingId === previewTemplate.id}
                     className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-primary hover:bg-blue-600 text-white text-xs font-bold transition-colors shadow-xs"
                   >
-                    <span>Use in Builder</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <Download className={`w-3.5 h-3.5 ${downloadingId === previewTemplate.id ? 'animate-bounce' : ''}`} />
+                    <span>Download</span>
                   </button>
 
                   <button
@@ -573,9 +650,12 @@ export default function TemplatesPage() {
                     }
                     title={previewTemplate.name}
                     onDownload={() => handleDownloadTemplate(previewTemplate)}
-                    onUseTemplate={() => handleUseTemplate(previewTemplate.id)}
                     isFullscreen={isFullscreenModal}
                     onToggleFullscreen={(val) => setIsFullscreenModal(val)}
+                    onClose={() => {
+                      setPreviewTemplate(null);
+                      setIsFullscreenModal(false);
+                    }}
                     className="h-full border-0 rounded-none"
                   />
                 )}
@@ -590,9 +670,20 @@ export default function TemplatesPage() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
+                    onClick={() => {
+                      setPreviewTemplate(null);
+                      setIsFullscreenModal(false);
+                    }}
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 transition-colors shadow-xs"
+                  >
+                    Close Preview
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => handleDownloadTemplate(previewTemplate)}
                     disabled={downloadingId === previewTemplate.id}
-                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-brand-primary bg-white hover:bg-blue-50 border border-brand-border transition-colors inline-flex items-center gap-1.5 shadow-xs"
+                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-brand-primary hover:bg-blue-600 shadow-xs transition-colors inline-flex items-center gap-1.5"
                   >
                     <Download
                       className={`w-3.5 h-3.5 ${
@@ -604,15 +695,6 @@ export default function TemplatesPage() {
                         ? 'Downloading...'
                         : 'Download Template'}
                     </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleUseTemplate(previewTemplate.id)}
-                    className="px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-brand-primary hover:bg-blue-600 shadow-xs transition-colors inline-flex items-center gap-1.5"
-                  >
-                    <span>Use in Builder</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

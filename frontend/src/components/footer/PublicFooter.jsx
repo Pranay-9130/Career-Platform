@@ -95,11 +95,6 @@ export default function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link to="/features/resume-builder" className="text-brand-muted hover:text-brand-primary transition-colors">
-                  Resume Builder
-                </Link>
-              </li>
-              <li>
                 <Link to="/features/placement-preparation" className="text-brand-muted hover:text-brand-primary transition-colors">
                   Placement Preparation
                 </Link>

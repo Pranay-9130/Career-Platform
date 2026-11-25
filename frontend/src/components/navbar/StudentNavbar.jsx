@@ -48,7 +48,7 @@ export default function StudentNavbar({ onToggleSidebar }) {
     '/dashboard': { label: 'Dashboard Overview', icon: null },
     '/my-projects': { label: 'My Projects', icon: FolderGit2 },
     '/projects/submit': { label: 'Submit Project', icon: PlusCircle },
-    '/resume-builder': { label: 'Resume Builder', icon: FileText },
+    '/templates': { label: 'Resume Templates', icon: FileText },
     '/ats-analyzer': { label: 'ATS Resume Analyzer', icon: Sparkles },
     '/applications': { label: 'Applications Tracker', icon: Send },
     '/saved': { label: 'Saved Bookmarks', icon: Bookmark },

@@ -100,8 +100,8 @@ export default function DownloadAppPage() {
 
   const features = [
     {
-      title: 'Mobile Resume Builder',
-      desc: 'Build, edit, and tailor professional tech resumes directly on your mobile device with instant PDF export.',
+      title: 'Resume Templates & Formats',
+      desc: 'Browse, preview, and download professional ATS-optimized resume templates with instant high-fidelity formatting.',
       icon: FileText,
       color: 'bg-blue-50 text-brand-primary border-blue-100',
     },
@@ -443,8 +443,8 @@ export default function DownloadAppPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-blue-50/80 p-2.5 rounded-xl border border-blue-100 text-left">
                       <FileText className="w-4 h-4 text-brand-primary mb-1" />
-                      <div className="text-xs font-bold text-slate-900">Resume Builder</div>
-                      <div className="text-[10px] text-slate-500">Edit & Export</div>
+                      <div className="text-xs font-bold text-slate-900">Resume Templates</div>
+                      <div className="text-[10px] text-slate-500">Preview & Download</div>
                     </div>
                     <div className="bg-cyan-50/80 p-2.5 rounded-xl border border-cyan-100 text-left">
                       <Sparkles className="w-4 h-4 text-brand-cyan mb-1" />

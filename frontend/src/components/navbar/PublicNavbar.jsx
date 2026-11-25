@@ -92,14 +92,6 @@ export default function PublicNavbar() {
   // Features mega-menu list — 4 Core Career Tools
   const featureTools = [
     {
-      name: 'Resume Builder',
-      description: 'Create professional resumes with ATS-optimized templates and live export.',
-      path: '/features/resume-builder',
-      icon: FileText,
-      iconBg: 'bg-blue-50 text-brand-primary',
-      badge: 'PDF Export',
-    },
-    {
       name: 'ATS Resume Analyzer',
       description: 'Analyze resumes against job descriptions with deterministic match scoring.',
       path: '/features/ats-analyzer',
@@ -152,7 +144,6 @@ export default function PublicNavbar() {
     location.pathname.startsWith('/features') ||
     location.pathname === '/ats-analyzer' ||
     location.pathname === '/skill-intelligence' ||
-    location.pathname === '/resume-builder' ||
     location.pathname.startsWith('/placement-preparation') ||
     location.pathname.startsWith('/college-survival-kit');
 
@@ -411,11 +402,11 @@ export default function PublicNavbar() {
                           </Link>
 
                           <Link
-                            to="/resume-builder"
+                            to="/templates"
                             className="flex items-center gap-2.5 px-4 py-2 text-slate-700 hover:bg-brand-veryLight hover:text-brand-primary transition-colors"
                           >
                             <FileText className="w-4 h-4 text-slate-400" />
-                            <span>Resume Builder</span>
+                            <span>Resume Templates</span>
                           </Link>
 
                           <Link
@@ -682,12 +673,12 @@ export default function PublicNavbar() {
                     </Link>
 
                     <Link
-                      to="/resume-builder"
+                      to="/templates"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-sm text-slate-700 hover:bg-slate-50 font-medium"
                     >
                       <FileText className="w-4 h-4 text-slate-400" />
-                      <span>Resume Builder</span>
+                      <span>Resume Templates</span>
                     </Link>
 
                     <Link

@@ -14,6 +14,7 @@ from reportlab.platypus import (
     KeepTogether,
 )
 from reportlab.pdfgen import canvas
+from app.services.skill_categorizer import categorize_skills
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -274,16 +275,16 @@ def generate_resume_pdf(resume_data: Dict[str, Any]) -> bytes:
         story.append(Paragraph(escape_xml(summary.strip()), body_style))
         story.append(Spacer(1, 4 if not is_compact else 2))
 
-    # 3. Technical Skills
+    # 3. Technical Skills (Categorized for ATS compliance)
     if skills:
         add_section_header("Technical Skills")
-        if isinstance(skills, list):
-            skills_str = ", ".join(escape_xml(str(s)) for s in skills)
-            story.append(Paragraph(f"<b>Languages, Frameworks &amp; Tools:</b> {skills_str}", body_style))
-        elif isinstance(skills, dict):
-            for cat, items in skills.items():
-                items_str = ", ".join(escape_xml(str(i)) for i in items) if isinstance(items, list) else escape_xml(str(items))
-                story.append(Paragraph(f"<b>{escape_xml(cat)}:</b> {items_str}", body_style))
+        categorized_groups = categorize_skills(skills)
+        for cat_name, cat_items in categorized_groups:
+            items_str = ", ".join(escape_xml(str(s)) for s in cat_items)
+            if cat_name:
+                story.append(Paragraph(f"<b>{escape_xml(cat_name)}:</b> {items_str}", body_style))
+            else:
+                story.append(Paragraph(items_str, body_style))
         story.append(Spacer(1, 4 if not is_compact else 2))
 
     # 4. Work Experience

@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
 import { getDashboardPath, getInternalPath } from '@/utils/navigation';
+import { classifyLoginError } from '@/services/authErrors';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -31,6 +32,13 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState(null);
 
   const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
+
+  // Pre-warm backend connection if idle to reduce login latency
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
+      window.fetch('/api/auth/config', { method: 'GET', keepalive: true }).catch(() => {});
+    }
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -97,6 +105,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent duplicate concurrent authentication requests
     if (!validate()) return;
 
     setIsSubmitting(true);
@@ -113,11 +122,8 @@ export default function LoginPage() {
 
       navigate(targetPath, { replace: true });
     } catch (err) {
-      const message =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Unable to log in. Please check your credentials and try again.';
-      setErrorMessage(message);
+      const classified = classifyLoginError(err);
+      setErrorMessage(classified.message);
       setIsSubmitting(false);
     }
   };

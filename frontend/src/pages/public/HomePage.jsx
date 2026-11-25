@@ -344,7 +344,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Pillar 2: Resume Builder */}
+          {/* Pillar 2: Resume Templates */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-indigo-300">
             <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
             <div className="p-7 space-y-5">
@@ -353,41 +353,41 @@ export default function HomePage() {
                   <FileText className="w-6 h-6" />
                 </div>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Vector PDF Export
+                  Curated Formats
                 </span>
               </div>
 
               <div>
                 <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Resume Builder
+                  Resume Templates
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Create a professional resume for your next opportunity.
+                  Choose from professionally designed, ATS-ready resume templates.
                 </p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Split-screen live editing and real-time layout rendering</span>
+                  <span>ATS-approved structural hierarchy and modern styling</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Direct import of verified showcase projects</span>
+                  <span>Interactive full-page PDF preview with zoom and fit controls</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>1-click export to ATS-approved vector PDF</span>
+                  <span>Instant high-fidelity vector PDF template downloads</span>
                 </div>
               </div>
             </div>
 
             <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
               <Link
-                to="/features/resume-builder"
+                to="/templates"
                 className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
               >
-                <span>Explore Feature Details</span>
+                <span>Browse Templates</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>

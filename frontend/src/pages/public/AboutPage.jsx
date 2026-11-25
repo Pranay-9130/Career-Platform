@@ -46,15 +46,15 @@ export default function AboutPage() {
       actionText: 'Explore Guides',
     },
     {
-      id: 'resume-builder',
-      title: 'Resume Builder',
+      id: 'resume-templates',
+      title: 'Resume Templates',
       icon: FileText,
       color: 'bg-blue-50 text-brand-primary',
-      badge: 'Interactive Editor',
+      badge: 'Curated Formats',
       description:
-        'Create clean, structured resumes designed specifically to be readable by Applicant Tracking Systems. Edit personal details, education, experience, and import verified portfolio projects directly with one-click PDF export.',
-      route: '/features/resume-builder',
-      actionText: 'Open Builder',
+        'Browse and download professionally structured resume templates crafted for student applications and software engineering careers with ATS-approved layouts.',
+      route: '/templates',
+      actionText: 'View Templates',
     },
     {
       id: 'ats-analyzer',

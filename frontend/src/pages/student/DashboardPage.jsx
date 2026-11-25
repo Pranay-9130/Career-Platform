@@ -184,7 +184,7 @@ export default function DashboardPage() {
 
         {/* Metric 2: Resume Status */}
         <Link
-          to="/resume-builder"
+          to="/templates"
           className="group p-5 bg-white rounded-card border border-brand-border shadow-card hover:shadow-card-hover hover:border-brand-primary/40 transition-all flex flex-col justify-between"
         >
           <div>
@@ -222,7 +222,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center justify-between text-xs text-brand-muted">
               <span className="truncate max-w-[150px]">
-                {data?.has_resume ? (data?.latest_resume_title || 'Active Resume') : 'Build first ATS resume'}
+                {data?.has_resume ? (data?.latest_resume_title || 'Active Resume') : 'Browse ATS Templates'}
               </span>
               <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-brand-cyan group-hover:translate-x-1 transition-all shrink-0" />
             </div>
@@ -487,15 +487,15 @@ export default function DashboardPage() {
       {/* 6. Quick Action Cards Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Link
-          to="/resume-builder"
+          to="/templates"
           className="p-3.5 bg-white rounded-2xl border border-brand-border shadow-xs hover:border-brand-primary/40 hover:bg-blue-50/40 transition-all flex items-center gap-3 group"
         >
           <div className="w-8 h-8 rounded-xl bg-cyan-50 text-brand-cyan flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
             <FileText className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-brand-text truncate">Build Resume</p>
-            <p className="text-[11px] text-brand-muted truncate">Modern templates</p>
+            <p className="text-xs font-bold text-brand-text truncate">Resume Templates</p>
+            <p className="text-[11px] text-brand-muted truncate">ATS-ready formats</p>
           </div>
         </Link>
 
@@ -1160,7 +1160,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {(data?.readiness_details?.criteria || [
               { id: 'profile', name: 'Profile Foundation', weight: 20, score: 0, status: 'not_started', improvement: 'Add headline, bio, university, and social links in Profile.', link: '/profile' },
-              { id: 'resume', name: 'Resume & ATS Optimization', weight: 20, score: 0, status: 'not_started', improvement: 'Build a structured resume and run an ATS match scan.', link: '/resume-builder' },
+              { id: 'resume', name: 'Resume & ATS Optimization', weight: 20, score: 0, status: 'not_started', improvement: 'Select an ATS template and run a resume match scan.', link: '/templates' },
               { id: 'skills', name: 'Skill Intelligence & Roadmap', weight: 20, score: 0, status: 'not_started', improvement: 'Select target role and confirm technical skills.', link: '/skill-intelligence' },
               { id: 'projects', name: 'Practical Projects & Verification', weight: 25, score: 0, status: 'not_started', improvement: 'Create and submit a project with GitHub repo in My Projects.', link: '/my-projects' },
               { id: 'applications', name: 'Opportunities & Applications', weight: 15, score: 0, status: 'not_started', improvement: 'Submit internship or job applications to connect with employers.', link: '/jobs' },

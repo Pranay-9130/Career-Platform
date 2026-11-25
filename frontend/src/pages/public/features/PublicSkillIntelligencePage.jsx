@@ -375,9 +375,9 @@ export default function PublicSkillIntelligencePage() {
                   Get Started Free
                 </Button>
               </Link>
-              <Link to="/features/resume-builder">
+              <Link to="/templates">
                 <Button size="lg" variant="outline" className="text-white border-white/60 hover:bg-white/10 px-6">
-                  Explore Resume Builder
+                  Explore Resume Templates
                 </Button>
               </Link>
             </div>
