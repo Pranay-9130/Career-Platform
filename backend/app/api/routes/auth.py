@@ -11,7 +11,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from sqlalchemy import select, desc, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import noload
+from sqlalchemy.orm import noload, load_only
 from google.auth.exceptions import GoogleAuthError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
@@ -274,7 +274,22 @@ async def login_user(
         try:
             result = await db.execute(
                 select(User)
-                .options(noload(User.profile))
+                .options(
+                    load_only(
+                        User.id,
+                        User.email,
+                        User.hashed_password,
+                        User.full_name,
+                        User.role,
+                        User.is_active,
+                        User.is_verified,
+                        User.headline,
+                        User.avatar_url,
+                        User.created_at,
+                        User.updated_at,
+                    ),
+                    noload("*"),
+                )
                 .where(
                     User.role == UserRole.ADMIN,
                     User.is_active == True,
@@ -328,7 +343,22 @@ async def login_user(
         try:
             result = await db.execute(
                 select(User)
-                .options(noload(User.profile))
+                .options(
+                    load_only(
+                        User.id,
+                        User.email,
+                        User.hashed_password,
+                        User.full_name,
+                        User.role,
+                        User.is_active,
+                        User.is_verified,
+                        User.headline,
+                        User.avatar_url,
+                        User.created_at,
+                        User.updated_at,
+                    ),
+                    noload("*"),
+                )
                 .where(User.email == normalized_email)
             )
         except SQLAlchemyError:
@@ -586,7 +616,24 @@ async def refresh_session(
         )
 
     user = (await db.execute(
-        select(User).options(noload(User.profile)).where(User.id == user_id)
+        select(User)
+        .options(
+            load_only(
+                User.id,
+                User.email,
+                User.hashed_password,
+                User.full_name,
+                User.role,
+                User.is_active,
+                User.is_verified,
+                User.headline,
+                User.avatar_url,
+                User.created_at,
+                User.updated_at,
+            ),
+            noload("*"),
+        )
+        .where(User.id == user_id)
     )).scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(

@@ -47,8 +47,9 @@ export const authService = {
     if (!loginPromise) {
       loginPromise = (async () => {
         // Keep authentication bounded independently from slower upload/data APIs.
-        // A broken connection must not hold the login form for the global 30s timeout.
-        const response = await api.post('/auth/login', credentials, { timeout: 12000 });
+        // A 25s timeout ensures cloud cold-starts and connection handshakes can finish
+        // without falsely aborting valid login requests before the server responds.
+        const response = await api.post('/auth/login', credentials, { timeout: 25000 });
         const { access_token, user } = response.data;
         if (access_token && user) authStorage.setSession(access_token, user, persistent);
         return response.data;

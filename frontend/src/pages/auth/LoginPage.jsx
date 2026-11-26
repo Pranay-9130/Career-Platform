@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Mail,
@@ -16,6 +16,7 @@ import { getDashboardPath, getInternalPath } from '@/utils/navigation';
 import { classifyLoginError } from '@/services/authErrors';
 import { dashboardService } from '@/services/dashboardService';
 import { adminService } from '@/services/adminService';
+import api from '@/services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -35,6 +36,11 @@ export default function LoginPage() {
   const submissionInFlight = useRef(false);
 
   const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
+
+  // Pre-warm backend connection so Render instance & DB pool are ready while user enters credentials
+  useEffect(() => {
+    void api.get('/health', { timeout: 8000 }).catch(() => {});
+  }, []);
 
   const preloadDashboard = (isAdmin) => {
     if (isAdmin) {

@@ -207,7 +207,7 @@ test('login uses a bounded timeout and collapses rapid duplicate submissions', a
   ]);
 
   assert.equal(backendHits, 1, 'rapid clicks must create exactly one login request');
-  assert.equal(observedTimeout, 12000);
+  assert.equal(observedTimeout, 25000);
   assert.equal(first.access_token, 'single-flight-login-token');
   assert.deepEqual(second, first);
   assert.deepEqual(third, first);
