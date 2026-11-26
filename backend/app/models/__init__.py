@@ -26,6 +26,7 @@ from app.models.placement_preparation import (
     PreparationTopic,
     PreparationMaterial,
 )
+from app.models.career_discovery import StudentCareerDiscovery
 
 __all__ = [
     "Base",
@@ -56,6 +57,7 @@ __all__ = [
     "PreparationRole",
     "PreparationTopic",
     "PreparationMaterial",
+    "StudentCareerDiscovery",
 ]
 
 

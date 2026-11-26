@@ -78,6 +78,7 @@ const SavedWorkspacePage = lazyWithRetry(() => import('./pages/student/SavedWork
 const ResumeBuilderPage = lazyWithRetry(() => import('./pages/student/ResumeBuilderPage'));
 const AtsAnalyzerPage = lazyWithRetry(() => import('./pages/student/AtsAnalyzerPage'));
 const SkillIntelligencePage = lazyWithRetry(() => import('./pages/student/SkillIntelligencePage'));
+const CareerDiscoveryPage = lazyWithRetry(() => import('./pages/student/CareerDiscoveryPage'));
 const PlacementPrepLandingPage = lazyWithRetry(() => import('./pages/student/PlacementPrepLandingPage'));
 const PlacementPrepRolePage = lazyWithRetry(() => import('./pages/student/PlacementPrepRolePage'));
 
@@ -150,6 +151,7 @@ export default function App() {
                 <Route path="/design-system" element={<DesignSystemShowcasePage />} />
 
                 {/* Public Feature Preview Pages */}
+                <Route path="/features/career-discovery" element={<Navigate to="/career-discovery" replace />} />
                 <Route path="/features/ats-analyzer" element={<PublicAtsAnalyzerPage />} />
                 <Route path="/features/skill-intelligence" element={<PublicSkillIntelligencePage />} />
                 <Route path="/features/resume-builder" element={<Navigate to="/templates" replace />} />
@@ -177,6 +179,7 @@ export default function App() {
               <Route element={<ProtectedRoute allowedRoles={['STUDENT', 'CONTRIBUTOR', 'ADMIN']} />}>
                 <Route element={<StudentLayout />}>
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/career-discovery" element={<CareerDiscoveryPage />} />
                   <Route path="/my-projects" element={<MyProjectsPage />} />
                   <Route path="/resume-builder" element={<Navigate to="/templates" replace />} />
                   <Route path="/ats-analyzer" element={<AtsAnalyzerPage />} />

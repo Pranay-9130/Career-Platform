@@ -46,15 +46,15 @@ export default function AboutPage() {
       actionText: 'Explore Guides',
     },
     {
-      id: 'resume-templates',
-      title: 'Resume Templates',
-      icon: FileText,
-      color: 'bg-blue-50 text-brand-primary',
-      badge: 'Curated Formats',
+      id: 'career-discovery',
+      title: 'Career Discovery',
+      icon: Compass,
+      color: 'bg-indigo-50 text-indigo-600',
+      badge: 'Interactive Guidance',
       description:
-        'Browse and download professionally structured resume templates crafted for student applications and software engineering careers with ATS-approved layouts.',
-      route: '/templates',
-      actionText: 'View Templates',
+        'Discover your technical strengths, assess domain competencies, and follow a 7-stage actionable career roadmap tailored to your graduation timeline.',
+      route: '/career-discovery',
+      actionText: 'Start Discovery',
     },
     {
       id: 'ats-analyzer',

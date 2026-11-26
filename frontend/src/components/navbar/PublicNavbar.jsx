@@ -88,14 +88,22 @@ export default function PublicNavbar() {
     };
   }, []);
 
-  // Features mega-menu list — 4 Core Career Tools
+  // Features mega-menu list — 5 Core Career Tools
   const featureTools = [
+    {
+      name: 'Career Discovery',
+      description: 'Discover your strengths, assess competencies, and generate your personalized roadmap.',
+      path: '/features/career-discovery',
+      icon: Compass,
+      iconBg: 'bg-indigo-50 text-indigo-600',
+      badge: 'Interactive AI',
+    },
     {
       name: 'ATS Resume Analyzer',
       description: 'Analyze resumes against job descriptions with deterministic match scoring.',
       path: '/features/ats-analyzer',
       icon: Sparkles,
-      iconBg: 'bg-indigo-50 text-indigo-600',
+      iconBg: 'bg-blue-50 text-brand-primary',
       badge: 'ATS Scoring',
     },
     {
@@ -141,6 +149,7 @@ export default function PublicNavbar() {
 
   const isFeaturesActive =
     location.pathname.startsWith('/features') ||
+    location.pathname === '/career-discovery' ||
     location.pathname === '/ats-analyzer' ||
     location.pathname === '/skill-intelligence' ||
     location.pathname.startsWith('/placement-preparation') ||

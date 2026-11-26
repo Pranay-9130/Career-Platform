@@ -115,6 +115,13 @@ export default function StudentLayout() {
       title: 'Career Tools',
       items: [
         {
+          name: 'Career Discovery',
+          path: '/career-discovery',
+          icon: Compass,
+          badge: 'NEW',
+          description: 'Personalized career roadmap',
+        },
+        {
           name: 'ATS Analyzer',
           path: '/ats-analyzer',
           icon: Sparkles,

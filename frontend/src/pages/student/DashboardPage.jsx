@@ -31,10 +31,15 @@ import Badge from '@/components/common/Badge';
 import Skeleton from '@/components/common/Skeleton';
 import Modal from '@/components/common/Modal';
 import SkillIntelligenceSummaryCard from '@/components/dashboard/SkillIntelligenceSummaryCard';
+import { careerDiscoveryService } from '@/services/careerDiscoveryService';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [discoverySummary, setDiscoverySummary] = useState(null);
+  const [dismissDiscoveryCard, setDismissDiscoveryCard] = useState(
+    () => localStorage.getItem('dismiss_discovery_welcome') === 'true'
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -51,10 +56,12 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const summary = await dashboardService.getSummary(
-        isRefresh ? { _skipCache: true } : {}
-      );
+      const [summary, disc] = await Promise.all([
+        dashboardService.getSummary(isRefresh ? { _skipCache: true } : {}),
+        careerDiscoveryService.getSummary().catch(() => null),
+      ]);
       setData(summary);
+      if (disc) setDiscoverySummary(disc);
       hasDataRef.current = true;
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
@@ -143,6 +150,91 @@ export default function DashboardPage() {
           <Button variant="outline" size="sm" onClick={() => fetchDashboardData()}>
             Retry
           </Button>
+        </div>
+      )}
+
+      {/* 3. Career Discovery Onboarding / Summary Card */}
+      {discoverySummary?.show_card && !discoverySummary?.is_completed && !dismissDiscoveryCard && (
+        <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden border border-indigo-700/40">
+          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-56 h-56 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-bold uppercase tracking-wider border border-indigo-400/30">
+                <Compass className="w-3.5 h-3.5 text-indigo-300" />
+                <span>Your Career Journey Starts Here!</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                Discover your strengths, explore your interests, and unlock a personalized 7-stage roadmap.
+              </h2>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-indigo-200 pt-1">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>3–5 min completion</span>
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>5 indicative assessment questions</span>
+                </span>
+                <span>•</span>
+                <span>Zero guesswork</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+              <Link to="/career-discovery">
+                <Button variant="gradient" size="sm" rightIcon={ArrowRight} className="font-bold text-xs px-5 shadow-md">
+                  Discover My Career Path
+                </Button>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem('dismiss_discovery_welcome', 'true');
+                  setDismissDiscoveryCard(true);
+                }}
+                className="text-xs text-slate-400 hover:text-white transition-colors text-center py-1.5"
+              >
+                I'll explore the dashboard first
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Career Discovery Completed Summary Card */}
+      {discoverySummary?.show_card && discoverySummary?.is_completed && (
+        <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white rounded-2xl border border-indigo-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Compass className="w-5 h-5" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                  Career Match: {discoverySummary.match_percentage}%
+                </span>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Target Path: {discoverySummary.primary_role}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-600">
+                {discoverySummary.next_stage ? (
+                  <span>Next Step: <strong>{discoverySummary.next_stage.title}</strong> — {discoverySummary.next_stage.description}</span>
+                ) : (
+                  <span>All 7 roadmap stages completed! Explore verified job vacancies.</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 pl-13 md:pl-0">
+            <Link to="/career-discovery">
+              <Button variant="outline" size="sm" rightIcon={ArrowRight} className="text-xs font-semibold text-brand-primary border-brand-primary/30">
+                View Full Roadmap & Jobs
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
 
@@ -487,15 +579,15 @@ export default function DashboardPage() {
       {/* 6. Quick Action Cards Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Link
-          to="/templates"
+          to="/career-discovery"
           className="p-3.5 bg-white rounded-2xl border border-brand-border shadow-xs hover:border-brand-primary/40 hover:bg-blue-50/40 transition-all flex items-center gap-3 group"
         >
-          <div className="w-8 h-8 rounded-xl bg-cyan-50 text-brand-cyan flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <FileText className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Compass className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-brand-text truncate">Resume Templates</p>
-            <p className="text-[11px] text-brand-muted truncate">ATS-ready formats</p>
+            <p className="text-xs font-bold text-brand-text truncate">Career Discovery</p>
+            <p className="text-[11px] text-brand-muted truncate">Personalized roadmap</p>
           </div>
         </Link>
 

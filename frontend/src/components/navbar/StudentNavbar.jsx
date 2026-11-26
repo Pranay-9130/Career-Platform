@@ -16,6 +16,7 @@ import {
   Bookmark,
   PlusCircle,
   Shield,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import NotificationDropdown from './NotificationDropdown';
@@ -46,6 +47,7 @@ export default function StudentNavbar({ onToggleSidebar }) {
 
   const pageMeta = {
     '/dashboard': { label: 'Dashboard Overview', icon: null },
+    '/career-discovery': { label: 'Career Discovery', icon: Compass },
     '/my-projects': { label: 'My Projects', icon: FolderGit2 },
     '/projects/submit': { label: 'Submit Project', icon: PlusCircle },
     '/templates': { label: 'Resume Templates', icon: FileText },

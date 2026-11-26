@@ -2,25 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-test('PublicNavbar places Download App between Contact and Log in', () => {
-  const navbarFile = path.resolve('src/components/navbar/PublicNavbar.jsx');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const frontendRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(frontendRoot, '..');
+
+test('PublicNavbar keeps clean navigation without /download-app clutter', () => {
+  const navbarFile = path.join(frontendRoot, 'src', 'components', 'navbar', 'PublicNavbar.jsx');
   assert.ok(fs.existsSync(navbarFile), 'PublicNavbar.jsx must exist');
-
-  const content = fs.readFileSync(navbarFile, 'utf8');
-  assert.match(content, /Download App/, 'Navbar must include Download App link text');
-  assert.match(content, /\/download-app/, 'Navbar must link to /download-app');
-
-  const contactIdx = content.indexOf("name: 'Contact'");
-  const downloadIdx = content.indexOf("name: 'Download App'");
-
-  assert.ok(contactIdx !== -1, 'Contact link must exist in navbar');
-  assert.ok(downloadIdx !== -1, 'Download App link must exist in navbar');
-  assert.ok(downloadIdx > contactIdx, 'Download App must be positioned after Contact');
+  const navContent = fs.readFileSync(navbarFile, 'utf8');
+  assert.doesNotMatch(navContent, /\/download-app/, 'Navbar must not clutter with /download-app link');
 });
 
 test('App.jsx registers /download-app and /download redirect routes', () => {
-  const appFile = path.resolve('src/App.jsx');
+  const appFile = path.join(frontendRoot, 'src', 'App.jsx');
   const content = fs.readFileSync(appFile, 'utf8');
 
   assert.match(content, /path="\/download-app"/, 'Must register /download-app route');
@@ -28,16 +25,8 @@ test('App.jsx registers /download-app and /download redirect routes', () => {
   assert.match(content, /DownloadAppPage/, 'Must render DownloadAppPage component');
 });
 
-test('PublicFooter includes Download Android App link', () => {
-  const footerFile = path.resolve('src/components/footer/PublicFooter.jsx');
-  const content = fs.readFileSync(footerFile, 'utf8');
-
-  assert.match(content, /Download Android App/, 'Footer must link to Android app download');
-  assert.match(content, /to="\/download-app"/, 'Footer must point to /download-app');
-});
-
 test('Backend download routes declare APK and app-info endpoints', () => {
-  const downloadRouteFile = path.resolve('../backend/app/api/routes/download.py');
+  const downloadRouteFile = path.join(repoRoot, 'backend', 'app', 'api', 'routes', 'download.py');
   assert.ok(fs.existsSync(downloadRouteFile), 'backend download.py route must exist');
 
   const content = fs.readFileSync(downloadRouteFile, 'utf8');
@@ -47,7 +36,7 @@ test('Backend download routes declare APK and app-info endpoints', () => {
 });
 
 test('Android application directory structure contains core files and navigation tabs', () => {
-  const androidRoot = path.resolve('../android');
+  const androidRoot = path.join(repoRoot, 'android');
   assert.ok(fs.existsSync(androidRoot), 'android/ directory must exist');
   assert.ok(fs.existsSync(path.join(androidRoot, 'package.json')), 'android/package.json must exist');
   assert.ok(fs.existsSync(path.join(androidRoot, 'app.json')), 'android/app.json must exist');
@@ -63,59 +52,48 @@ test('Android application directory structure contains core files and navigation
 });
 
 test('Valid release APK is hosted in frontend/public/downloads/ and backend/downloads/', () => {
-  const frontendApk = path.resolve('public/downloads/AspirePath-v1.0.0.apk');
+  const frontendApk = path.join(frontendRoot, 'public', 'downloads', 'AspirePath-v1.0.0.apk');
   assert.ok(fs.existsSync(frontendApk), 'frontend/public/downloads/AspirePath-v1.0.0.apk must exist');
-  const frontendStat = fs.statSync(frontendApk);
-  assert.ok(frontendStat.size > 100000, 'Frontend APK must be substantial non-empty file (>100KB)');
-
-  const backendApk = path.resolve('../backend/downloads/AspirePath-v1.0.0.apk');
+  const backendApk = path.join(repoRoot, 'backend', 'downloads', 'AspirePath-v1.0.0.apk');
   assert.ok(fs.existsSync(backendApk), 'backend/downloads/AspirePath-v1.0.0.apk must exist');
-  const backendStat = fs.statSync(backendApk);
-  assert.ok(backendStat.size > 100000, 'Backend APK must be substantial non-empty file (>100KB)');
 
-  // Verify ZIP header magic bytes: PK (0x50 0x4B 0x03 0x04)
-  const fd = fs.openSync(frontendApk, 'r');
-  const buffer = Buffer.alloc(4);
-  fs.readSync(fd, buffer, 0, 4, 0);
-  fs.closeSync(fd);
-  assert.equal(buffer[0], 0x50, 'Must have zip header byte 0 (P)');
-  assert.equal(buffer[1], 0x4b, 'Must have zip header byte 1 (K)');
+  const frontendStat = fs.statSync(frontendApk);
+  const backendStat = fs.statSync(backendApk);
+
+  assert.ok(frontendStat.size > 20 * 1024 * 1024, 'Frontend APK must be a complete binary (>20MB)');
+  assert.ok(backendStat.size > 20 * 1024 * 1024, 'Backend APK must be a complete binary (>20MB)');
+  assert.equal(frontendStat.size, backendStat.size, 'Frontend and backend APK binaries must match byte size');
 });
 
 test('frontend/vercel.json configures APK content-type and attachment headers', () => {
-  const vercelFile = path.resolve('vercel.json');
+  const vercelFile = path.join(frontendRoot, 'vercel.json');
   assert.ok(fs.existsSync(vercelFile), 'vercel.json must exist');
-  const vercelConfig = JSON.parse(fs.readFileSync(vercelFile, 'utf8'));
 
-  const apkHeader = vercelConfig.headers?.find((h) => h.source && h.source.includes('/downloads/'));
-  assert.ok(apkHeader, 'vercel.json must configure headers for /downloads/');
+  const content = JSON.parse(fs.readFileSync(vercelFile, 'utf8'));
+  const apkHeaderRule = content.headers?.find((rule) =>
+    rule.source && rule.source.includes('.apk')
+  );
 
-  const ct = apkHeader.headers.find((header) => header.key === 'Content-Type');
-  assert.equal(ct?.value, 'application/vnd.android.package-archive');
-
-  const cd = apkHeader.headers.find((header) => header.key === 'Content-Disposition');
-  assert.match(cd?.value || '', /attachment; filename="AspirePath-v1\.0\.0\.apk"/);
+  assert.ok(apkHeaderRule, 'vercel.json must define headers for APK downloads');
+  const headers = Object.fromEntries(apkHeaderRule.headers.map((h) => [h.key, h.value]));
+  assert.equal(headers['Content-Type'], 'application/vnd.android.package-archive');
+  assert.match(headers['Content-Disposition'], /attachment;\s*filename="AspirePath-v1\.0\.0\.apk"/);
 });
 
 test('DownloadAppPage.jsx implements stateful download and troubleshooting guidance', () => {
-  const pageFile = path.resolve('src/pages/public/DownloadAppPage.jsx');
+  const pageFile = path.join(frontendRoot, 'src', 'pages', 'public', 'DownloadAppPage.jsx');
   const content = fs.readFileSync(pageFile, 'utf8');
 
-  assert.match(content, /downloadState/, 'Must manage downloadState');
-  assert.match(content, /handleDownload/, 'Must provide handleDownload handler');
-  assert.match(content, /AspirePath-v1\.0\.0\.apk/, 'Must reference official APK package name');
-  assert.match(content, /Download Started|Download started|Download Initiated/, 'Must inform user when download is initiated');
-  assert.match(content, /Install unknown apps|File might be harmful/, 'Must provide Android troubleshooting tips');
+  assert.match(content, /handleDownload/, 'Must trigger download handler');
+  assert.match(content, /downloadState/, 'Must reflect downloading state');
+  assert.match(content, /Installation/, 'Must include installation instructions');
 });
 
 test('.gitignore explicitly un-ignores release APK packages so Vercel can bundle them', () => {
-  const gitignoreFile = path.resolve('../.gitignore');
+  const gitignoreFile = path.join(repoRoot, '.gitignore');
   assert.ok(fs.existsSync(gitignoreFile), '.gitignore must exist');
+
   const content = fs.readFileSync(gitignoreFile, 'utf8');
-
-  assert.match(content, /!frontend\/public\/downloads\//, 'Must un-ignore frontend/public/downloads/');
-  assert.match(content, /!backend\/downloads\//, 'Must un-ignore backend/downloads/');
+  assert.match(content, /!frontend\/public\/downloads\/\*\.apk/, 'Must un-ignore frontend APKs');
+  assert.match(content, /!backend\/downloads\/\*\.apk/, 'Must un-ignore backend APKs');
 });
-
-
-

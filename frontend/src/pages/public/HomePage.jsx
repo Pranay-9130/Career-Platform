@@ -311,50 +311,50 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Pillar 2: Resume Templates */}
+          {/* Pillar 2: Career Discovery */}
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all duration-300 flex flex-col justify-between overflow-hidden group hover:-translate-y-1.5 hover:border-indigo-300">
             <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500" />
             <div className="p-7 space-y-5">
               <div className="flex items-center justify-between">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
-                  <FileText className="w-6 h-6" />
+                  <Compass className="w-6 h-6" />
                 </div>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  Curated Formats
+                  Interactive AI
                 </span>
               </div>
 
               <div>
                 <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                  Resume Templates
+                  Career Discovery
                 </h3>
                 <p className="mt-2 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Choose from professionally designed, ATS-ready resume templates.
+                  Discover your strengths, assess competencies, and get a tailored 7-stage roadmap.
                 </p>
               </div>
 
               <div className="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>ATS-approved structural hierarchy and modern styling</span>
+                  <span>5-step technical interest & skill background mapping</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Interactive full-page PDF preview with zoom and fit controls</span>
+                  <span>Indicative domain assessment tailored to your level</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Instant high-fidelity vector PDF template downloads</span>
+                  <span>Personalized 7-stage actionable career roadmap</span>
                 </div>
               </div>
             </div>
 
             <div className="px-7 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
               <Link
-                to="/templates"
+                to="/career-discovery"
                 className="text-xs font-bold text-brand-primary flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
               >
-                <span>Browse Templates</span>
+                <span>Discover Your Path</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
