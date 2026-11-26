@@ -584,9 +584,11 @@ class CareerDiscoveryService:
         discovery_data: Dict[str, Any],
         db: AsyncSession
     ) -> Dict[str, Any]:
-        interests = [i.lower() for i in discovery_data.get("technical_interests", [])]
-        self_skills = [s.strip().lower() for s in discovery_data.get("self_reported_skills", [])]
-        assessment_result = discovery_data.get("assessment_result", {})
+        raw_interests = discovery_data.get("technical_interests") or []
+        interests = [str(i).lower() for i in raw_interests if i]
+        raw_skills = discovery_data.get("self_reported_skills") or []
+        self_skills = [str(s).strip().lower() for s in raw_skills if s]
+        assessment_result = discovery_data.get("assessment_result") or {}
         accuracy = assessment_result.get("accuracy_percentage", 60)
 
         # Match against CURATED_ROLES

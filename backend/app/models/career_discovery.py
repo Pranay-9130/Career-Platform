@@ -62,7 +62,7 @@ class StudentCareerDiscovery(BaseUUIDModel, TimestampMixin):
     # e.g. [{"stage_id": 1, "title": "Core Skill Acquisition", "status": "completed", ...}]
     roadmap_progress = Column(JSON, nullable=True)
 
-    completed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
     # Relationship to user
     user = relationship("User", backref="career_discovery", lazy="joined")

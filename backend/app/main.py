@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
         return
 
     from app.core.database import engine, Base, AsyncSessionLocal
+    import app.models.career_discovery
 
     # Ensure tables exist safely across environments
     async with engine.begin() as conn:

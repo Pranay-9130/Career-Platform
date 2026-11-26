@@ -270,7 +270,17 @@ export default function CareerDiscoveryPage() {
   // =========================================================================
   // VIEW 1: RESULTS & PERSONALIZED ROADMAP
   // =========================================================================
-  if (viewMode === 'results' && discoveryState?.recommendations) {
+  if (viewMode === 'results') {
+    if (!discoveryState?.recommendations) {
+      return (
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 animate-spin">
+            <Compass className="w-6 h-6" />
+          </div>
+          <p className="text-sm font-semibold text-slate-600">Generating your personalized roadmap...</p>
+        </div>
+      );
+    }
     const { primary_role, recommended_roles, recommended_projects, recommended_preparation, matched_jobs, roadmap } =
       discoveryState.recommendations;
     const assessmentResult = discoveryState.assessment_result || {};
