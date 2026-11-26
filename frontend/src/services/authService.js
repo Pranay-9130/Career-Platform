@@ -1,6 +1,8 @@
 import api, { executeTokenRefresh, clearApiCache } from './api.js';
 import { authStorage } from './authStorage.js';
 
+let loginPromise = null;
+
 export const authService = {
   getToken: () => authStorage.getToken(),
 
@@ -42,10 +44,19 @@ export const authService = {
   },
 
   login: async (credentials, persistent = true) => {
-    const response = await api.post('/auth/login', credentials);
-    const { access_token, user } = response.data;
-    if (access_token && user) authStorage.setSession(access_token, user, persistent);
-    return response.data;
+    if (!loginPromise) {
+      loginPromise = (async () => {
+        // Keep authentication bounded independently from slower upload/data APIs.
+        // A broken connection must not hold the login form for the global 30s timeout.
+        const response = await api.post('/auth/login', credentials, { timeout: 12000 });
+        const { access_token, user } = response.data;
+        if (access_token && user) authStorage.setSession(access_token, user, persistent);
+        return response.data;
+      })().finally(() => {
+        loginPromise = null;
+      });
+    }
+    return loginPromise;
   },
 
   register: async (userData) => {

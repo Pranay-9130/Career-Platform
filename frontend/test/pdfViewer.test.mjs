@@ -20,7 +20,7 @@ test('TemplatesPage integrates PdfViewer and avoids iframe blob blocking', () =>
   const filePath = path.resolve('src/pages/public/TemplatesPage.jsx');
   const content = fs.readFileSync(filePath, 'utf-8');
 
-  assert.ok(content.includes("import PdfViewer from '@/components/common/PdfViewer'"), 'Must import PdfViewer');
+  assert.ok(content.includes("lazy(() => import('@/components/common/PdfViewer'))"), 'Load PDF.js only when a preview is opened');
   assert.ok(content.includes('<PdfViewer'), 'Must render PdfViewer component');
   assert.ok(!content.includes('<iframe'), 'Must not render iframe for PDF preview');
   assert.ok(content.includes('templateBlobCacheRef'), 'Must cache PDF blobs to avoid duplicate downloads');

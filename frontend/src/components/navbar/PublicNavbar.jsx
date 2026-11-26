@@ -24,7 +24,6 @@ import {
 import { Button } from '@/components/common';
 import { useAuth } from '@/context/AuthContext';
 import { getDashboardPath } from '@/utils/navigation';
-import logoPng from '@/assets/logo.png';
 
 export default function PublicNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -182,14 +181,17 @@ export default function PublicNavbar() {
           aria-label="AspirePath Home"
         >
           {!logoError ? (
-            <img
-              src={logoPng}
-              alt="AspirePath"
-              width="140"
-              height="36"
-              onError={() => setLogoError(true)}
-              className="h-9 w-auto max-h-9 object-contain transition-transform group-hover:scale-[1.02]"
-            />
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
+                src="/logo.png"
+                alt="AspirePath"
+                width="140"
+                height="36"
+                onError={() => setLogoError(true)}
+                className="h-9 w-auto max-h-9 object-contain transition-transform group-hover:scale-[1.02]"
+              />
+            </picture>
           ) : (
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-xs">

@@ -32,8 +32,16 @@ export function classifyLoginError(error) {
 
   // 2. Network Connection Failure Detection
   const isOffline = typeof window !== 'undefined' && typeof window.navigator?.onLine === 'boolean' && !window.navigator.onLine;
+  if (isOffline) {
+    return {
+      type: 'OFFLINE',
+      message: 'You appear to be offline. Reconnect to the internet, then try again.',
+      retryable: true,
+      status: null,
+    };
+  }
+
   const isNetworkFailure =
-    isOffline ||
     error?.code === 'ERR_NETWORK' ||
     error?.message === 'Network Error' ||
     (!error?.response && Boolean(error?.request));
@@ -41,7 +49,7 @@ export function classifyLoginError(error) {
   if (isNetworkFailure) {
     return {
       type: 'NETWORK_ERROR',
-      message: 'Unable to connect. Please check your internet connection and try again.',
+      message: 'The login request could not reach AspirePath. Check your connection and try again.',
       retryable: true,
       status: null,
     };
@@ -54,7 +62,7 @@ export function classifyLoginError(error) {
   if (status === 401) {
     return {
       type: 'INVALID_CREDENTIALS',
-      message: 'Incorrect email or password. Please check your details and try again.',
+      message: 'Invalid email or password.',
       retryable: true,
       status: 401,
     };
@@ -92,11 +100,31 @@ export function classifyLoginError(error) {
     };
   }
 
-  // 5xx Server Error / Backend Unavailable
+  const detail = error?.response?.data?.detail;
+  const errorCode = typeof detail === 'object' ? detail?.code : error?.response?.data?.code;
+
+  if (status === 503 && errorCode === 'AUTH_DATABASE_UNAVAILABLE') {
+    return {
+      type: 'DATABASE_UNAVAILABLE',
+      message: detail?.message || 'The sign-in database is temporarily unavailable. Please try again shortly.',
+      retryable: true,
+      status,
+    };
+  }
+
+  if ([502, 503, 504].includes(status)) {
+    return {
+      type: 'BACKEND_UNAVAILABLE',
+      message: 'AspirePath is temporarily unavailable. Please try again shortly.',
+      retryable: true,
+      status,
+    };
+  }
+
   if (status && status >= 500) {
     return {
       type: 'SERVER_ERROR',
-      message: 'Our server is temporarily unavailable. Please try again shortly.',
+      message: 'AspirePath encountered a server error. Please try again shortly.',
       retryable: true,
       status,
     };

@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -8,8 +9,9 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select, desc, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import noload
 from google.auth.exceptions import GoogleAuthError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
@@ -56,6 +58,25 @@ from app.core.rate_limiter import auth_rate_limiter
 router = APIRouter(prefix="/auth", tags=["Authentication & Accounts"])
 REFRESH_COOKIE_NAME = "career_platform_refresh"
 logger = logging.getLogger(__name__)
+
+
+def login_database_unavailable() -> HTTPException:
+    """Return a stable, non-sensitive contract for authentication DB outages."""
+    return HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail={
+            "code": "AUTH_DATABASE_UNAVAILABLE",
+            "message": "The sign-in service cannot reach its database right now. Please try again shortly.",
+        },
+    )
+
+
+async def rollback_quietly(db: AsyncSession) -> None:
+    """Best-effort cleanup without masking the stable outage response."""
+    try:
+        await db.rollback()
+    except Exception:
+        logger.warning("Database rollback also failed during login outage", exc_info=True)
 
 
 @router.get('/config')
@@ -250,12 +271,19 @@ async def login_user(
                 configured_admin_emails.append(ae)
 
         # Dynamically query all active platform administrators
-        result = await db.execute(
-            select(User).where(
-                User.role == UserRole.ADMIN,
-                User.is_active == True,
+        try:
+            result = await db.execute(
+                select(User)
+                .options(noload(User.profile))
+                .where(
+                    User.role == UserRole.ADMIN,
+                    User.is_active == True,
+                )
             )
-        )
+        except SQLAlchemyError:
+            logger.exception("Database unavailable during admin login lookup")
+            await rollback_quietly(db)
+            raise login_database_unavailable()
         admins = result.scalars().all()
         admin_map = {a.email.strip().lower(): a for a in admins}
         # Order candidates: configured admin emails first by priority, then any remaining active admins
@@ -269,17 +297,28 @@ async def login_user(
         user = None
         password_valid = False
         t_pw_start = time.perf_counter()
-        for idx, candidate in enumerate(ordered_candidates):
+
+        async def verify_admin_candidate(idx, candidate):
             c_start = time.perf_counter()
             matched = await run_in_threadpool(
                 verify_password, credentials.password, candidate.hashed_password
             )
             c_dur = round((time.perf_counter() - c_start) * 1000, 2)
-            candidate_timings.append({
+            return candidate, matched, {
                 "candidate_index": idx,
                 "verified": matched,
                 "duration_ms": c_dur,
-            })
+            }
+
+        # A shared administrator alias may map to multiple real accounts. Verify
+        # the small, rate-limited candidate set concurrently so latency does not
+        # grow by one full bcrypt operation for every administrator.
+        verification_results = await asyncio.gather(*(
+            verify_admin_candidate(idx, candidate)
+            for idx, candidate in enumerate(ordered_candidates)
+        ))
+        for candidate, matched, candidate_timing in verification_results:
+            candidate_timings.append(candidate_timing)
             if matched:
                 user = candidate
                 password_valid = True
@@ -287,9 +326,16 @@ async def login_user(
         t_pw_ms = round((time.perf_counter() - t_pw_start) * 1000, 2)
     else:
         # Lookup user record
-        result = await db.execute(
-            select(User).where(User.email == normalized_email)
-        )
+        try:
+            result = await db.execute(
+                select(User)
+                .options(noload(User.profile))
+                .where(User.email == normalized_email)
+            )
+        except SQLAlchemyError:
+            logger.exception("Database unavailable during login lookup")
+            await rollback_quietly(db)
+            raise login_database_unavailable()
         user = result.scalar_one_or_none()
         t_lookup_ms = round((time.perf_counter() - t_lookup_start) * 1000, 2)
         
@@ -324,7 +370,12 @@ async def login_user(
 
     # Generate access token and set HttpOnly refresh cookie
     t_session_start = time.perf_counter()
-    access_token = await set_refresh_cookie(response, user, db)
+    try:
+        access_token = await set_refresh_cookie(response, user, db)
+    except SQLAlchemyError:
+        logger.exception("Database unavailable while creating login session")
+        await rollback_quietly(db)
+        raise login_database_unavailable()
     t_session_ms = round((time.perf_counter() - t_session_start) * 1000, 2)
 
     t_total_ms = round((time.perf_counter() - t0) * 1000, 2)

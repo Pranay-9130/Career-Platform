@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Mail,
@@ -29,16 +29,25 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(null);
+  const [loginError, setLoginError] = useState(null);
+  const submissionInFlight = useRef(false);
 
   const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
 
-  // Pre-warm backend connection if idle to reduce login latency
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.fetch === 'function') {
-      window.fetch('/api/auth/config', { method: 'GET', keepalive: true }).catch(() => {});
+  const preloadDestination = (identifier) => {
+    const looksLikeAdminAlias = identifier.trim() && !identifier.includes('@');
+    if (looksLikeAdminAlias) {
+      void Promise.allSettled([
+        import('@/layouts/AdminLayout'),
+        import('@/pages/admin/AdminDashboardPage'),
+      ]);
+      return;
     }
-  }, []);
+    void Promise.allSettled([
+      import('@/layouts/StudentLayout'),
+      import('@/pages/student/DashboardPage'),
+    ]);
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -98,18 +107,19 @@ export default function LoginPage() {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
-    if (errorMessage) {
-      setErrorMessage(null);
+    if (loginError) {
+      setLoginError(null);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return; // Prevent duplicate concurrent authentication requests
+  const submitCredentials = async () => {
+    // Close the same-event-loop gap before React commits isSubmitting.
+    if (submissionInFlight.current) return;
     if (!validate()) return;
 
+    submissionInFlight.current = true;
     setIsSubmitting(true);
-    setErrorMessage(null);
+    setLoginError(null);
 
     try {
       const response = await loginWithCredentials(
@@ -123,9 +133,16 @@ export default function LoginPage() {
       navigate(targetPath, { replace: true });
     } catch (err) {
       const classified = classifyLoginError(err);
-      setErrorMessage(classified.message);
+      setLoginError(classified);
+    } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    void submitCredentials();
   };
 
   return (
@@ -191,14 +208,26 @@ export default function LoginPage() {
             </div>
           )}
 
-          {errorMessage && (
+          {loginError && (
             <Alert
               variant="error"
-              title="Authentication Failed"
+              title={loginError.type === 'INVALID_CREDENTIALS' ? 'Authentication Failed' : 'Unable to Sign In'}
               className="mb-6"
-              onClose={() => setErrorMessage(null)}
+              onClose={() => setLoginError(null)}
             >
-              {errorMessage}
+              <div className="space-y-3">
+                <p>{loginError.message}</p>
+                {loginError.retryable && (
+                  <button
+                    type="button"
+                    onClick={() => void submitCredentials()}
+                    disabled={isSubmitting}
+                    className="font-semibold underline underline-offset-2 disabled:opacity-50"
+                  >
+                    Try again
+                  </button>
+                )}
+              </div>
             </Alert>
           )}
 
@@ -246,6 +275,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
+                  onFocus={() => preloadDestination(formData.email)}
                   error={errors.password}
                   leftIcon={Lock}
                   required

@@ -175,6 +175,44 @@ test('authService.logout() clears storage and cache immediately without waiting 
   assert.equal(serverLogoutCompleted, true);
 });
 
+test('login uses a bounded timeout and collapses rapid duplicate submissions', async () => {
+  authStorage.clear();
+  let backendHits = 0;
+  let observedTimeout = null;
+
+  api.defaults.adapter = async (config) => {
+    if (config.url === '/auth/login') {
+      backendHits += 1;
+      observedTimeout = config.timeout;
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      return {
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+        data: {
+          access_token: 'single-flight-login-token',
+          user: { id: 'login-user', role: 'STUDENT', email: 'student@example.com' },
+        },
+      };
+    }
+    throw new Error(`Unexpected request: ${config.url}`);
+  };
+
+  const credentials = { email: 'student@example.com', password: 'CorrectPassword123!' };
+  const [first, second, third] = await Promise.all([
+    authService.login(credentials, true),
+    authService.login(credentials, true),
+    authService.login(credentials, true),
+  ]);
+
+  assert.equal(backendHits, 1, 'rapid clicks must create exactly one login request');
+  assert.equal(observedTimeout, 12000);
+  assert.equal(first.access_token, 'single-flight-login-token');
+  assert.deepEqual(second, first);
+  assert.deepEqual(third, first);
+});
+
 test('Dashboard cache isolates data per user token and clears completely across account switches', async () => {
   clearApiCache();
 

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Linkedin, Instagram, Mail, Sparkles, Smartphone } from 'lucide-react';
-import logoPng from '@/assets/logo.png';
 
 export default function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -16,15 +15,18 @@ export default function PublicFooter() {
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="inline-flex items-center gap-2 group" aria-label="AspirePath Home">
               {!logoError ? (
-                <img
-                  src={logoPng}
-                  alt="AspirePath"
-                  width="150"
-                  height="40"
-                  loading="lazy"
-                  onError={() => setLogoError(true)}
-                  className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
-                />
+                <picture>
+                  <source srcSet="/logo.webp" type="image/webp" />
+                  <img
+                    src="/logo.png"
+                    alt="AspirePath"
+                    width="150"
+                    height="40"
+                    loading="lazy"
+                    onError={() => setLogoError(true)}
+                    className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+                  />
+                </picture>
               ) : (
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-primary to-cyan-500 flex items-center justify-center text-white font-black text-sm shadow-xs">

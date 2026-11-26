@@ -26,7 +26,8 @@ test('PublicNavbar registers Features mega-menu with core career tools including
   assert.match(navbarSource, /\/features\/college-survival-kit/, 'Navbar must route to /features/college-survival-kit');
 
   // Verify Logo import and fallback handling
-  assert.match(navbarSource, /import logoPng from '@\/assets\/logo\.png'/, 'Navbar must import official logo asset');
+  assert.match(navbarSource, /srcSet="\/logo\.webp"/, 'Navbar must prefer the compact official logo');
+  assert.match(navbarSource, /src="\/logo\.png"/, 'Navbar must retain a PNG fallback');
   assert.match(navbarSource, /onError=/, 'Navbar logo must declare onError fallback handler');
 
   // Verify Android APK/download is strictly excluded from main website navbar

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Eye,
@@ -18,7 +18,7 @@ import { resumeService } from '../../services/resumeService';
 import { useAuth } from '../../context/AuthContext';
 import SEO from '@/components/common/SEO';
 import { getSoftwareApplicationSchema, getBreadcrumbListSchema } from '@/utils/seoSchemas';
-import PdfViewer from '@/components/common/PdfViewer';
+const PdfViewer = lazy(() => import('@/components/common/PdfViewer'));
 
 const getSampleResumePayload = (templateId = 'template-1') => ({
   title: 'ATS Professional Resume',
@@ -642,22 +642,24 @@ export default function TemplatesPage() {
                     />
                   </div>
                 ) : (
-                  <PdfViewer
-                    pdfData={previewBlob}
-                    fileName={
-                      previewTemplate.uploaded_file_name ||
-                      `${previewTemplate.name || 'resume-template'}.pdf`
-                    }
-                    title={previewTemplate.name}
-                    onDownload={() => handleDownloadTemplate(previewTemplate)}
-                    isFullscreen={isFullscreenModal}
-                    onToggleFullscreen={(val) => setIsFullscreenModal(val)}
-                    onClose={() => {
-                      setPreviewTemplate(null);
-                      setIsFullscreenModal(false);
-                    }}
-                    className="h-full border-0 rounded-none"
-                  />
+                  <Suspense fallback={<p role="status" className="m-auto p-4 text-sm text-white">Loading PDF viewer…</p>}>
+                    <PdfViewer
+                      pdfData={previewBlob}
+                      fileName={
+                        previewTemplate.uploaded_file_name ||
+                        `${previewTemplate.name || 'resume-template'}.pdf`
+                      }
+                      title={previewTemplate.name}
+                      onDownload={() => handleDownloadTemplate(previewTemplate)}
+                      isFullscreen={isFullscreenModal}
+                      onToggleFullscreen={(val) => setIsFullscreenModal(val)}
+                      onClose={() => {
+                        setPreviewTemplate(null);
+                        setIsFullscreenModal(false);
+                      }}
+                      className="h-full border-0 rounded-none"
+                    />
+                  </Suspense>
                 )}
               </div>
 

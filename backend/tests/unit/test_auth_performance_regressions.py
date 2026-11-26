@@ -1,8 +1,13 @@
+import json
+import time
+from unittest.mock import AsyncMock
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 
 from app.main import app
 from app.core.database import Base, get_db
@@ -223,4 +228,64 @@ async def test_validate_session_origin_blocks_malicious_subdomain(client):
     )
     assert resp.status_code == 403
     assert "not allowed" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_login_database_failure_returns_retryable_503_contract(client, db_session, monkeypatch):
+    """A database outage must never be reported to the browser as bad credentials."""
+    monkeypatch.setattr(
+        db_session,
+        "execute",
+        AsyncMock(side_effect=OperationalError("SELECT users", {}, Exception("database offline"))),
+    )
+    monkeypatch.setattr(db_session, "rollback", AsyncMock())
+
+    resp = await client.post("/api/auth/login", json={
+        "email": "student@example.com",
+        "password": "ValidPassword123!",
+    })
+
+    assert resp.status_code == 503
+    detail = resp.json()["detail"]
+    assert detail["code"] == "AUTH_DATABASE_UNAVAILABLE"
+    assert "database" in detail["message"].lower()
+    assert "credential" not in detail["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_shared_admin_alias_verifies_candidates_concurrently(client, db_session, monkeypatch):
+    """Admin-alias latency must not grow linearly with the number of bcrypt hashes."""
+    admins = [
+        User(
+            email=f"parallel-admin-{index}@example.com",
+            full_name=f"Parallel Admin {index}",
+            role=UserRole.ADMIN,
+            hashed_password="matching-hash" if index == 2 else f"nonmatching-hash-{index}",
+            is_active=True,
+            is_verified=True,
+        )
+        for index in range(3)
+    ]
+    db_session.add_all(admins)
+    await db_session.commit()
+
+    def deliberately_slow_verify(_password, password_hash):
+        time.sleep(0.15)
+        return password_hash == "matching-hash"
+
+    monkeypatch.setattr("app.api.routes.auth.verify_password", deliberately_slow_verify)
+    started = time.perf_counter()
+    resp = await client.post("/api/auth/login", json={
+        "email": settings.ADMIN_USERNAME,
+        "password": "ValidPassword123!",
+    })
+    elapsed = time.perf_counter() - started
+
+    assert resp.status_code == 200
+    assert resp.json()["user"]["email"] == "parallel-admin-2@example.com"
+    assert elapsed < 0.32, f"candidate checks appear sequential: {elapsed:.3f}s"
+
+    breakdown = json.loads(resp.headers["X-Login-Breakdown"])
+    assert breakdown["candidates_evaluated"] == 3
+    assert breakdown["password_verify_ms"] < 300
 

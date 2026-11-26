@@ -48,11 +48,15 @@ export function AuthProvider({ children }) {
             setToken(refreshData.access_token);
             setUser(refreshData.user);
           }
-        } catch {
-          authService.clearAuth();
-          if (active) {
-            setToken(null);
-            setUser(null);
+        } catch (error) {
+          // Temporary transport/server failures do not prove the refresh
+          // credential is invalid. Preserve the session hint for a later retry.
+          if (isSessionRejection(error)) {
+            authService.clearAuth();
+            if (active) {
+              setToken(null);
+              setUser(null);
+            }
           }
         }
       } else {

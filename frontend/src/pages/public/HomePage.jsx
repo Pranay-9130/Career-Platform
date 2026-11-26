@@ -54,58 +54,25 @@ export default function HomePage() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadShowcaseData() {
+    async function loadSection(request, key, setItems, setError, setLoading, errorMessage) {
       try {
-        setProjectsLoading(true);
-        setJobsLoading(true);
-        setProjectsError(null);
-        setJobsError(null);
-
-        const [projectsData, jobsData] = await Promise.allSettled([
-          projectService.getProjects({ limit: 3 }),
-          jobService.getJobs({ limit: 3 }),
-        ]);
-
-        if (isMounted) {
-          if (projectsData.status === 'fulfilled') {
-            const data = projectsData.value;
-            const projectList = Array.isArray(data)
-              ? data
-              : Array.isArray(data?.items)
-              ? data.items
-              : Array.isArray(data?.projects)
-              ? data.projects
-              : [];
-            setProjects(projectList.slice(0, 3));
-          } else {
-            console.warn('Unable to load live showcase blueprints:', projectsData.reason);
-            setProjectsError('Unable to load showcase projects. Please browse the project hub directly.');
-          }
-
-          if (jobsData.status === 'fulfilled') {
-            const data = jobsData.value;
-            const jobList = Array.isArray(data)
-              ? data
-              : Array.isArray(data?.items)
-              ? data.items
-              : Array.isArray(data?.jobs)
-              ? data.jobs
-              : [];
-            setJobs(jobList.slice(0, 3));
-          } else {
-            console.warn('Unable to load live job opportunities:', jobsData.reason);
-            setJobsError('Unable to load current job opportunities. Please visit the jobs board directly.');
-          }
-        }
+        const data = await request();
+        if (!isMounted) return;
+        const items = [data, data?.items, data?.[key]].find(Array.isArray) ?? [];
+        setItems(items.slice(0, 3));
+      } catch (error) {
+        if (!isMounted) return;
+        console.warn(errorMessage, error);
+        setError(errorMessage);
       } finally {
-        if (isMounted) {
-          setProjectsLoading(false);
-          setJobsLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     }
 
-    loadShowcaseData();
+    void loadSection(() => projectService.getProjects({ limit: 3 }), 'projects', setProjects, setProjectsError,
+      setProjectsLoading, 'Unable to load showcase projects. Please browse the project hub directly.');
+    void loadSection(() => jobService.getJobs({ limit: 3, include_facets: false }), 'jobs', setJobs, setJobsError,
+      setJobsLoading, 'Unable to load current job opportunities. Please visit the jobs board directly.');
 
     return () => {
       isMounted = false;
