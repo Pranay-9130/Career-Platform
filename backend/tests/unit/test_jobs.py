@@ -1,6 +1,7 @@
 import pytest
 import pytest_asyncio
 import uuid
+from unittest.mock import AsyncMock
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
@@ -74,6 +75,18 @@ async def test_list_jobs_empty(client):
     assert data["items"] == []
     assert data["total"] == 0
     assert data["facets"]["domains"] == []
+
+
+@pytest.mark.asyncio
+async def test_job_facets_use_one_database_statement(client, db_session, monkeypatch):
+    execute = AsyncMock(wraps=db_session.execute)
+    monkeypatch.setattr(db_session, "execute", execute)
+
+    response = await client.get("/api/jobs/facets")
+
+    assert response.status_code == 200
+    assert response.json()["candidate_types"] == []
+    execute.assert_awaited_once()
 
 
 @pytest.mark.asyncio

@@ -3,7 +3,7 @@ import uuid
 import time
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func, or_, desc, asc, cast, String
+from sqlalchemy import select, func, or_, desc, asc, cast, String, literal, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -43,67 +43,28 @@ async def _compute_job_facets(db: AsyncSession) -> JobFacets:
     if not is_sqlite and now < _JOB_FACETS_CACHE["expires_at"] and _JOB_FACETS_CACHE["data"] is not None:
         return _JOB_FACETS_CACHE["data"]
 
-    # 1. Domains
-    domain_stmt = (
-        select(Job.domain, func.count(Job.id))
-        .where(Job.is_active.is_(True))
-        .group_by(Job.domain)
-        .order_by(desc(func.count(Job.id)))
-    )
-    domain_rows = (await db.execute(domain_stmt)).all()
-    domains = [JobFacetItem(name=row[0], count=row[1]) for row in domain_rows if row[0]]
+    fields = {
+        "domains": Job.domain,
+        "job_types": Job.job_type,
+        "work_modes": Job.work_mode,
+        "experience_levels": Job.experience_level,
+        "candidate_types": Job.candidate_type,
+    }
+    # Return grouped counts only, with one database round trip on a cache miss.
+    grouped_counts = union_all(*(
+        select(literal(name), column, func.count(Job.id))
+        .where(Job.is_active.is_(True), column.is_not(None), column != "")
+        .group_by(column)
+        for name, column in fields.items()
+    ))
+    counts = {name: [] for name in fields}
+    for name, value, count in (await db.execute(grouped_counts)):
+        counts[name].append(JobFacetItem(name=value, count=count))
 
-    # 2. Job Types
-    type_stmt = (
-        select(Job.job_type, func.count(Job.id))
-        .where(Job.is_active.is_(True))
-        .group_by(Job.job_type)
-        .order_by(desc(func.count(Job.id)))
-    )
-    type_rows = (await db.execute(type_stmt)).all()
-    job_types = [JobFacetItem(name=row[0], count=row[1]) for row in type_rows if row[0]]
-
-    # 3. Work Modes
-    mode_stmt = (
-        select(Job.work_mode, func.count(Job.id))
-        .where(Job.is_active.is_(True))
-        .group_by(Job.work_mode)
-        .order_by(desc(func.count(Job.id)))
-    )
-    mode_rows = (await db.execute(mode_stmt)).all()
-    work_modes = [JobFacetItem(name=row[0], count=row[1]) for row in mode_rows if row[0]]
-
-    # 4. Experience Levels
-    exp_stmt = (
-        select(Job.experience_level, func.count(Job.id))
-        .where(Job.is_active.is_(True))
-        .group_by(Job.experience_level)
-        .order_by(desc(func.count(Job.id)))
-    )
-    exp_rows = (await db.execute(exp_stmt)).all()
-    experience_levels = [
-        JobFacetItem(name=row[0], count=row[1]) for row in exp_rows if row[0]
-    ]
-
-    # 5. Candidate Types
-    c_stmt = (
-        select(Job.candidate_type, func.count(Job.id))
-        .where(Job.is_active.is_(True), Job.candidate_type.isnot(None), Job.candidate_type != "")
-        .group_by(Job.candidate_type)
-        .order_by(desc(func.count(Job.id)))
-    )
-    c_rows = (await db.execute(c_stmt)).all()
-    candidate_types = [
-        JobFacetItem(name=row[0], count=row[1]) for row in c_rows if row[0]
-    ]
-
-    facets = JobFacets(
-        domains=domains,
-        job_types=job_types,
-        work_modes=work_modes,
-        experience_levels=experience_levels,
-        candidate_types=candidate_types,
-    )
+    facets = JobFacets(**{
+        name: sorted(items, key=lambda item: (-item.count, item.name))
+        for name, items in counts.items()
+    })
     _JOB_FACETS_CACHE["data"] = facets
     _JOB_FACETS_CACHE["expires_at"] = now + _JOB_FACETS_CACHE_TTL
     return facets

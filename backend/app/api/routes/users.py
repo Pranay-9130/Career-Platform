@@ -5,8 +5,9 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Tuple, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, func, desc, or_
+from sqlalchemy import select, func, desc, or_, true, inspect
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import NO_VALUE
 
 from app.core.database import get_db
 from app.core.profile_links import clean_social_profile_url, normalize_profile_url
@@ -250,58 +251,71 @@ async def get_dashboard_summary(
     recommended_opportunities = []
 
     try:
-        # A. Projects Breakdown
-        stmt_p_all = (
-            select(Project.status, func.count(Project.id))
-            .where(Project.owner_id == current_user.id)
-            .group_by(Project.status)
+        # Each grouped set produces one row, including for an empty workspace.
+        uid = current_user.id
+        project_counts = (
+            select(
+                func.count().label("projects_count"),
+                func.count().filter(Project.status == "Draft").label("projects_draft"),
+                func.count().filter(Project.status.in_(["Submitted", "Under Review"])).label("projects_under_review"),
+                func.count().filter(Project.status == "Published").label("projects_published"),
+            )
+            .where(Project.owner_id == uid)
+            .subquery()
         )
-        p_rows = (await db.execute(stmt_p_all)).all()
-        p_counts = {r[0]: r[1] for r in p_rows}
-        projects_count = sum(p_counts.values())
-        projects_draft = p_counts.get("Draft", 0)
-        projects_under_review = p_counts.get("Submitted", 0) + p_counts.get("Under Review", 0)
-        projects_published = p_counts.get("Published", 0)
-
-        # B. Applications Breakdown (Excluding "Saved" from submitted applications)
-        stmt_a_all = (
-            select(JobApplication.status, func.count(JobApplication.id))
-            .where(JobApplication.user_id == current_user.id)
-            .group_by(JobApplication.status)
+        application_counts = (
+            select(
+                func.count().filter(JobApplication.status == "Applied").label("applications_applied"),
+                func.count().filter(JobApplication.status == "Interviewing").label("interviews_scheduled_count"),
+                func.count().filter(JobApplication.status == "Offer").label("applications_offer"),
+                func.count().filter(JobApplication.status == "Rejected").label("applications_rejected"),
+                func.count().filter(JobApplication.status == "Saved").label("saved_jobs_count"),
+            )
+            .where(JobApplication.user_id == uid)
+            .subquery()
         )
-        a_rows = (await db.execute(stmt_a_all)).all()
-        a_counts = {r[0]: r[1] for r in a_rows}
-        applications_applied = a_counts.get("Applied", 0)
-        interviews_scheduled_count = a_counts.get("Interviewing", 0)
-        applications_offer = a_counts.get("Offer", 0)
-        applications_rejected = a_counts.get("Rejected", 0)
-        saved_jobs_count = a_counts.get("Saved", 0)
+        skill_counts = (
+            select(
+                func.count().filter(StudentSkill.is_confirmed.is_(True)).label("confirmed_skills_count"),
+                func.count().filter(StudentSkill.status.in_(["Learning", "Practiced", "Completed"])).label("active_roadmap_skills"),
+            )
+            .where(StudentSkill.user_id == uid)
+            .subquery()
+        )
+        stmt_counts = select(
+            *project_counts.c,
+            *application_counts.c,
+            *skill_counts.c,
+            select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == uid).scalar_subquery().label("project_bookmarks"),
+            select(func.count(JobBookmark.id)).where(JobBookmark.user_id == uid).scalar_subquery().label("job_bookmarks"),
+            select(func.count(Notification.id)).where(Notification.user_id == uid, Notification.is_read.is_(False)).scalar_subquery().label("unread_notifications"),
+            select(StudentTargetRole.target_role).where(StudentTargetRole.user_id == uid).limit(1).scalar_subquery().label("target_role"),
+        ).select_from(
+            project_counts.join(application_counts, true()).join(skill_counts, true())
+        )
+        counts = (await db.execute(stmt_counts)).one()
+        projects_count = counts.projects_count
+        projects_draft = counts.projects_draft
+        projects_under_review = counts.projects_under_review
+        projects_published = counts.projects_published
+        applications_applied = counts.applications_applied
+        interviews_scheduled_count = counts.interviews_scheduled_count
+        applications_offer = counts.applications_offer
+        applications_rejected = counts.applications_rejected
+        saved_jobs_count = counts.saved_jobs_count
         active_applications_count = (
             applications_applied + interviews_scheduled_count + applications_offer + applications_rejected
         )
-
-        # C. Bookmarks, Notifications, Skills & Career Preferences (Consolidated in single roundtrip)
-        stmt_counts = select(
-            select(func.count(ProjectBookmark.id)).where(ProjectBookmark.user_id == current_user.id).scalar_subquery(),
-            select(func.count(JobBookmark.id)).where(JobBookmark.user_id == current_user.id).scalar_subquery(),
-            select(func.count(Notification.id)).where(Notification.user_id == current_user.id, Notification.is_read.is_(False)).scalar_subquery(),
-            select(func.count(StudentSkill.id)).where(StudentSkill.user_id == current_user.id, StudentSkill.is_confirmed.is_(True)).scalar_subquery(),
-            select(func.count(StudentSkill.id)).where(StudentSkill.user_id == current_user.id, StudentSkill.status.in_(["Learning", "Practiced", "Completed"])).scalar_subquery(),
-            select(StudentTargetRole.target_role).where(StudentTargetRole.user_id == current_user.id).limit(1).scalar_subquery(),
-        )
-        counts_res = (await db.execute(stmt_counts)).one()
-        pb_count = counts_res[0] or 0
-        jb_count = counts_res[1] or 0
-        saved_items_count = pb_count + jb_count
-        unread_notifications_count = counts_res[2] or 0
-        confirmed_skills_count = counts_res[3] or 0
-        active_roadmap_skills = counts_res[4] or 0
-        target_role_name = counts_res[5]
+        saved_items_count = counts.project_bookmarks + counts.job_bookmarks
+        unread_notifications_count = counts.unread_notifications
+        confirmed_skills_count = counts.confirmed_skills_count
+        active_roadmap_skills = counts.active_roadmap_skills
+        target_role_name = counts.target_role
         has_target_role = bool(target_role_name and str(target_role_name).strip())
 
         # D. Profile Completion (use in-memory profile if already loaded)
-        profile = getattr(current_user, "profile", None)
-        if profile is None:
+        profile = inspect(current_user).attrs.profile.loaded_value
+        if profile is NO_VALUE:
             stmt_prof = select(Profile).where(Profile.user_id == current_user.id)
             profile = (await db.scalars(stmt_prof)).first()
         profile_completion = calculate_profile_completion(current_user, profile) if profile else (25 if current_user.full_name else 0)

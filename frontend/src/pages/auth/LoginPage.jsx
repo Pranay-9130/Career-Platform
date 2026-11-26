@@ -14,6 +14,8 @@ import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, Alert } from '@/components/common';
 import { getDashboardPath, getInternalPath } from '@/utils/navigation';
 import { classifyLoginError } from '@/services/authErrors';
+import { dashboardService } from '@/services/dashboardService';
+import { adminService } from '@/services/adminService';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -34,9 +36,8 @@ export default function LoginPage() {
 
   const [hasExistingSession, setHasExistingSession] = useState(() => isAuthenticated);
 
-  const preloadDestination = (identifier) => {
-    const looksLikeAdminAlias = identifier.trim() && !identifier.includes('@');
-    if (looksLikeAdminAlias) {
+  const preloadDashboard = (isAdmin) => {
+    if (isAdmin) {
       void Promise.allSettled([
         import('@/layouts/AdminLayout'),
         import('@/pages/admin/AdminDashboardPage'),
@@ -47,6 +48,13 @@ export default function LoginPage() {
       import('@/layouts/StudentLayout'),
       import('@/pages/student/DashboardPage'),
     ]);
+  };
+
+  const preloadLikelyDashboard = () => {
+    const identifier = formData.email.trim();
+    if (identifier && !getRequestedPath()) {
+      preloadDashboard(!identifier.includes('@'));
+    }
   };
 
   const handleLogout = async () => {
@@ -122,13 +130,25 @@ export default function LoginPage() {
     setLoginError(null);
 
     try {
-      const response = await loginWithCredentials(
+      const loginRequest = loginWithCredentials(
         formData.email.trim(),
         formData.password,
         formData.rememberMe
       );
+      preloadLikelyDashboard();
+      const response = await loginRequest;
 
       const targetPath = getDestination(response.user);
+      const isAdmin = response.user.role === 'ADMIN';
+      if (targetPath === getDashboardPath(response.user)) {
+        preloadDashboard(isAdmin);
+        // Start the authenticated read while route chunks load. The API client
+        // shares this request with the dashboard or serves its cached result.
+        const dashboardData = isAdmin
+          ? adminService.getAdminStats()
+          : dashboardService.getSummary();
+        void dashboardData.catch(() => {});
+      }
 
       navigate(targetPath, { replace: true });
     } catch (err) {
@@ -275,7 +295,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  onFocus={() => preloadDestination(formData.email)}
+                  onFocus={preloadLikelyDashboard}
                   error={errors.password}
                   leftIcon={Lock}
                   required

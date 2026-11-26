@@ -288,9 +288,8 @@ async def login_user(
         admin_map = {a.email.strip().lower(): a for a in admins}
         # Order candidates: configured admin emails first by priority, then any remaining active admins
         ordered_candidates = [admin_map[em] for em in configured_admin_emails if em in admin_map]
-        for a in admins:
-            if a not in ordered_candidates:
-                ordered_candidates.append(a)
+        prioritized_admin_ids = {candidate.id for candidate in ordered_candidates}
+        ordered_candidates.extend(admin for admin in admins if admin.id not in prioritized_admin_ids)
 
         t_lookup_ms = round((time.perf_counter() - t_lookup_start) * 1000, 2)
         
@@ -586,7 +585,9 @@ async def refresh_session(
             detail="Refresh session contains an invalid user identifier.",
         )
 
-    user = (await db.execute(select(User).where(User.id == user_id))).scalar_one_or_none()
+    user = (await db.execute(
+        select(User).options(noload(User.profile)).where(User.id == user_id)
+    )).scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -606,11 +607,6 @@ async def refresh_session(
         raise HTTPException(status_code=401, detail="Session has been revoked or already refreshed.")
     invalidate_session_cache(session_id=consumed_sid, user_id=user.id)
 
-    access_token = create_access_token({
-        "sub": str(user.id),
-        "email": user.email,
-        "role": user.role.value,
-    })
     access_token = await set_refresh_cookie(response, user, db)
     return AuthResponse(
         access_token=access_token,

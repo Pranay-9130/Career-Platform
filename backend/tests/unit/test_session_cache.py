@@ -54,7 +54,16 @@ class SessionCacheSafetyTests(unittest.TestCase):
     def test_cache_memory_is_bounded(self):
         for i in range(_ACTIVE_SESSION_CACHE_MAX_SIZE + 100):
             register_active_session(f"sid-{i}", "user-bulk")
-        self.assertLessEqual(len(_ACTIVE_SESSION_CACHE), _ACTIVE_SESSION_CACHE_MAX_SIZE)
+        self.assertEqual(len(_ACTIVE_SESSION_CACHE), _ACTIVE_SESSION_CACHE_MAX_SIZE)
+        self.assertNotIn(("sid-99", "user-bulk"), _ACTIVE_SESSION_CACHE)
+        self.assertIn(("sid-100", "user-bulk"), _ACTIVE_SESSION_CACHE)
+
+    def test_refreshing_cached_entry_does_not_evict_a_different_session(self):
+        for i in range(_ACTIVE_SESSION_CACHE_MAX_SIZE):
+            register_active_session(f"sid-{i}", "user-bulk")
+        register_active_session("sid-0", "user-bulk")
+        self.assertEqual(len(_ACTIVE_SESSION_CACHE), _ACTIVE_SESSION_CACHE_MAX_SIZE)
+        self.assertEqual(next(reversed(_ACTIVE_SESSION_CACHE)), ("sid-0", "user-bulk"))
 
     def test_multi_worker_mode_disables_in_memory_session_cache(self):
         os.environ["WEB_CONCURRENCY"] = "2"

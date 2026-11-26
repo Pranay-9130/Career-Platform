@@ -1,6 +1,7 @@
 import pytest
 import pytest_asyncio
 import uuid
+from unittest.mock import AsyncMock
 from httpx import AsyncClient, ASGITransport
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
@@ -69,8 +70,10 @@ async def test_unauthenticated_dashboard_rejected():
 
 
 @pytest.mark.asyncio
-async def test_authenticated_student_receives_dashboard_summary(db_session):
+async def test_authenticated_student_receives_dashboard_summary(db_session, monkeypatch):
     """Authenticated student successfully receives personalized statistics and recommendations."""
+    execute = AsyncMock(wraps=db_session.execute)
+    monkeypatch.setattr(db_session, "execute", execute)
     app.dependency_overrides[get_current_active_user] = lambda: mock_active_student
     app.dependency_overrides[get_db] = lambda: db_session
     transport = ASGITransport(app=app)
@@ -89,6 +92,11 @@ async def test_authenticated_student_receives_dashboard_summary(db_session):
         assert "resume_completion_percentage" in stats
         assert "ats_score" in stats
         assert "active_applications_count" in stats
+        aggregate_calls = [
+            call for call in execute.await_args_list
+            if "count(" in str(call.args[0]).lower()
+        ]
+        assert len(aggregate_calls) == 1
 
         # Recent Activity Feed
         activities = data["recent_activity"]

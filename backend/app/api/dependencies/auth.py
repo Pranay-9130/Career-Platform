@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
 from app.core.security import decode_token
@@ -73,7 +74,9 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    result = await db.execute(select(User).where(User.id == user_uuid))
+    result = await db.execute(
+        select(User).options(joinedload(User.profile)).where(User.id == user_uuid)
+    )
     user = result.scalar_one_or_none()
 
     if not user:
@@ -104,11 +107,11 @@ def _is_multi_worker_mode() -> bool:
         return True
 
 
-def _evict_expired_or_overflow(now: float) -> None:
-    expired_keys = [k for k, (exp, _) in _ACTIVE_SESSION_CACHE.items() if now >= exp]
-    for k in expired_keys:
-        _ACTIVE_SESSION_CACHE.pop(k, None)
-    while len(_ACTIVE_SESSION_CACHE) >= _ACTIVE_SESSION_CACHE_MAX_SIZE:
+def _cache_session_result(key: Tuple[str, str], expires_at: float, is_active: bool) -> None:
+    # Read-time expiry and LRU eviction keep inserts bounded without scanning the cache.
+    _ACTIVE_SESSION_CACHE[key] = (expires_at, is_active)
+    _ACTIVE_SESSION_CACHE.move_to_end(key)
+    if len(_ACTIVE_SESSION_CACHE) > _ACTIVE_SESSION_CACHE_MAX_SIZE:
         _ACTIVE_SESSION_CACHE.popitem(last=False)
 
 
@@ -117,11 +120,8 @@ def register_active_session(session_id: Any = None, user_id: Any = None) -> None
     if _is_multi_worker_mode():
         return
     if session_id and user_id:
-        now = time.time()
-        _evict_expired_or_overflow(now)
         key = (str(session_id), str(user_id))
-        _ACTIVE_SESSION_CACHE[key] = (now + _ACTIVE_SESSION_CACHE_TTL, True)
-        _ACTIVE_SESSION_CACHE.move_to_end(key)
+        _cache_session_result(key, time.monotonic() + _ACTIVE_SESSION_CACHE_TTL, True)
 
 
 def invalidate_session_cache(session_id: Optional[Any] = None, user_id: Optional[Any] = None) -> None:
@@ -148,7 +148,7 @@ async def session_is_active(session_id: str, user_id: uuid.UUID, db: AsyncSessio
     uid_str = str(user_id)
     cache_key = (sid_str, uid_str)
     use_cache = not _is_multi_worker_mode()
-    now = time.time()
+    now = time.monotonic()
 
     if use_cache:
         cached = _ACTIVE_SESSION_CACHE.get(cache_key)
@@ -169,8 +169,7 @@ async def session_is_active(session_id: str, user_id: uuid.UUID, db: AsyncSessio
     )
     is_active = result.scalar_one_or_none() is not None
     if use_cache:
-        _evict_expired_or_overflow(now)
-        _ACTIVE_SESSION_CACHE[cache_key] = (now + _ACTIVE_SESSION_CACHE_TTL, is_active)
+        _cache_session_result(cache_key, now + _ACTIVE_SESSION_CACHE_TTL, is_active)
     return is_active
 
 
