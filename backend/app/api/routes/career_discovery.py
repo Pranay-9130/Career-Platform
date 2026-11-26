@@ -318,16 +318,27 @@ async def get_career_discovery_summary(
 
     recs = discovery.recommendations or {}
     primary_role = recs.get("primary_role") or {}
+    top_roles = recs.get("top_roles") or []
     roadmap = discovery.roadmap_progress or []
     next_stage = next((s for s in roadmap if s.get("status") != "completed"), None)
     matched_jobs = recs.get("matched_jobs") or []
+
+    recommended_roles = [r.get("role_name") for r in top_roles if r.get("role_name")]
+    if not recommended_roles and primary_role.get("role_name"):
+        recommended_roles = [primary_role.get("role_name")]
+
+    strengths = primary_role.get("matched_skills") or discovery.self_reported_skills or ["Core Engineering"]
+    missing_skills = primary_role.get("missing_skills") or []
 
     return {
         "show_card": True,
         "is_completed": True,
         "primary_role": primary_role.get("role_name", "Software Engineer"),
         "match_percentage": primary_role.get("match_percentage", 85),
-        "missing_skills": primary_role.get("missing_skills", [])[:3],
+        "strengths": strengths[:4],
+        "missing_skills": missing_skills[:4],
+        "skill_gaps": missing_skills[:4],
+        "recommended_roles": recommended_roles[:3],
         "next_stage": next_stage,
         "matched_jobs_count": len(matched_jobs),
         "completed_at": discovery.completed_at.isoformat() if discovery.completed_at else None,

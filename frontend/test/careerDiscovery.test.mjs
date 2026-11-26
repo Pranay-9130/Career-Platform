@@ -83,3 +83,47 @@ test('PublicNavbar and HomePage feature Career Discovery and exclude Resume Temp
   assert.match(homeSource, /Pillar 2: Career Discovery/, 'HomePage must showcase Career Discovery as Pillar 2');
   assert.match(homeSource, /to="\/career-discovery"/, 'HomePage must link to /career-discovery');
 });
+
+test('CareerGuidanceWelcomeModal renders complete onboarding content, benefits, metadata, and CTAs', () => {
+  const modalSource = fs.readFileSync(
+    path.join(projectRoot, 'src', 'components', 'dashboard', 'CareerGuidanceWelcomeModal.jsx'),
+    'utf-8'
+  );
+
+  assert.match(modalSource, /Your Career Journey Starts Here!/, 'Modal must display title');
+  assert.match(modalSource, /Discover your strengths, explore career opportunities/, 'Modal must display description');
+  assert.match(modalSource, /Discover career paths matching your interests/, 'Benefit 1 must be present');
+  assert.match(modalSource, /Understand your current technical skills/, 'Benefit 2 must be present');
+  assert.match(modalSource, /Identify skills you need to improve/, 'Benefit 3 must be present');
+  assert.match(modalSource, /Receive a personalized learning and career roadmap/, 'Benefit 4 must be present');
+  assert.match(modalSource, /Estimated duration:[\s\S]*3–5 minutes/, 'Estimated duration must be 3-5 min');
+  assert.match(modalSource, /5-question indicative assessment/, 'Assessment detail must specify 5 questions');
+  assert.match(modalSource, /Discover My Career Path/, 'Primary CTA must be Discover My Career Path');
+  assert.match(modalSource, /I'll Explore AspirePath First/, 'Secondary CTA must be I\'ll Explore AspirePath First');
+});
+
+test('DashboardPage and RegisterPage seamlessly coordinate Career Guidance onboarding, reminders, and summary', () => {
+  const registerSource = fs.readFileSync(
+    path.join(projectRoot, 'src', 'pages', 'auth', 'RegisterPage.jsx'),
+    'utf-8'
+  );
+  assert.match(
+    registerSource,
+    /fromRegistration:\s*true/,
+    'RegisterPage must set fromRegistration flag upon successful registration'
+  );
+
+  const dashboardSource = fs.readFileSync(
+    path.join(projectRoot, 'src', 'pages', 'student', 'DashboardPage.jsx'),
+    'utf-8'
+  );
+
+  assert.match(dashboardSource, /CareerGuidanceWelcomeModal/, 'DashboardPage must import CareerGuidanceWelcomeModal');
+  assert.match(dashboardSource, /user\.role === 'ADMIN'/, 'DashboardPage must suppress onboarding for ADMIN users');
+  assert.match(dashboardSource, /Your Career Guidance Is Waiting!/, 'DashboardPage must display reminder card when skipped');
+  assert.match(dashboardSource, /Start Career Discovery/, 'DashboardPage must provide Start Career Discovery action');
+  assert.match(dashboardSource, /View My Career Roadmap/, 'DashboardPage must provide View My Career Roadmap for completed students');
+  assert.match(dashboardSource, /Recommended Roles/, 'DashboardPage must show recommended roles in summary');
+  assert.match(dashboardSource, /Key Strengths/, 'DashboardPage must show strengths in summary');
+  assert.match(dashboardSource, /Skill Gaps to Prioritize/, 'DashboardPage must show skill gaps in summary');
+});

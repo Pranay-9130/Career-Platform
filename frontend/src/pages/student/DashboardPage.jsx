@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FolderGit2,
   FileText,
@@ -23,6 +23,7 @@ import {
   CalendarCheck2,
   IndianRupee,
   Percent,
+  Target,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { dashboardService } from '@/services/dashboardService';
@@ -31,12 +32,16 @@ import Badge from '@/components/common/Badge';
 import Skeleton from '@/components/common/Skeleton';
 import Modal from '@/components/common/Modal';
 import SkillIntelligenceSummaryCard from '@/components/dashboard/SkillIntelligenceSummaryCard';
+import CareerGuidanceWelcomeModal from '@/components/dashboard/CareerGuidanceWelcomeModal';
 import { careerDiscoveryService } from '@/services/careerDiscoveryService';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [discoverySummary, setDiscoverySummary] = useState(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [dismissDiscoveryCard, setDismissDiscoveryCard] = useState(
     () => localStorage.getItem('dismiss_discovery_welcome') === 'true'
   );
@@ -46,6 +51,43 @@ export default function DashboardPage() {
   const [recFilter, setRecFilter] = useState('all'); // 'all' | 'project' | 'job'
   const [criteriaModalOpen, setCriteriaModalOpen] = useState(false);
   const hasDataRef = useRef(false);
+
+  // Trigger welcome modal for new registrations or existing students who haven't completed discovery
+  useEffect(() => {
+    if (!discoverySummary || !user) return;
+    if (user.role === 'ADMIN') return;
+
+    if (discoverySummary.is_completed) {
+      setShowWelcomeModal(false);
+      return;
+    }
+
+    const isModalDismissed =
+      localStorage.getItem(`aspirepath_career_discovery_modal_dismissed_${user.id}`) === 'true';
+    const isFromRegistration = location.state?.fromRegistration === true;
+
+    if (isFromRegistration || !isModalDismissed) {
+      setShowWelcomeModal(true);
+    }
+  }, [discoverySummary, user, location.state]);
+
+  const handleCloseWelcomeModal = () => {
+    if (user?.id) {
+      localStorage.setItem(`aspirepath_career_discovery_modal_dismissed_${user.id}`, 'true');
+    }
+    setShowWelcomeModal(false);
+    if (location.state?.fromRegistration) {
+      window.history.replaceState({}, document.title);
+    }
+  };
+
+  const handleStartCareerDiscovery = () => {
+    if (user?.id) {
+      localStorage.setItem(`aspirepath_career_discovery_modal_dismissed_${user.id}`, 'true');
+    }
+    setShowWelcomeModal(false);
+    navigate('/career-discovery');
+  };
 
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
@@ -153,22 +195,32 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 3. Career Discovery Onboarding / Summary Card */}
+      {/* Career Guidance Welcome Modal */}
+      <CareerGuidanceWelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={handleCloseWelcomeModal}
+        onStart={handleStartCareerDiscovery}
+      />
+
+      {/* 3. Career Discovery Onboarding / Reminder Card */}
       {discoverySummary?.show_card && !discoverySummary?.is_completed && !dismissDiscoveryCard && (
-        <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden border border-indigo-700/40">
-          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-56 h-56 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden border border-blue-700/40">
+          <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-56 h-56 rounded-full bg-blue-500/20 blur-3xl pointer-events-none" />
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
             <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/30 text-indigo-200 text-xs font-bold uppercase tracking-wider border border-indigo-400/30">
-                <Compass className="w-3.5 h-3.5 text-indigo-300" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/30 text-blue-200 text-xs font-bold uppercase tracking-wider border border-blue-400/30">
+                <Compass className="w-3.5 h-3.5 text-blue-300" />
                 <span>Your Career Journey Starts Here!</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                Discover your strengths, explore your interests, and unlock a personalized 7-stage roadmap.
+                Your Career Guidance Is Waiting!
               </h2>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-indigo-200 pt-1">
+              <p className="text-sm text-blue-100/90 leading-relaxed">
+                Take a few minutes to discover suitable career paths and receive your personalized roadmap.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-blue-200 pt-1">
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  <Clock className="w-3.5 h-3.5 text-blue-400" />
                   <span>3–5 min completion</span>
                 </span>
                 <span>•</span>
@@ -177,14 +229,17 @@ export default function DashboardPage() {
                   <span>5 indicative assessment questions</span>
                 </span>
                 <span>•</span>
-                <span>Zero guesswork</span>
+                <span className="flex items-center gap-1.5">
+                  <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Personalized 7-stage roadmap</span>
+                </span>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-              <Link to="/career-discovery">
+              <Link to="/career-discovery" title="Discover My Career Path">
                 <Button variant="gradient" size="sm" rightIcon={ArrowRight} className="font-bold text-xs px-5 shadow-md">
-                  Discover My Career Path
+                  {discoverySummary?.current_step > 1 ? 'Continue Career Discovery' : 'Start Career Discovery'}
                 </Button>
               </Link>
               <button
@@ -204,36 +259,91 @@ export default function DashboardPage() {
 
       {/* Career Discovery Completed Summary Card */}
       {discoverySummary?.show_card && discoverySummary?.is_completed && (
-        <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white rounded-2xl border border-indigo-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                  Career Match: {discoverySummary.match_percentage}%
-                </span>
-                <h3 className="text-sm font-bold text-slate-900">
-                  Target Path: {discoverySummary.primary_role}
-                </h3>
+        <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/60 to-white rounded-3xl border border-blue-200/80 p-6 sm:p-7 shadow-xs space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                <Compass className="w-6 h-6" />
               </div>
-              <p className="text-xs text-slate-600">
-                {discoverySummary.next_stage ? (
-                  <span>Next Step: <strong>{discoverySummary.next_stage.title}</strong> — {discoverySummary.next_stage.description}</span>
-                ) : (
-                  <span>All 7 roadmap stages completed! Explore verified job vacancies.</span>
-                )}
-              </p>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                    Career Match: {discoverySummary.match_percentage}%
+                  </span>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
+                    Target Path: {discoverySummary.primary_role}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-600">
+                  {discoverySummary.next_stage ? (
+                    <span>Next Milestone: <strong>{discoverySummary.next_stage.title}</strong> — {discoverySummary.next_stage.description}</span>
+                  ) : (
+                    <span>All 7 roadmap stages completed! Explore verified job vacancies.</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 pl-15 md:pl-0">
+              <Link to="/career-discovery">
+                <Button variant="primary" size="sm" rightIcon={ArrowRight} className="text-xs font-bold px-4 py-2 shadow-xs">
+                  View My Career Roadmap
+                </Button>
+              </Link>
+              <Link to="/career-discovery" state={{ restart: true }}>
+                <Button variant="outline" size="sm" className="text-xs font-semibold text-slate-600 border-slate-200 hover:text-slate-900">
+                  Update Discovery
+                </Button>
+              </Link>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 pl-13 md:pl-0">
-            <Link to="/career-discovery">
-              <Button variant="outline" size="sm" rightIcon={ArrowRight} className="text-xs font-semibold text-brand-primary border-brand-primary/30">
-                View Full Roadmap & Jobs
-              </Button>
-            </Link>
+          {/* Recommended Roles, Strengths & Skill Gaps Badges */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-blue-100/80 text-xs">
+            {/* Recommended Roles */}
+            <div className="p-3 rounded-2xl bg-white/80 border border-blue-100/80 space-y-1.5">
+              <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-blue-600" />
+                Recommended Roles
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(discoverySummary.recommended_roles || [discoverySummary.primary_role]).map((role, idx) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-medium text-[11px] border border-blue-100">
+                    {role}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Strengths */}
+            <div className="p-3 rounded-2xl bg-white/80 border border-emerald-100/80 space-y-1.5">
+              <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Key Strengths
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(discoverySummary.strengths || ['Problem Solving']).map((st, idx) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-medium text-[11px] border border-emerald-100">
+                    {st}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Skill Gaps to Improve */}
+            <div className="p-3 rounded-2xl bg-white/80 border border-amber-100/80 space-y-1.5">
+              <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
+                Skill Gaps to Prioritize
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {(discoverySummary.missing_skills || discoverySummary.skill_gaps || ['System Design']).map((sk, idx) => (
+                  <span key={idx} className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-medium text-[11px] border border-amber-200/60">
+                    {sk}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -139,7 +139,7 @@ export default function RegisterPage() {
 
       const requestedRedirect = getInternalPath(new URLSearchParams(location.search).get('redirect'));
       const targetPath = requestedRedirect || getDashboardPath(response.user);
-      navigate(targetPath, { replace: true });
+      navigate(targetPath, { replace: true, state: { fromRegistration: true } });
     } catch (err) {
       const rawDetail = err.response?.data?.detail;
       const message =

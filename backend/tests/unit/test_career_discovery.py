@@ -201,3 +201,72 @@ async def test_generate_recommendations_json_serializability():
     assert len(loaded["roadmap"]) == 7
 
 
+@pytest.mark.asyncio
+async def test_get_career_discovery_summary_admin_and_student_roles():
+    import uuid
+    from unittest.mock import AsyncMock, MagicMock
+    from app.api.routes.career_discovery import get_career_discovery_summary
+    from app.models.user import User, UserRole
+    from app.models.career_discovery import StudentCareerDiscovery
+
+    # 1. Admin should receive show_card = False
+    admin_user = User(id=uuid.uuid4(), email="admin@aspirepath.com", role=UserRole.ADMIN, full_name="Admin User")
+    mock_db = AsyncMock()
+
+    admin_summary = await get_career_discovery_summary(db=mock_db, current_user=admin_user)
+    assert admin_summary == {"show_card": False}
+
+    # 2. Incomplete student should receive show_card = True, is_completed = False
+    student_user = User(id=uuid.uuid4(), email="student@aspirepath.com", role=UserRole.STUDENT, full_name="Student User")
+    incomplete_disc = StudentCareerDiscovery(
+        id=uuid.uuid4(),
+        user_id=student_user.id,
+        status="questionnaire_in_progress",
+        current_step=3,
+    )
+    CareerDiscoveryService.get_or_create_discovery = AsyncMock(return_value=incomplete_disc)
+
+    student_summary = await get_career_discovery_summary(db=mock_db, current_user=student_user)
+    assert student_summary["show_card"] is True
+    assert student_summary["is_completed"] is False
+    assert student_summary["status"] == "questionnaire_in_progress"
+    assert student_summary["current_step"] == 3
+
+    # 3. Completed student should receive strengths, skill_gaps, and recommended_roles
+    completed_disc = StudentCareerDiscovery(
+        id=uuid.uuid4(),
+        user_id=student_user.id,
+        status="completed",
+        current_step=7,
+        recommendations={
+            "primary_role": {
+                "role_name": "Full Stack Developer",
+                "match_percentage": 92,
+                "matched_skills": ["React", "Node.js"],
+                "missing_skills": ["Docker", "Kubernetes"],
+            },
+            "top_roles": [
+                {"role_name": "Full Stack Developer"},
+                {"role_name": "Frontend Engineer"},
+                {"role_name": "Backend Engineer"},
+            ],
+            "matched_jobs": [{"id": "job-1"}],
+        },
+        roadmap_progress=[
+            {"stage_id": 1, "title": "Core Skill Acquisition", "status": "completed"},
+            {"stage_id": 2, "title": "Practical Showcase Projects", "status": "in_progress"},
+        ],
+    )
+    CareerDiscoveryService.get_or_create_discovery = AsyncMock(return_value=completed_disc)
+
+    completed_summary = await get_career_discovery_summary(db=mock_db, current_user=student_user)
+    assert completed_summary["show_card"] is True
+    assert completed_summary["is_completed"] is True
+    assert completed_summary["primary_role"] == "Full Stack Developer"
+    assert completed_summary["match_percentage"] == 92
+    assert "React" in completed_summary["strengths"]
+    assert "Docker" in completed_summary["skill_gaps"]
+    assert "Frontend Engineer" in completed_summary["recommended_roles"]
+    assert completed_summary["next_stage"]["title"] == "Practical Showcase Projects"
+
+
