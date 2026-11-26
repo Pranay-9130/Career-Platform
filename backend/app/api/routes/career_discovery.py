@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+import logging
 from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -139,21 +140,29 @@ async def submit_assessment(
     discovery.assessment_total = eval_result["total"]
     discovery.assessment_result = eval_result
 
-    # Generate recommendations using real DB items
-    recommendations = await CareerDiscoveryService.generate_recommendations(
-        discovery_data=discovery.to_dict(),
-        db=db,
-    )
+    try:
+        # Generate recommendations using real DB items
+        recommendations = await CareerDiscoveryService.generate_recommendations(
+            discovery_data=discovery.to_dict(),
+            db=db,
+        )
 
-    discovery.recommendations = recommendations
-    discovery.roadmap_progress = recommendations.get("roadmap", [])
-    discovery.status = "completed"
-    discovery.completed_at = datetime.utcnow()
+        discovery.recommendations = recommendations
+        discovery.roadmap_progress = recommendations.get("roadmap", [])
+        discovery.status = "completed"
+        discovery.completed_at = datetime.now(timezone.utc)
 
-    await db.commit()
-    await db.refresh(discovery)
+        await db.commit()
+        await db.refresh(discovery)
 
-    return discovery.to_dict()
+        return discovery.to_dict()
+    except Exception as e:
+        await db.rollback()
+        logging.getLogger("uvicorn.error").error("submit_assessment failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate your career roadmap: {str(e)}"
+        )
 
 
 @router.post("/update-roadmap", response_model=Dict[str, Any])

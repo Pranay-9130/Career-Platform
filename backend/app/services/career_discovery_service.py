@@ -639,7 +639,7 @@ class CareerDiscoveryService:
                 overlaps_gap = any(t in [s.lower() for s in primary_role["missing_skills"]] for t in p_tech) if primary_role else False
 
                 recommended_projects.append({
-                    "id": proj.id,
+                    "id": str(proj.id) if proj.id else None,
                     "title": proj.title,
                     "slug": proj.slug,
                     "domain": proj.domain,
@@ -656,10 +656,10 @@ class CareerDiscoveryService:
             prep_materials = (await db.scalars(select(PreparationMaterial).limit(4))).all()
             for mat in prep_materials:
                 recommended_prep.append({
-                    "id": mat.id,
+                    "id": str(mat.id) if mat.id else None,
                     "title": mat.title,
                     "file_name": mat.file_name,
-                    "topic_id": mat.topic_id,
+                    "topic_id": str(mat.topic_id) if mat.topic_id else None,
                     "link": "/placement-preparation",
                 })
         except Exception:
@@ -678,7 +678,7 @@ class CareerDiscoveryService:
                     match_pct += min(len(matching_skills) * 15, 45)
 
                 matched_jobs.append({
-                    "id": job.id,
+                    "id": str(job.id) if job.id else None,
                     "title": job.title,
                     "company_name": job.company_name,
                     "location": job.location,

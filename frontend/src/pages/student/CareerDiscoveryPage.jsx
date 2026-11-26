@@ -215,7 +215,10 @@ export default function CareerDiscoveryPage() {
       setViewMode('results');
     } catch (err) {
       console.error('Failed to submit assessment:', err);
-      setError('An error occurred while evaluating your assessment. Please try again.');
+      setError(
+        err.response?.data?.detail ||
+          'An error occurred while evaluating your assessment. Please try again.'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -709,6 +712,14 @@ export default function CareerDiscoveryPage() {
             This 5-question indicative assessment identifies your conceptual readiness and domain gaps. It is used strictly for personalized guidance and is not an official test.
           </p>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-2xl flex items-center gap-3 text-xs sm:text-sm animate-in fade-in duration-200">
+            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* Question Card */}
         <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 space-y-6 shadow-card">

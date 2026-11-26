@@ -90,3 +90,79 @@ def test_student_career_discovery_model_uuid_foreign_key():
     assert d["id"] == str(sample_id)
     assert d["user_id"] == str(sample_user_id)
 
+
+@pytest.mark.asyncio
+async def test_generate_recommendations_json_serializability():
+    import json
+    import uuid
+    from unittest.mock import AsyncMock, MagicMock
+    from app.models.project import Project
+    from app.models.job import Job
+    from app.models.placement_preparation import PreparationMaterial
+
+    mock_db = AsyncMock()
+
+    proj = Project(
+        id=uuid.uuid4(),
+        title="Distributed Task Queue",
+        slug="distributed-task-queue",
+        domain="Backend",
+        tech_stack="Python, FastAPI, Redis",
+        difficulty="Intermediate",
+        status="Published",
+    )
+    job = Job(
+        id=uuid.uuid4(),
+        title="Backend Software Engineer",
+        company_name="Tech Corp",
+        location="Remote",
+        job_type="Full-time",
+        work_mode="Remote",
+        domain="Backend Development",
+        skills_required="Python, FastAPI, PostgreSQL",
+        is_active=True,
+    )
+    mat = PreparationMaterial(
+        id=str(uuid.uuid4()),
+        role_id=str(uuid.uuid4()),
+        topic_id=str(uuid.uuid4()),
+        title="Python Interview Preparation Guide",
+        file_name="guide.pdf",
+    )
+
+    mock_scalars_project = MagicMock()
+    mock_scalars_project.all.return_value = [proj]
+
+    mock_scalars_mat = MagicMock()
+    mock_scalars_mat.all.return_value = [mat]
+
+    mock_scalars_job = MagicMock()
+    mock_scalars_job.all.return_value = [job]
+
+    mock_db.scalars.side_effect = [
+        mock_scalars_project,
+        mock_scalars_mat,
+        mock_scalars_job,
+    ]
+
+    discovery_data = {
+        "technical_interests": ["Python Development", "Web Development"],
+        "self_reported_skills": ["Python", "FastAPI"],
+        "assessment_result": {"accuracy_percentage": 85.0},
+    }
+
+    recs = await CareerDiscoveryService.generate_recommendations(discovery_data, mock_db)
+
+    # Must be 100% JSON serializable (NO native UUIDs in projects, jobs, or materials)
+    dumped = json.dumps(recs)
+    assert dumped is not None
+    loaded = json.loads(dumped)
+
+    assert loaded["primary_role"]["role_name"] in ["Python Developer", "Backend Developer"]
+    assert len(loaded["recommended_projects"]) == 1
+    assert loaded["recommended_projects"][0]["id"] == str(proj.id)
+    assert len(loaded["matched_jobs"]) == 1
+    assert loaded["matched_jobs"][0]["id"] == str(job.id)
+    assert len(loaded["roadmap"]) == 7
+
+
