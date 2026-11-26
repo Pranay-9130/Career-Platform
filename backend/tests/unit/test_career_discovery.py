@@ -52,3 +52,41 @@ def test_evaluate_assessment():
     assert "Python Development" in result["domain_breakdown"]
     assert result["domain_breakdown"]["Python Development"]["correct"] == 1
     assert result["domain_breakdown"]["Java Development"]["correct"] == 0
+
+
+def test_student_career_discovery_model_uuid_foreign_key():
+    import uuid
+    from sqlalchemy import Uuid
+    from app.models.career_discovery import StudentCareerDiscovery
+    from app.models.user import User
+
+    # Check user_id column type
+    user_id_col = StudentCareerDiscovery.__table__.c.user_id
+    assert isinstance(user_id_col.type, Uuid), f"user_id must be Uuid, got {type(user_id_col.type)}"
+    assert user_id_col.unique is True
+    assert user_id_col.nullable is False
+
+    # Check foreign key reference
+    foreign_keys = list(user_id_col.foreign_keys)
+    assert len(foreign_keys) == 1
+    fk = foreign_keys[0]
+    assert fk.target_fullname == "users.id"
+    assert fk.ondelete.upper() == "CASCADE"
+
+    # Verify type matches User.id
+    user_pk_col = User.__table__.c.id
+    assert type(user_id_col.type) == type(user_pk_col.type)
+
+    # Verify to_dict serializes UUIDs cleanly
+    sample_user_id = uuid.uuid4()
+    sample_id = uuid.uuid4()
+    discovery = StudentCareerDiscovery(
+        id=sample_id,
+        user_id=sample_user_id,
+        status="not_started",
+        current_step=1,
+    )
+    d = discovery.to_dict()
+    assert d["id"] == str(sample_id)
+    assert d["user_id"] == str(sample_user_id)
+

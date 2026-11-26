@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON, Uuid
 from sqlalchemy.orm import relationship
 from app.models.base import BaseUUIDModel, TimestampMixin
 
@@ -13,7 +13,7 @@ class StudentCareerDiscovery(BaseUUIDModel, TimestampMixin):
     __tablename__ = "student_career_discoveries"
 
     user_id = Column(
-        String(36),
+        Uuid(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
         nullable=False,
@@ -69,8 +69,8 @@ class StudentCareerDiscovery(BaseUUIDModel, TimestampMixin):
 
     def to_dict(self):
         return {
-            "id": self.id,
-            "user_id": self.user_id,
+            "id": str(self.id) if self.id else None,
+            "user_id": str(self.user_id) if self.user_id else None,
             "status": self.status,
             "current_step": self.current_step,
             "education_info": self.education_info or {},

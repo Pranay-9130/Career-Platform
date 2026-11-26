@@ -399,7 +399,7 @@ class CareerDiscoveryService:
     """
 
     @staticmethod
-    async def get_or_create_discovery(db: AsyncSession, user_id: str) -> StudentCareerDiscovery:
+    async def get_or_create_discovery(db: AsyncSession, user_id: Any) -> StudentCareerDiscovery:
         stmt = select(StudentCareerDiscovery).where(StudentCareerDiscovery.user_id == user_id)
         discovery = (await db.scalars(stmt)).first()
 
@@ -418,7 +418,7 @@ class CareerDiscoveryService:
     @staticmethod
     async def save_questionnaire_progress(
         db: AsyncSession,
-        user_id: str,
+        user_id: Any,
         data: Dict[str, Any]
     ) -> StudentCareerDiscovery:
         discovery = await CareerDiscoveryService.get_or_create_discovery(db, user_id)
