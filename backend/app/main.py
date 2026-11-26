@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
 
     from app.core.database import engine, Base, AsyncSessionLocal
     import app.models.career_discovery
+    import app.models.announcement
 
     # Ensure tables exist safely across environments
     async with engine.begin() as conn:
@@ -38,11 +39,13 @@ async def lifespan(app: FastAPI):
                 seed_placement_preparation_defaults,
                 repair_existing_materials,
             )
+            from app.services.announcement_service import AnnouncementService
             await seed_placement_preparation_defaults(session)
             await repair_existing_materials(session)
+            await AnnouncementService.seed_defaults_if_empty(session)
     except Exception as e:
         import logging
-        logging.getLogger("uvicorn.error").warning("Placement preparation seed/repair check: %s", e)
+        logging.getLogger("uvicorn.error").warning("Placement preparation/announcement seed check: %s", e)
 
     if settings.ENVIRONMENT.strip().lower() in {"production", "prod", "release", "test"}:
         yield

@@ -15,6 +15,10 @@ from app.api.routes.placement_preparation import router as placement_preparation
 from app.api.routes.admin_placement_preparation import router as admin_placement_preparation_router
 from app.api.routes.download import router as download_router
 from app.api.routes.career_discovery import router as career_discovery_router
+from app.api.routes.announcements import (
+    router as announcements_router,
+    admin_router as admin_announcements_router,
+)
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(health_router)
@@ -33,6 +37,8 @@ api_router.include_router(placement_preparation_router)
 api_router.include_router(admin_placement_preparation_router)
 api_router.include_router(download_router)
 api_router.include_router(career_discovery_router)
+api_router.include_router(announcements_router)
+api_router.include_router(admin_announcements_router)
 
 __all__ = ["api_router"]
 

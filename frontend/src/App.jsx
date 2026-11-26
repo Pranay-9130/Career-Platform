@@ -85,6 +85,7 @@ const PlacementPrepRolePage = lazyWithRetry(() => import('./pages/student/Placem
 // Lazy Loaded Admin Pages
 const AdminDashboardPage = lazyWithRetry(() => import('./pages/admin/AdminDashboardPage'));
 const AdminPlacementPrepPage = lazyWithRetry(() => import('./pages/admin/AdminPlacementPrepPage'));
+const AdminAnnouncementsPage = lazyWithRetry(() => import('./pages/admin/AdminAnnouncementsPage'));
 
 export default function App() {
   return (
@@ -203,6 +204,7 @@ export default function App() {
                   <Route path="students" element={<AdminDashboardPage />} />
                   <Route path="templates" element={<AdminDashboardPage />} />
                   <Route path="placement-preparation" element={<AdminPlacementPrepPage />} />
+                  <Route path="announcements" element={<AdminAnnouncementsPage />} />
                 </Route>
               </Route>
 

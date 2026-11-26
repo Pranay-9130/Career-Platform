@@ -11,6 +11,7 @@ import {
   ExternalLink,
   GraduationCap,
   BookOpen,
+  Sparkles,
 } from 'lucide-react';
 import { AdminNavbar } from '@/components/navbar';
 
@@ -44,6 +45,7 @@ export default function AdminLayout() {
         { name: 'Students Directory', path: '/admin/students', icon: Users },
         { name: 'Resume Templates', path: '/admin/templates', icon: FileText },
         { name: 'Placement Preparation', path: '/admin/placement-preparation', icon: BookOpen },
+        { name: 'Feature Announcements', path: '/admin/announcements', icon: Sparkles },
       ],
     },
     {

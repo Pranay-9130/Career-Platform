@@ -33,7 +33,10 @@ import Skeleton from '@/components/common/Skeleton';
 import Modal from '@/components/common/Modal';
 import SkillIntelligenceSummaryCard from '@/components/dashboard/SkillIntelligenceSummaryCard';
 import CareerGuidanceWelcomeModal from '@/components/dashboard/CareerGuidanceWelcomeModal';
+import WhatsNewModal from '@/components/announcements/WhatsNewModal';
+import WhatsNewDashboardWidget from '@/components/dashboard/WhatsNewDashboardWidget';
 import { careerDiscoveryService } from '@/services/careerDiscoveryService';
+import { announcementService } from '@/services/announcementService';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -45,6 +48,12 @@ export default function DashboardPage() {
   const [dismissDiscoveryCard, setDismissDiscoveryCard] = useState(
     () => localStorage.getItem('dismiss_discovery_welcome') === 'true'
   );
+  const [announcementsData, setAnnouncementsData] = useState({
+    announcements: [],
+    unread_count: 0,
+    pending_popup_announcements: [],
+  });
+  const [showWhatsNewModal, setShowWhatsNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -105,6 +114,19 @@ export default function DashboardPage() {
       setData(summary);
       if (disc) setDiscoverySummary(disc);
       hasDataRef.current = true;
+
+      // Asynchronously fetch feature announcements without blocking critical dashboard summary metrics
+      announcementService
+        .getActiveAnnouncements()
+        .then((annData) => {
+          if (annData) {
+            setAnnouncementsData(annData);
+            if (annData.pending_popup_announcements?.length > 0 && user?.role !== 'ADMIN') {
+              setShowWhatsNewModal(true);
+            }
+          }
+        })
+        .catch(() => {});
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
       setError(
@@ -120,6 +142,52 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  const handleExploreAnnouncement = (ann) => {
+    if (ann?.id) {
+      announcementService.trackAnnouncement(ann.id, 'SEEN').catch(() => {});
+      setAnnouncementsData((prev) => ({
+        ...prev,
+        unread_count: Math.max(0, prev.unread_count - (ann.user_status === 'SEEN' ? 0 : 1)),
+        announcements: prev.announcements.map((a) =>
+          a.id === ann.id ? { ...a, user_status: 'SEEN' } : a
+        ),
+        pending_popup_announcements: prev.pending_popup_announcements.filter((a) => a.id !== ann.id),
+      }));
+    }
+    setShowWhatsNewModal(false);
+    if (ann?.link_url) {
+      navigate(ann.link_url);
+    }
+  };
+
+  const handleMaybeLaterAnnouncement = (ann) => {
+    if (ann?.id) {
+      announcementService.trackAnnouncement(ann.id, 'DEFERRED').catch(() => {});
+      setAnnouncementsData((prev) => ({
+        ...prev,
+        announcements: prev.announcements.map((a) =>
+          a.id === ann.id ? { ...a, user_status: 'DEFERRED' } : a
+        ),
+        pending_popup_announcements: prev.pending_popup_announcements.filter((a) => a.id !== ann.id),
+      }));
+    }
+    setShowWhatsNewModal(false);
+  };
+
+  const handleDismissAnnouncementModal = (ann) => {
+    if (ann?.id) {
+      announcementService.trackAnnouncement(ann.id, 'DISMISSED').catch(() => {});
+      setAnnouncementsData((prev) => ({
+        ...prev,
+        announcements: prev.announcements.map((a) =>
+          a.id === ann.id ? { ...a, user_status: 'DISMISSED' } : a
+        ),
+        pending_popup_announcements: prev.pending_popup_announcements.filter((a) => a.id !== ann.id),
+      }));
+    }
+    setShowWhatsNewModal(false);
+  };
 
   // Greeting helper based on local time
   const getGreeting = () => {
@@ -200,6 +268,15 @@ export default function DashboardPage() {
         isOpen={showWelcomeModal}
         onClose={handleCloseWelcomeModal}
         onStart={handleStartCareerDiscovery}
+      />
+
+      {/* Feature Announcement "What's New" Modal */}
+      <WhatsNewModal
+        isOpen={showWhatsNewModal && !showWelcomeModal}
+        announcements={announcementsData.pending_popup_announcements}
+        onExplore={handleExploreAnnouncement}
+        onMaybeLater={handleMaybeLaterAnnouncement}
+        onClose={handleDismissAnnouncementModal}
       />
 
       {/* 3. Career Discovery Onboarding / Reminder Card */}
@@ -740,6 +817,15 @@ export default function DashboardPage() {
           </div>
         </Link>
       </div>
+
+      {/* Feature Announcements "What's New" Section */}
+      {announcementsData?.announcements?.length > 0 && (
+        <WhatsNewDashboardWidget
+          announcements={announcementsData.announcements}
+          unreadCount={announcementsData.unread_count}
+          onExplore={handleExploreAnnouncement}
+        />
+      )}
 
       {/* 6.5 College Survival Kit Section */}
       <div className="bg-white rounded-2xl border border-brand-border shadow-xs p-5 sm:p-6 transition-all hover:border-blue-300">
