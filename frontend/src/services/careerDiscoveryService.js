@@ -13,7 +13,16 @@ export const careerDiscoveryService = {
     return res.data;
   },
 
-  // Generate 5-7 questions based on current interests and skill level
+  // Save a single question's answer incrementally
+  saveAnswer: async (questionId, answerOption) => {
+    const res = await api.post('/career-discovery/save-answer', {
+      question_id: questionId,
+      answer_option: answerOption,
+    });
+    return res.data;
+  },
+
+  // Generate 5 questions based on current interests and skill level
   generateAssessment: async () => {
     const res = await api.post('/career-discovery/generate-assessment');
     return res.data;
@@ -22,6 +31,12 @@ export const careerDiscoveryService = {
   // Submit assessment answers and compute recommendations + roadmap
   submitAssessment: async (answers) => {
     const res = await api.post('/career-discovery/submit-assessment', { answers });
+    return res.data;
+  },
+
+  // Generate or retry roadmap generation from saved assessment
+  generateRoadmap: async () => {
+    const res = await api.post('/career-discovery/generate-roadmap');
     return res.data;
   },
 

@@ -31,6 +31,11 @@ class AssessmentSubmitRequest(BaseModel):
     answers: Dict[str, str]
 
 
+class SaveAnswerRequest(BaseModel):
+    question_id: str
+    answer_option: str
+
+
 class RoadmapUpdateRequest(BaseModel):
     stage_id: int
     status: str  # 'pending', 'in_progress', 'completed'
@@ -81,6 +86,25 @@ async def save_discovery_progress(
     return discovery.to_dict()
 
 
+@router.post("/save-answer", response_model=Dict[str, Any])
+async def save_assessment_answer(
+    payload: SaveAnswerRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Saves an individual assessment answer incrementally so page refresh
+    restores student progress reliably without loss.
+    """
+    discovery = await CareerDiscoveryService.get_or_create_discovery(db, current_user.id)
+    answers = dict(discovery.assessment_answers or {})
+    answers[payload.question_id] = payload.answer_option.strip().upper()
+    discovery.assessment_answers = answers
+    await db.commit()
+    await db.refresh(discovery)
+    return {"status": "saved", "answers": answers}
+
+
 @router.post("/generate-assessment", response_model=Dict[str, Any])
 async def generate_assessment(
     db: AsyncSession = Depends(get_db),
@@ -124,45 +148,93 @@ async def submit_assessment(
     discovery = await CareerDiscoveryService.get_or_create_discovery(db, current_user.id)
 
     questions = discovery.assessment_questions or []
-    if not questions:
-        # If questions weren't stored, generate a fresh batch to evaluate
+    if not questions or len(questions) != 5:
+        # Guarantee exact 5 questions
         questions = CareerDiscoveryService.generate_assessment_questions(
             discovery.technical_interests or [],
             discovery.skill_level or "beginner"
         )
         discovery.assessment_questions = questions
 
-    # Evaluate answers
-    eval_result = CareerDiscoveryService.evaluate_assessment(questions, payload.answers)
+    # Combine answers from payload and saved answers
+    answers = dict(discovery.assessment_answers or {})
+    answers.update(payload.answers or {})
 
-    discovery.assessment_answers = payload.answers
+    # Evaluate answers deterministically
+    eval_result = CareerDiscoveryService.evaluate_assessment(questions, answers)
+
+    # Persist the evaluation result FIRST so it is guaranteed to be saved
+    discovery.assessment_answers = answers
     discovery.assessment_score = eval_result["score"]
-    discovery.assessment_total = eval_result["total"]
+    discovery.assessment_total = len(questions)
     discovery.assessment_result = eval_result
 
     try:
-        # Generate recommendations using real DB items
+        await db.commit()
+        await db.refresh(discovery)
+    except Exception as eval_commit_err:
+        await db.rollback()
+        logging.getLogger("uvicorn.error").error("Failed to commit assessment evaluation: %s", eval_commit_err, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="We couldn't evaluate your assessment. Your answers have been preserved. Please retry."
+        )
+
+    # Now generate the personalized roadmap with guaranteed fallback
+    try:
         recommendations = await CareerDiscoveryService.generate_recommendations(
             discovery_data=discovery.to_dict(),
             db=db,
         )
+    except Exception as rec_err:
+        logging.getLogger("uvicorn.error").warning("generate_recommendations DB query failed; using curated fallback: %s", rec_err)
+        recommendations = CareerDiscoveryService.get_fallback_recommendations(discovery.to_dict())
 
-        discovery.recommendations = recommendations
-        discovery.roadmap_progress = recommendations.get("roadmap", [])
-        discovery.status = "completed"
-        discovery.completed_at = datetime.now(timezone.utc)
+    discovery.recommendations = recommendations
+    discovery.roadmap_progress = recommendations.get("roadmap", [])
+    discovery.status = "completed"
+    discovery.completed_at = datetime.now(timezone.utc)
 
+    try:
         await db.commit()
         await db.refresh(discovery)
-
-        return discovery.to_dict()
-    except Exception as e:
+    except Exception as rec_commit_err:
         await db.rollback()
-        logging.getLogger("uvicorn.error").error("submit_assessment failed: %s", e, exc_info=True)
+        logging.getLogger("uvicorn.error").error("Failed to commit career roadmap: %s", rec_commit_err, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate your career roadmap: {str(e)}"
+            detail="Your assessment was completed, but we couldn't generate your roadmap yet. Please retry."
         )
+
+    return discovery.to_dict()
+
+
+@router.post("/generate-roadmap", response_model=Dict[str, Any])
+async def generate_career_roadmap(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Generates or regenerates the personalized career roadmap from saved assessment results.
+    """
+    discovery = await CareerDiscoveryService.get_or_create_discovery(db, current_user.id)
+    try:
+        recommendations = await CareerDiscoveryService.generate_recommendations(
+            discovery_data=discovery.to_dict(),
+            db=db,
+        )
+    except Exception as rec_err:
+        logging.getLogger("uvicorn.error").warning("generate_career_roadmap fallback: %s", rec_err)
+        recommendations = CareerDiscoveryService.get_fallback_recommendations(discovery.to_dict())
+
+    discovery.recommendations = recommendations
+    discovery.roadmap_progress = recommendations.get("roadmap", [])
+    discovery.status = "completed"
+    discovery.completed_at = datetime.now(timezone.utc)
+
+    await db.commit()
+    await db.refresh(discovery)
+    return discovery.to_dict()
 
 
 @router.post("/update-roadmap", response_model=Dict[str, Any])

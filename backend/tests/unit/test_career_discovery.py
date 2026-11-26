@@ -17,41 +17,76 @@ def test_question_bank_structure():
         assert "concept" in q
 
 
-def test_generate_assessment_questions_beginner():
+def test_generate_assessment_questions_exactly_five():
     interests = ["Python Development", "Web Development"]
     questions = CareerDiscoveryService.generate_assessment_questions(interests, "beginner")
 
-    assert 5 <= len(questions) <= 7
+    # The assessment must contain EXACTLY 5 questions
+    assert len(questions) == 5
     for q in questions:
         # Answers and explanations should not be exposed to client in the question prompt
         assert "correct_option" not in q
         assert "explanation" not in q
         assert "id" in q
         assert "options" in q
+        assert len(q["options"]) == 4
 
 
-def test_evaluate_assessment():
+def test_evaluate_assessment_five_questions_scenarios():
+    # Includes swe-01 (BST average complexity question from user issue)
     questions = [
-        {"id": "py-01", "domain": "Python Development", "question": "q1", "concept": "c1"},
-        {"id": "java-01", "domain": "Java Development", "question": "q2", "concept": "c2"},
+        {"id": "swe-01", "domain": "Software Engineering", "question": "BST search", "concept": "Complexity"},
+        {"id": "py-01", "domain": "Python Development", "question": "Immutability", "concept": "Types"},
+        {"id": "py-02", "domain": "Python Development", "question": "OOP init", "concept": "OOP"},
+        {"id": "web-01", "domain": "Web Development", "question": "Status 201", "concept": "HTTP"},
+        {"id": "web-02", "domain": "Web Development", "question": "CORS", "concept": "Security"},
     ]
 
-    # py-01 correct answer is B, java-01 correct answer is B
-    answers = {
+    # Scenario 1: All 5 correct (swe-01: B, py-01: B, py-02: B, web-01: B, web-02: B)
+    all_correct = {
+        "swe-01": "B",
         "py-01": "B",
-        "java-01": "A",  # incorrect
+        "py-02": "B",
+        "web-01": "B",
+        "web-02": "B",
     }
+    res_perfect = CareerDiscoveryService.evaluate_assessment(questions, all_correct)
+    assert res_perfect["total"] == 5
+    assert res_perfect["score"] == 5
+    assert res_perfect["accuracy_percentage"] == 100.0
+    assert res_perfect["level_label"] == "Strong Foundation"
 
-    result = CareerDiscoveryService.evaluate_assessment(questions, answers)
+    # Specific check: BST question evaluates O(log n) (Option B) as correct
+    bst_detail = next(d for d in res_perfect["details"] if d["id"] == "swe-01")
+    assert bst_detail["is_correct"] is True
+    assert bst_detail["correct_answer"] == "B"
 
-    assert result["total"] == 2
-    assert result["score"] == 1
-    assert result["accuracy_percentage"] == 50.0
-    assert result["level_label"] == "Developing Competence"
-    assert "disclaimer" in result
-    assert "Python Development" in result["domain_breakdown"]
-    assert result["domain_breakdown"]["Python Development"]["correct"] == 1
-    assert result["domain_breakdown"]["Java Development"]["correct"] == 0
+    # Scenario 2: All 5 incorrect
+    all_incorrect = {q["id"]: "Z" for q in questions}
+    res_zero = CareerDiscoveryService.evaluate_assessment(questions, all_incorrect)
+    assert res_zero["total"] == 5
+    assert res_zero["score"] == 0
+    assert res_zero["accuracy_percentage"] == 0.0
+
+    # Scenario 3: Mixed (3 correct, 2 incorrect)
+    mixed = {
+        "swe-01": "B",  # Correct
+        "py-01": "B",   # Correct
+        "py-02": "A",   # Incorrect
+        "web-01": "B",  # Correct
+        "web-02": "C",  # Incorrect
+    }
+    res_mixed = CareerDiscoveryService.evaluate_assessment(questions, mixed)
+    assert res_mixed["total"] == 5
+    assert res_mixed["score"] == 3
+    assert res_mixed["accuracy_percentage"] == 60.0
+    assert res_mixed["level_label"] == "Developing Competence"
+
+    # Scenario 4: Incomplete / partially answered
+    incomplete = {"swe-01": "B"}
+    res_incomplete = CareerDiscoveryService.evaluate_assessment(questions, incomplete)
+    assert res_incomplete["total"] == 5
+    assert res_incomplete["score"] == 1
 
 
 def test_student_career_discovery_model_uuid_foreign_key():

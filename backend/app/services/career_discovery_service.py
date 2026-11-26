@@ -494,8 +494,23 @@ class CareerDiscoveryService:
         if len(combined) < 5:
             combined = QUESTION_BANK.copy()
 
-        count = min(max(len(matched_domains) + 3, 5), 7)
-        selected = random.sample(combined, min(count, len(combined)))
+        # Exact 5-question selection
+        count = 5
+        seen_ids = set()
+        deduped_combined = []
+        for q in combined:
+            if q["id"] not in seen_ids:
+                seen_ids.add(q["id"])
+                deduped_combined.append(q)
+
+        if len(deduped_combined) < 5:
+            for q in QUESTION_BANK:
+                if q["id"] not in seen_ids:
+                    seen_ids.add(q["id"])
+                    deduped_combined.append(q)
+
+        # Deterministic or sample of exactly 5 questions
+        selected = deduped_combined[:count]
 
         client_questions = []
         for q in selected:
@@ -508,7 +523,7 @@ class CareerDiscoveryService:
                 "concept": q["concept"],
             })
 
-        return client_questions
+        return client_questions[:5]
 
     @staticmethod
     def evaluate_assessment(
@@ -770,5 +785,182 @@ class CareerDiscoveryService:
             "recommended_projects": recommended_projects[:4],
             "recommended_preparation": recommended_prep[:3],
             "matched_jobs": matched_jobs[:4],
+            "roadmap": roadmap,
+        }
+
+    @staticmethod
+    def get_fallback_recommendations(discovery_data: Dict[str, Any]) -> Dict[str, Any]:
+        raw_interests = discovery_data.get("technical_interests") or []
+        interests = [str(i).lower() for i in raw_interests if i]
+        raw_skills = discovery_data.get("self_reported_skills") or []
+        self_skills = [str(s).strip().lower() for s in raw_skills if s]
+        assessment_result = discovery_data.get("assessment_result") or {}
+        accuracy = assessment_result.get("accuracy_percentage", 60)
+
+        scored_roles = []
+        for role_name, role_data in CURATED_ROLES.items():
+            role_skills = [s.lower() for s in role_data.get("core_skills", [])]
+            role_desc = role_data.get("description", "").lower()
+            role_lower = role_name.lower()
+
+            interest_score = 0
+            for interest in interests:
+                if any(word in role_lower or word in role_desc for word in interest.split()):
+                    interest_score += 20
+            interest_score = min(interest_score, 40)
+
+            overlap = set(self_skills).intersection(set(role_skills))
+            skill_score = min(len(overlap) * 12, 40)
+            perf_score = int((accuracy / 100) * 20)
+            total_match = min(interest_score + skill_score + perf_score, 98)
+
+            if total_match < 45 and any(word in role_lower for word in ["software", "developer", "engineer"]):
+                total_match = 52
+
+            missing_skills = [s for s in role_data.get("core_skills", []) if s.lower() not in self_skills]
+            matched_skills_list = [s for s in role_data.get("core_skills", []) if s.lower() in self_skills]
+
+            scored_roles.append({
+                "role_name": role_name,
+                "match_percentage": total_match,
+                "description": role_data.get("description"),
+                "core_skills": role_data.get("core_skills", []),
+                "matched_skills": matched_skills_list,
+                "missing_skills": missing_skills,
+                "career_track": role_data.get("category", "Engineering"),
+            })
+
+        scored_roles.sort(key=lambda x: x["match_percentage"], reverse=True)
+        top_roles = scored_roles[:3]
+        primary_role = top_roles[0] if top_roles else None
+
+        role_label = primary_role["role_name"] if primary_role else "Software Engineer"
+
+        fallback_projects = [
+            {
+                "id": "proj-curated-1",
+                "title": f"Production-Grade {role_label} Showcase Project",
+                "slug": "production-showcase-application",
+                "domain": "Engineering",
+                "tech_stack": ", ".join(primary_role.get("core_skills", ["Python", "FastAPI"])[:4]) if primary_role else "Python, React, PostgreSQL",
+                "difficulty": "Intermediate",
+                "why_recommended": "Builds high-priority skills demonstrated in your gap analysis.",
+            },
+            {
+                "id": "proj-curated-2",
+                "title": "Real-Time Distributed Event Processing System",
+                "slug": "distributed-event-processor",
+                "domain": "Software Engineering",
+                "tech_stack": "FastAPI, WebSockets, Redis, Docker",
+                "difficulty": "Advanced",
+                "why_recommended": "Demonstrates architectural design and throughput optimization.",
+            },
+        ]
+
+        fallback_prep = [
+            {
+                "id": "prep-curated-1",
+                "title": "Data Structures & Algorithmic Complexity Masterclass",
+                "file_name": "dsa-interview-guide.pdf",
+                "topic_id": "topic-dsa",
+                "link": "/placement-preparation",
+            },
+            {
+                "id": "prep-curated-2",
+                "title": "OOP Architecture, Clean Code & System Design",
+                "file_name": "oop-system-design-guide.pdf",
+                "topic_id": "topic-oop",
+                "link": "/placement-preparation",
+            },
+        ]
+
+        fallback_jobs = [
+            {
+                "id": "job-curated-1",
+                "title": f"Junior / Associate {role_label}",
+                "company_name": "AspirePath Tech Partners",
+                "location": "Bengaluru / Hybrid",
+                "job_type": "Full-time",
+                "work_mode": "Hybrid",
+                "domain": "Engineering",
+                "match_score": primary_role.get("match_percentage", 85) if primary_role else 85,
+                "matching_skills": primary_role.get("matched_skills", ["Problem Solving"]) if primary_role else ["Python"],
+                "apply_url": "/jobs",
+                "is_active": True,
+            }
+        ]
+
+        roadmap = [
+            {
+                "stage_id": 1,
+                "title": "Core Skill Acquisition",
+                "description": f"Master the foundational competencies for {role_label}. Focus on high-priority missing skills: {', '.join(primary_role.get('missing_skills', [])[:3]) if primary_role else 'Core Programming'}.",
+                "action_label": "Explore Skill Matrix",
+                "target_route": "/skill-intelligence",
+                "status": "in_progress",
+                "estimated_time": "2-4 Weeks",
+            },
+            {
+                "stage_id": 2,
+                "title": "Practical Showcase Projects",
+                "description": f"Build and publish production-grade showcase projects demonstrating clean API design and runnable code for {role_label}.",
+                "action_label": "Browse Showcase Blueprints",
+                "target_route": "/projects",
+                "status": "pending",
+                "estimated_time": "3-5 Weeks",
+            },
+            {
+                "stage_id": 3,
+                "title": "Technical Interview Preparation",
+                "description": "Study curated placement preparation guides covering Big-O, OOP, system design, and database queries.",
+                "action_label": "Study Prep Guides",
+                "target_route": "/placement-preparation",
+                "status": "pending",
+                "estimated_time": "1-2 Weeks",
+            },
+            {
+                "stage_id": 4,
+                "title": "ATS-Approved Resume Selection",
+                "description": "Select an ATS-tested resume layout to properly format your verified showcase projects and competencies.",
+                "action_label": "Select Resume Template",
+                "target_route": "/templates",
+                "status": "pending",
+                "estimated_time": "1 Day",
+            },
+            {
+                "stage_id": 5,
+                "title": "ATS Compatibility Scan",
+                "description": "Scan and score your resume against real target job descriptions with deterministic keyword analysis.",
+                "action_label": "Run ATS Scan",
+                "target_route": "/ats-analyzer",
+                "status": "pending",
+                "estimated_time": "2 Days",
+            },
+            {
+                "stage_id": 6,
+                "title": "Targeted Job & Internship Applications",
+                "description": f"Apply to verified openings matching your profile, graduation timeline, and technical skills.",
+                "action_label": "Explore Matched Jobs",
+                "target_route": "/jobs",
+                "status": "pending",
+                "estimated_time": "Ongoing",
+            },
+            {
+                "stage_id": 7,
+                "title": "Active Application Tracking",
+                "description": "Track all submitted job applications, interview milestones, and feedback in your dedicated tracker.",
+                "action_label": "View Applications",
+                "target_route": "/applications",
+                "status": "pending",
+                "estimated_time": "Continuous",
+            },
+        ]
+
+        return {
+            "primary_role": primary_role,
+            "recommended_roles": top_roles,
+            "recommended_projects": fallback_projects,
+            "recommended_preparation": fallback_prep,
+            "matched_jobs": fallback_jobs,
             "roadmap": roadmap,
         }

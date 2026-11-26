@@ -16,8 +16,10 @@ test('careerDiscoveryService defines all API integration methods', () => {
 
   assert.match(serviceSource, /getStatus/, 'Service must define getStatus');
   assert.match(serviceSource, /saveProgress/, 'Service must define saveProgress');
+  assert.match(serviceSource, /saveAnswer/, 'Service must define saveAnswer');
   assert.match(serviceSource, /generateAssessment/, 'Service must define generateAssessment');
   assert.match(serviceSource, /submitAssessment/, 'Service must define submitAssessment');
+  assert.match(serviceSource, /generateRoadmap/, 'Service must define generateRoadmap');
   assert.match(serviceSource, /updateRoadmapStage/, 'Service must define updateRoadmapStage');
   assert.match(serviceSource, /resetDiscovery/, 'Service must define resetDiscovery');
   assert.match(serviceSource, /getSummary/, 'Service must define getSummary');

@@ -108,7 +108,12 @@ export default function CareerDiscoveryPage() {
         setViewMode('results');
       } else if (data.status === 'assessment_ready' && data.assessment_questions?.length > 0) {
         setAssessmentQuestions(data.assessment_questions);
-        setAssessmentAnswers(data.assessment_answers || {});
+        const savedAnswers = data.assessment_answers || {};
+        setAssessmentAnswers(savedAnswers);
+        const firstUnanswered = data.assessment_questions.findIndex((q) => !savedAnswers[q.id]);
+        if (firstUnanswered !== -1) {
+          setCurrentQuestionIdx(firstUnanswered);
+        }
         setViewMode('assessment');
       } else {
         setViewMode('questionnaire');
@@ -199,26 +204,45 @@ export default function CareerDiscoveryPage() {
     }
   };
 
-  const handleSelectAnswer = (qId, optionId) => {
+  const handleSelectAnswer = async (qId, optionId) => {
     setAssessmentAnswers((prev) => ({
       ...prev,
       [qId]: optionId,
     }));
+    setError(null);
+    try {
+      await careerDiscoveryService.saveAnswer(qId, optionId);
+    } catch (saveErr) {
+      console.warn('Auto-saving answer in background:', saveErr);
+    }
   };
 
   const handleSubmitAssessment = async () => {
+    const totalQ = assessmentQuestions.length || 5;
+    const answeredCount = Object.keys(assessmentAnswers).length;
+    if (answeredCount < totalQ) {
+      setError(`Please answer all ${totalQ} questions before submitting (currently answered: ${answeredCount}/${totalQ}).`);
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
       const res = await careerDiscoveryService.submitAssessment(assessmentAnswers);
       setDiscoveryState(res);
       setViewMode('results');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error('Failed to submit assessment:', err);
-      setError(
-        err.response?.data?.detail ||
-          'An error occurred while evaluating your assessment. Please try again.'
-      );
+      if (!navigator.onLine || err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
+        setError('Unable to connect. Your answers are saved where possible. Please check your connection and retry.');
+      } else if (err.response?.status === 401) {
+        setError('Your session has expired. Please log in again to continue.');
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else {
+        setError("We couldn't evaluate your assessment. Your answers have been preserved. Please retry.");
+      }
     } finally {
       setSubmitting(false);
     }
