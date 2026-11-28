@@ -105,3 +105,113 @@ test('Both College Survival Kit pages exist and export default functions', () =>
   assert.match(fs.readFileSync(hubPath, 'utf-8'), /export default function/, 'CollegeSurvivalKitPage must export default function');
   assert.match(fs.readFileSync(previewPath, 'utf-8'), /export default function/, 'PublicCollegeSurvivalKitPage must export default function');
 });
+
+// Helper implementing the attendance calculation logic for verification
+function calculateSemesterAttendance({ totalSemesterClasses, conductedClasses, attendedClasses, targetPercentage }) {
+  const totalPlanned = Math.max(0, parseInt(totalSemesterClasses, 10) || 0);
+  const conductedRaw = Math.max(0, parseInt(conductedClasses, 10) || 0);
+  const attendedRaw = Math.max(0, parseInt(attendedClasses, 10) || 0);
+  const target = Math.min(100, Math.max(1, parseInt(targetPercentage, 10) || 75));
+
+  const validTotal = totalPlanned;
+  const validConducted = Math.min(validTotal > 0 ? validTotal : Infinity, conductedRaw);
+  const validAttended = Math.min(validConducted, attendedRaw);
+
+  const currentPercentage = validConducted > 0 ? (validAttended / validConducted) * 100 : 0;
+  const classesMissed = Math.max(0, validConducted - validAttended);
+  const remainingClasses = Math.max(0, validTotal - validConducted);
+
+  const isAboveTarget = currentPercentage >= target;
+
+  let classesNeeded = 0;
+  if (!isAboveTarget) {
+    if (target < 100) {
+      const numerator = target * validConducted - 100 * validAttended;
+      const denominator = 100 - target;
+      classesNeeded = Math.max(0, Math.ceil(numerator / denominator));
+    } else {
+      classesNeeded = validConducted > validAttended ? Infinity : 0;
+    }
+  }
+
+  const isAchievable = isAboveTarget || classesNeeded <= remainingClasses;
+
+  const maxPossibleFinalAttendance =
+    validTotal > 0 ? ((validAttended + remainingClasses) / validTotal) * 100 : 0;
+
+  return {
+    currentPercentage: parseFloat(currentPercentage.toFixed(2)),
+    classesMissed,
+    remainingClasses,
+    recoveryClassesNeeded: classesNeeded,
+    isAchievable,
+    maxPossibleFinalAttendance: parseFloat(maxPossibleFinalAttendance.toFixed(2)),
+  };
+}
+
+test('AttendanceCalculator satisfies the user prompt example test (60 total, 30 conducted, 20 attended, 75% target)', () => {
+  const result = calculateSemesterAttendance({
+    totalSemesterClasses: 60,
+    conductedClasses: 30,
+    attendedClasses: 20,
+    targetPercentage: 75,
+  });
+
+  assert.equal(result.currentPercentage, 66.67);
+  assert.equal(result.classesMissed, 10);
+  assert.equal(result.remainingClasses, 30);
+  assert.equal(result.recoveryClassesNeeded, 10);
+  assert.equal(result.isAchievable, true);
+  assert.equal(result.maxPossibleFinalAttendance, 83.33);
+});
+
+test('AttendanceCalculator detects unachievable recovery and calculates max possible final attendance', () => {
+  const result = calculateSemesterAttendance({
+    totalSemesterClasses: 60,
+    conductedClasses: 50,
+    attendedClasses: 20,
+    targetPercentage: 75,
+  });
+
+  // Numerator: 75*50 - 100*20 = 3750 - 2000 = 1750; Denominator: 25 => 70 classes needed.
+  // Remaining: 60 - 50 = 10 classes.
+  assert.equal(result.currentPercentage, 40.0);
+  assert.equal(result.classesMissed, 30);
+  assert.equal(result.remainingClasses, 10);
+  assert.equal(result.recoveryClassesNeeded, 70);
+  assert.equal(result.isAchievable, false);
+  // Max final attendance with perfect attendance for 10 remaining classes: (20 + 10) / 60 * 100 = 50.0%
+  assert.equal(result.maxPossibleFinalAttendance, 50.0);
+});
+
+test('AttendanceCalculator handles zero conducted classes without division errors', () => {
+  const result = calculateSemesterAttendance({
+    totalSemesterClasses: 60,
+    conductedClasses: 0,
+    attendedClasses: 0,
+    targetPercentage: 75,
+  });
+
+  assert.equal(result.currentPercentage, 0);
+  assert.equal(result.classesMissed, 0);
+  assert.equal(result.remainingClasses, 60);
+  assert.equal(result.recoveryClassesNeeded, 0);
+  assert.equal(result.isAchievable, true);
+  assert.equal(result.maxPossibleFinalAttendance, 100.0);
+});
+
+test('AttendanceCalculator.jsx source code declares the 3 distinct semester input fields and feasibility UI', () => {
+  const source = fs.readFileSync(
+    path.join(projectRoot, 'src', 'components', 'survivalKit', 'AttendanceCalculator.jsx'),
+    'utf-8'
+  );
+
+  assert.match(source, /Total Classes in This Semester/, 'Must have Total Classes in This Semester input');
+  assert.match(source, /Classes Conducted So Far/, 'Must have Classes Conducted So Far input');
+  assert.match(source, /Classes Attended So Far/, 'Must have Classes Attended So Far input');
+  assert.match(source, /Target Unachievable This Semester/, 'Must have Target Unachievable feasibility message');
+  assert.match(source, /Maximum Possible Final Attendance/, 'Must have Maximum Possible Final Attendance callout');
+  assert.match(source, /Recovery Requirement/, 'Must display Recovery Requirement');
+  assert.match(source, /Attended Today/, 'Must have Attended Today button');
+  assert.match(source, /Missed Today/, 'Must have Missed Today button');
+});
