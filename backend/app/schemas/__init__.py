@@ -47,6 +47,8 @@ from app.schemas.ats import (
     AtsAnalysisResponse,
     BulletRewrite,
     AtsBreakdown,
+    ResumeHealthCheckData,
+    SectionFeedbackItem,
 )
 
 __all__ = [

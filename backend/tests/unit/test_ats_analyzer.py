@@ -361,3 +361,99 @@ async def test_end_to_end_extracted_resume_to_ats_analysis(client):
     assert "fastapi" in matched
     assert "docker" in matched
 
+
+@pytest.mark.asyncio
+async def test_resume_health_check_without_job_description(client):
+    """Student can run Resume Health Check without providing a job description."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+
+    payload = {
+        "resume_text": (
+            "Alex Rivera | alex@university.edu | (555) 123-4567 | github.com/alex | linkedin.com/in/alex\n\n"
+            "PROFESSIONAL SUMMARY\n"
+            "Full Stack Software Engineer with 2+ years of experience designing robust REST microservices and responsive web apps.\n\n"
+            "TECHNICAL SKILLS\n"
+            "Languages: Python, JavaScript, TypeScript, SQL\n"
+            "Frameworks: FastAPI, React, Django, Node.js\n"
+            "Databases & Tools: PostgreSQL, Docker, Redis, Git\n\n"
+            "WORK EXPERIENCE\n"
+            "Software Engineering Intern at TechFlow (Jun 2024 - Present)\n"
+            "- Architected asynchronous API endpoints with FastAPI, cutting latency by 35% across 50,000+ daily calls.\n"
+            "- Implemented responsive React components with Tailwind CSS for internal operational dashboard.\n\n"
+            "PROJECTS\n"
+            "Cloud Task Orchestrator | Python, Redis, Docker\n"
+            "- Built distributed task scheduling queue processing 10k+ background jobs.\n\n"
+            "EDUCATION\n"
+            "B.Tech in Computer Science & Engineering, National Institute of Technology (Grad: 2025) GPA: 3.8/4.0\n\n"
+            "CERTIFICATIONS & ACHIEVEMENTS\n"
+            "- AWS Certified Cloud Practitioner\n"
+            "- 1st Place Hackathon Winner 2024\n"
+        ),
+        "analysis_mode": "health_check",
+    }
+
+    resp = await client.post("/api/resumes/analyze-ats", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["analysis_mode"] == "health_check"
+    assert 0 <= data["overall_score"] <= 100
+    assert "verdict" in data
+    assert "summary" in data
+    assert "health_check" in data
+    hc = data["health_check"]
+    assert hc is not None
+    assert 0 <= hc["ats_compatibility_score"] <= 100
+    assert 0 <= hc["content_quality_score"] <= 100
+    assert len(hc["technical_skills"]) >= 3
+    assert len(hc["section_feedback"]) >= 4
+    for section in hc["section_feedback"]:
+        assert "section_name" in section
+        assert "score" in section
+        assert "status" in section
+        assert "strengths" in section
+        assert "recommendations" in section
+    assert len(hc["actionable_recommendations"]) >= 1
+    assert "disclaimer" in hc
+    assert "does not evaluate job-specific fit" in hc["disclaimer"].lower() or "guarantee" in hc["disclaimer"].lower()
+
+
+@pytest.mark.asyncio
+async def test_resume_health_check_with_saved_resume(client, db_session):
+    """Resume Health Check functions with saved resume entity and persists latest_health_score."""
+    app.dependency_overrides[get_current_active_user] = lambda: student_1
+    db_session.add(student_1)
+
+    resume = Resume(
+        id=uuid.UUID("77777777-7777-7777-7777-777777777777"),
+        user_id=student_1.id,
+        title="Saved Software Resume",
+        template_id="classic-tech",
+        personal_info={"full_name": "Alex Rivera", "email": "alex@university.edu"},
+        summary="Backend engineer focused on scalable architectures.",
+        skills=["Python", "FastAPI", "Docker", "PostgreSQL"],
+        education=[{"degree": "B.Tech Computer Science", "institution": "State University"}],
+        experience=[{"role": "Backend Intern", "company": "DevCorp", "bullets": ["Built APIs"]}],
+        projects=[{"name": "Distributed Queue", "tech_stack": "Python, Redis"}],
+    )
+    db_session.add(resume)
+    await db_session.commit()
+
+    resp = await client.post(
+        "/api/resumes/analyze-ats",
+        json={
+            "resume_id": str(resume.id),
+            "analysis_mode": "health_check",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["analysis_mode"] == "health_check"
+    assert data["overall_score"] > 0
+    assert data["health_check"]["overall_score"] == data["overall_score"]
+
+    # Verify latest_health_score was persisted
+    await db_session.refresh(resume)
+    assert "latest_health_score" in resume.personal_info
+    assert resume.personal_info["latest_health_score"] == data["overall_score"]
+

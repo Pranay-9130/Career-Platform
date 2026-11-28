@@ -39,8 +39,10 @@ function checkIsResumeReady({ resumeMode, uploadedExtractedText, pastedResumeTex
   return Boolean(pastedResumeText && pastedResumeText.trim().length > 0);
 }
 
-function buildAtsAnalysisPayload({ resumeMode, uploadedExtractedText, pastedResumeText, selectedResumeId, jobDescription }) {
-  const payload = {};
+function buildAtsAnalysisPayload({ resumeMode, uploadedExtractedText, pastedResumeText, selectedResumeId, jobDescription, analysisMode = 'job_match' }) {
+  const payload = {
+    analysis_mode: analysisMode,
+  };
   if (resumeMode === 'upload') {
     if (!uploadedExtractedText || !uploadedExtractedText.trim()) {
       throw new Error('Please upload a valid resume (PDF or DOCX) before running the analysis.');
@@ -58,10 +60,12 @@ function buildAtsAnalysisPayload({ resumeMode, uploadedExtractedText, pastedResu
     payload.resume_text = pastedResumeText.trim();
   }
 
-  if (!jobDescription || !jobDescription.trim()) {
-    throw new Error('Please paste the target job description before running the analysis.');
+  if (analysisMode === 'job_match') {
+    if (!jobDescription || !jobDescription.trim()) {
+      throw new Error('Please paste the target job description before running the job match analysis.');
+    }
+    payload.job_description = jobDescription.trim();
   }
-  payload.job_description = jobDescription.trim();
 
   return payload;
 }
@@ -176,4 +180,64 @@ test('buildAtsAnalysisPayload passes selected resume_id when in saved mode', () 
   assert.equal(savedPayload.resume_id, 'draft-id-999');
   assert.equal(savedPayload.job_description, 'Frontend Developer React');
   assert.equal(savedPayload.resume_text, undefined);
+  assert.equal(savedPayload.analysis_mode, 'job_match');
+});
+
+test('buildAtsAnalysisPayload supports health_check mode without requiring job description', () => {
+  const healthPayload = buildAtsAnalysisPayload({
+    resumeMode: 'upload',
+    uploadedExtractedText: 'Jane Doe Software Engineer Python React Docker',
+    pastedResumeText: '',
+    selectedResumeId: '',
+    analysisMode: 'health_check',
+  });
+
+  assert.equal(healthPayload.analysis_mode, 'health_check');
+  assert.equal(healthPayload.resume_text, 'Jane Doe Software Engineer Python React Docker');
+  assert.equal(healthPayload.job_description, undefined);
+});
+
+test('buildAtsAnalysisPayload in health_check mode works with saved resumes without job description', () => {
+  const savedHealthPayload = buildAtsAnalysisPayload({
+    resumeMode: 'saved',
+    uploadedExtractedText: '',
+    pastedResumeText: '',
+    selectedResumeId: 'saved-resume-uuid-456',
+    analysisMode: 'health_check',
+  });
+
+  assert.equal(savedHealthPayload.analysis_mode, 'health_check');
+  assert.equal(savedHealthPayload.resume_id, 'saved-resume-uuid-456');
+  assert.equal(savedHealthPayload.job_description, undefined);
+});
+
+test('buildAtsAnalysisPayload throws error in job_match mode if job description is missing', () => {
+  assert.throws(
+    () => {
+      buildAtsAnalysisPayload({
+        resumeMode: 'upload',
+        uploadedExtractedText: 'Jane Doe Developer',
+        pastedResumeText: '',
+        selectedResumeId: '',
+        analysisMode: 'job_match',
+        jobDescription: '   ',
+      });
+    },
+    { message: /Please paste the target job description/ }
+  );
+});
+
+test('buildAtsAnalysisPayload throws error if resume input is missing in health_check mode', () => {
+  assert.throws(
+    () => {
+      buildAtsAnalysisPayload({
+        resumeMode: 'upload',
+        uploadedExtractedText: '',
+        pastedResumeText: '',
+        selectedResumeId: '',
+        analysisMode: 'health_check',
+      });
+    },
+    { message: /Please upload a valid resume/ }
+  );
 });

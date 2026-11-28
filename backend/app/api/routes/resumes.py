@@ -28,6 +28,7 @@ from app.core.rate_limiter import ai_rate_limiter
 from app.services.pdf_generator import generate_resume_pdf
 from app.services.ats_analyzer import (
     analyze_ats,
+    analyze_resume_health,
     extract_resume_text_from_dict,
     extract_text_from_resume_file,
 )
@@ -566,11 +567,15 @@ async def analyze_resume_ats(
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Dual-input ATS analysis comparing candidate resume against a target job description.
-    Supports either saved resume UUID / raw text and platform job UUID / custom JD text.
+    Two-mode ATS analyzer:
+    1. 'health_check': Evaluates resume independently for quality, ATS readability, formatting, and completeness without requiring a job description.
+    2. 'job_match': Compares candidate resume against target job description for keyword matching and role fit.
     """
+    is_health_check = (payload.analysis_mode == "health_check")
+
     # 1. Resolve Resume Text
     resume_text = ""
+    resume = None
     if payload.resume_id:
         stmt = select(Resume).where(Resume.id == payload.resume_id, Resume.user_id == current_user.id)
         resume = (await db.execute(stmt)).scalars().first()
@@ -595,7 +600,26 @@ async def analyze_resume_ats(
             detail="Either 'resume_id' or non-empty 'resume_text' must be provided",
         )
 
-    # 2. Resolve Job Description Text
+    # 2. If Health Check mode, run standalone resume assessment
+    if is_health_check:
+        try:
+            result = await analyze_resume_health(resume_text)
+            score = result.get("overall_score") if isinstance(result, dict) else getattr(result, "overall_score", 0)
+            if payload.resume_id and resume and score is not None:
+                pi = dict(resume.personal_info or {})
+                pi["latest_health_score"] = int(score)
+                pi["latest_health_date"] = datetime.now(timezone.utc).isoformat()
+                resume.personal_info = pi
+                flag_modified(resume, "personal_info")
+                await db.commit()
+            return AtsAnalysisResponse.model_validate(result)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Resume health check error: {str(exc)}",
+            )
+
+    # 3. Resolve Job Description Text for Job Match Mode
     job_description = ""
     if payload.job_id:
         j_stmt = select(Job).where(Job.id == payload.job_id)
@@ -622,7 +646,7 @@ async def analyze_resume_ats(
             detail="Either 'job_id' or non-empty 'job_description' must be provided",
         )
 
-    # 3. Perform AI / NLP Analysis
+    # 4. Perform AI / NLP Job Match Analysis
     try:
         result = await analyze_ats(resume_text, job_description)
         score = result.get("overall_score") if isinstance(result, dict) else getattr(result, "overall_score", 0)
